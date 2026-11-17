@@ -37,9 +37,11 @@ import org.jspecify.annotations.Nullable;
  *     「演奏者面朝北」的方块像素），这里换算到女仆模型的像素（模型按 {@code render_entity_scale} 缩放）。
  *     女仆的手臂和原版一样是直的、从肩上的支点垂下，所以沿用原版的转法（{@link HandheldPoses#reach}）。
  *     手持乐器、琴弓、琴槌由 {@link AddMaidLayerEvent.Legacy} 加的一层画出来。</li>
- * <li><b>GeckoLib 模型</b>：骨骼由女仆模组在别的线程里算好，没有公开的办法在那之后改。这里只用
- *     {@link DefaultGeckoAnimationEvent} 加三段默认动作（按骑着的实体：{@code vehicle#starbloom_orchestra:bench_seat} 琴凳上弹、
- *     {@code instrument_seat} 坐着拉大提琴、{@code standing_post} 站着拉、敲；按同名的实体标签），手不跟着音走；模型包自己写了同名动作时用模型包的。</li>
+ * <li><b>GeckoLib 模型</b>：骨骼由女仆模组在别的线程里算好，没有公开的办法在那之后改。这里用
+ *     {@link DefaultGeckoAnimationEvent} 加默认动作：按骑着的实体（{@code vehicle#starbloom_orchestra:bench_seat} 琴凳上弹、
+ *     {@code instrument_seat} 坐着拉大提琴、{@code standing_post} 站着拉、敲；按同名的实体标签），再按手里的手持乐器
+ *     （{@code hold_mainhand#starbloom_orchestra:maid_pose/...}，物品标签）摆双臂，坐着时拉弓；手不跟着音走，模型包自己写了同名动作时用模型包的。
+ *     乐器、琴弓、琴槌由 {@link AddMaidLayerEvent.Gecko} 加的一层按手的挂点和头骨画上去（{@link GeckoLayer}）。</li>
  * </ul>
  */
 public final class MaidMusicians {
@@ -64,6 +66,7 @@ public final class MaidMusicians {
     public static void init(IEventBus modBus) {
         modBus.addListener(MaidMusicians::modifiers);
         NeoForge.EVENT_BUS.addListener(MaidMusicians::legacyLayer);
+        NeoForge.EVENT_BUS.addListener(MaidMusicians::geckoLayer);
         NeoForge.EVENT_BUS.addListener(MaidMusicians::geckoClips);
     }
 
@@ -71,17 +74,23 @@ public final class MaidMusicians {
         event.<EntityMaid, EntityMaidRenderState>registerEntityModifier(EntityMaidRenderer.class, MaidMusicians::prepare);
     }
 
-    /** 女仆模组提取完渲染状态之后：记下演奏者，基岩版模型在动画列表末尾加上 {@link #POSE}，手里原本的东西不画。 */
+    /**
+     * 女仆模组提取完渲染状态之后：记下演奏者和要画的乐器、琴弓、琴槌，手里原本的东西不画（两种模型都由我们这边的层画）；
+     * 基岩版模型再在动画列表末尾加上 {@link #POSE}，GeckoLib 模型的手臂是默认动作（见类说明）。
+     */
     private static void prepare(EntityMaid maid, EntityMaidRenderState state) {
-        if (state.modelType != ModelType.SIMPLE_BEDROCK) {
-            // GeckoLib 模型的姿势是默认动作（见类说明），手里的东西照女仆模组的画
-            state.setRenderData(MusicianPoses.MUSICIAN, null);
-            state.setRenderData(HandheldPoses.HELD, null);
-            return;
-        }
         HandheldPoses.Held held = MusicianPoses.prepare(maid, state);
+        state.setRenderData(CARRIED, null);
+        if (state.modelType != ModelType.SIMPLE_BEDROCK && state.getRenderData(MusicianPoses.MUSICIAN) == null
+            && maid.getMainHandItem().getItem() instanceof dev.starbloom.orchestra.music.HandheldInstrumentItem item) {
+            // GeckoLib：不在琴凳上也拿着手持乐器时，默认动作（hold_mainhand#…）照样把它端在演奏的位置，乐器就画在那里（不拉弓、不按键）
+            held = HandheldPoses.heldFor(item.kind(), maid, 0);
+            state.rightHandItemState.clear();
+            state.leftHandItemState.clear();
+            state.setRenderData(CARRIED, item.kind());
+        }
         state.setRenderData(HandheldPoses.HELD, held);
-        if (state.getRenderData(MusicianPoses.MUSICIAN) == null) return;
+        if (state.modelType != ModelType.SIMPLE_BEDROCK || state.getRenderData(MusicianPoses.MUSICIAN) == null) return;
         List<IAnimation<EntityMaidRenderState>> animations = new ArrayList<>(state.animations);
         animations.add(POSE);
         state.animations = animations;
@@ -89,6 +98,10 @@ public final class MaidMusicians {
 
     private static void legacyLayer(AddMaidLayerEvent.Legacy event) {
         event.getRenderer().addLayer(new Layer(event.getRenderer()));
+    }
+
+    private static void geckoLayer(AddMaidLayerEvent.Gecko event) {
+        event.getRenderer().addLayer(new GeckoLayer());
     }
 
     private static void geckoClips(DefaultGeckoAnimationEvent event) {
@@ -290,6 +303,176 @@ public final class MaidMusicians {
             item.submit(pose, collector, light, OverlayTexture.NO_OVERLAY, state.outlineColor);
             pose.popPose();
         }
+    }
+
+    // —— GeckoLib 模型 ——
+
+    /** GeckoLib 女仆不在琴凳、工位上，手里拿着的手持乐器（见 {@link #prepare}）。 */
+    private static final net.minecraft.util.context.ContextKey<dev.starbloom.orchestra.music.InstrumentKind> CARRIED =
+        new net.minecraft.util.context.ContextKey<>(StarbloomOrchestra.id("maid_carried_instrument"));
+
+    /**
+     * 这一帧 GeckoLib 女仆的手和头（女仆模组的动画算完之后），都在层的坐标里、按模型像素：
+     * left / right 是两只手的挂点；neck 是头骨的支点，head 是头骨的转动（看头朝哪）。
+     */
+    private record Anchors(Vector3f left, Vector3f right, Vector3f neck, org.joml.Matrix3f head) {
+        static @Nullable Anchors of(com.github.tartaricacid.touhoulittlemaid.client.renderer.entity.gecko.GeckoMaidRenderData data, PoseStack pose) {
+            var state = data.modelState;
+            if (state == null) return null;
+            Matrix4f inv = new Matrix4f(pose.last().pose()).invert();
+            Vector3f left = locator(state, com.github.tartaricacid.touhoulittlemaid.geckolib3.geo.render.built.GeoLocatorType.LEFT_HAND, pose, inv);
+            Vector3f right = locator(state, com.github.tartaricacid.touhoulittlemaid.geckolib3.geo.render.built.GeoLocatorType.RIGHT_HAND, pose, inv);
+            Matrix4f[] head = new Matrix4f[1];
+            Vector3f[] pivot = new Vector3f[1];
+            state.visitRenderBones(pose.last(), (bone, p) -> {
+                if (head[0] == null && bone.name().equals("Head")) {
+                    head[0] = new Matrix4f(inv).mul(p.pose());
+                    pivot[0] = new Vector3f(bone.pivot());
+                }
+            });
+            if (left == null || right == null || head[0] == null) return null;
+            Vector3f neck = head[0].transformPosition(new Vector3f(pivot[0]).div(16)).mul(16);
+            return new Anchors(left, right, neck, head[0].get3x3(new org.joml.Matrix3f()));
+        }
+
+        private static @Nullable Vector3f locator(com.github.tartaricacid.touhoulittlemaid.geckolib3.geo.animated.GeoModelState state,
+                                                  com.github.tartaricacid.touhoulittlemaid.geckolib3.geo.render.built.GeoLocatorType type,
+                                                  PoseStack pose, Matrix4f inv) {
+            Vector3f[] out = new Vector3f[1];
+            state.visitLocatorGroup(type, pose, p -> {
+                if (out[0] == null) out[0] = new Matrix4f(inv).mul(p.last().pose()).transformPosition(new Vector3f()).mul(16);
+            });
+            return out[0];
+        }
+    }
+
+    /**
+     * GeckoLib 模型的乐器、琴弓、琴槌：女仆模组在别的线程里按 {@code maid_musician.animation.json} 的默认动作算好骨骼，
+     * 这一层在那之后按手的挂点和头骨把它们画上去（{@link AddMaidLayerEvent.Gecko}）。
+     */
+    private static final class GeckoLayer implements com.github.tartaricacid.touhoulittlemaid.geckolib3.geo.GeoLayerRenderer<EntityMaidRenderState,
+        com.github.tartaricacid.touhoulittlemaid.client.renderer.entity.gecko.GeckoMaidRenderData> {
+        @Override
+        public void submit(SubmitNodeCollector collector, PoseStack pose, EntityMaidRenderState state,
+                           com.github.tartaricacid.touhoulittlemaid.client.renderer.entity.gecko.GeckoMaidRenderData data,
+                           net.minecraft.client.renderer.state.level.CameraRenderState camera) {
+            HandheldPoses.Held held = state.getRenderData(HandheldPoses.HELD);
+            MusicianPoses.Musician m = state.getRenderData(MusicianPoses.MUSICIAN);
+            var carried = state.getRenderData(CARRIED);
+            if (held == null || (m == null && carried == null) || state.isInvisible || state.modelType == ModelType.SIMPLE_BEDROCK) return;
+            Anchors a = Anchors.of(data, pose);
+            if (a == null) return;
+            int light = state.lightCoords, outline = state.outlineColor;
+            if (m == null) {
+                handheld(pose, collector, light, outline, carried, a, held);
+                return;
+            }
+            // 层的坐标里 1 个模型像素在世界里有多大（女仆模型按 render_entity_scale 缩放过）
+            float scale = (float) Math.cbrt(pose.last().pose().determinant3x3());
+            if (!(scale > 1e-4f)) return;
+            switch (m.mode()) {
+                case HANDHELD -> handheld(pose, collector, light, outline, m.kind(), a, held);
+                case BOWED -> {
+                    if (held.bow() == null) return;
+                    // 弓根在右手，弓杆从琴弦上弓毛该压的那一点过（同玩家，HeldRig.seatedBlock）
+                    Vector3f contact = toLayer(HeldRig.stringContact(m.kind()), m.feet(), scale);
+                    draw(pose, collector, light, outline, span(a.right(), contact, BOW_FROG, BOW_TIP, BOW_HAIR, FORWARD,
+                        HeldRig.bowScale(m.kind()), false), held.bow());
+                }
+                case MALLETS -> {
+                    if (held.bow() == null) return;
+                    for (boolean left : new boolean[]{true, false}) {
+                        Vector3f target = left ? m.left() : m.right();
+                        if (target == null) continue;
+                        draw(pose, collector, light, outline, HeldRig.along(left ? a.left() : a.right(), toLayer(target, m.feet(), scale),
+                            StationPoses.toolGrip(m.kind()), StationPoses.toolHead(m.kind())), held.bow());
+                    }
+                }
+                default -> { }
+            }
+        }
+    }
+
+    // 层的坐标（模型像素）：x 向右、y 向上、z 向后（脸朝 -z），原点在骑着的座位上、同演奏者的方块像素只差双脚的位置
+    private static final Vector3f UP = new Vector3f(0, 1, 0), FORWARD = new Vector3f(0, 0, -1), RIGHT = new Vector3f(1, 0, 0);
+    /** 琴弓（物品像素）：弓根、弓尖方向上的一点、弓毛那一侧（同 HeldRig 里的弓）。 */
+    private static final Vector3f BOW_FROG = new Vector3f(8.1f, 1.8f, 8), BOW_TIP = new Vector3f(8.1f, 16, 8), BOW_HAIR = new Vector3f(1, 0, 0);
+
+    /** 演奏者坐标（方块像素）→ 层的坐标：去掉双脚的位置，按模型的缩放换算。 */
+    private static Vector3f toLayer(Vector3f block, Vector3f feet, float scale) {
+        return new Vector3f(block).sub(feet).div(scale);
+    }
+
+    /** 嘴（吹口、号嘴贴着的地方）、下巴偏左（小提琴的腮托）：头骨支点往上、往前，跟着头转。 */
+    private static Vector3f onHead(Anchors a, float x, float y, float z) {
+        return a.head().transform(new Vector3f(x, y, z)).add(a.neck());
+    }
+
+    /** 手持乐器：两头各对着一个点（嘴或下巴、某只手），物品的某一面尽量朝着给定的方向。 */
+    private static void handheld(PoseStack pose, SubmitNodeCollector collector, int light, int outline, dev.starbloom.orchestra.music.InstrumentKind kind,
+                                 Anchors a, HandheldPoses.Held held) {
+        if (held.instrument() == null) return;
+        Vector3f mouth = onHead(a, 0, 2.2f, -3.6f);
+        Matrix4f body;
+        switch (kind) {
+            case VIOLIN, VIOLA -> {
+                // 腮托在下巴左边，琴颈在托琴的左手里；琴面朝上、往右（拉弓那边）偏 15°
+                float scale = kind == dev.starbloom.orchestra.music.InstrumentKind.VIOLA ? 0.75f : 0.65f;
+                Vector3f roll = new Vector3f(UP).add(new Vector3f(RIGHT).mul(0.27f));
+                body = span(onHead(a, -1.2f, 0.8f, -3.0f), a.left(), new Vector3f(8, 1, 9), new Vector3f(8, 13, 11), new Vector3f(0, 0, -1), roll, scale, true);
+                if (held.bow() != null) {
+                    Vector3f contact = body.transformPosition(new Vector3f(0, 5 - 8, 6.4f - 8));
+                    Vector3f back = body.transformDirection(new Vector3f(0, 0, 1)).normalize();
+                    draw(pose, collector, light, outline, span(a.right(), contact, BOW_FROG, BOW_TIP, BOW_HAIR, back, scale, false), held.bow());
+                }
+            }
+            // 吹孔在嘴边，笛身伸向右手；按键那面朝上
+            case FLUTE -> body = span(mouth, a.right(), new Vector3f(2.8f, 8, 8), new Vector3f(11.5f, 8, 8), new Vector3f(0, 1, 0), UP, 0.75f, true);
+            // 哨片含在嘴里，管身往下伸到下面那只（右）手；按键那面朝前
+            case OBOE -> body = span(mouth, a.right(), new Vector3f(8, 15.6f, 8), new Vector3f(8, 5, 8), new Vector3f(0, 0, 1),
+                new Vector3f(FORWARD).negate(), 0.72f, true);
+            // 管靴在右手（胯前），管身斜着伸到左手
+            case BASSOON -> body = span(a.right(), a.left(), new Vector3f(9.4f, 0.5f, 10.6f), new Vector3f(6.6f, 7.5f, 10.6f), new Vector3f(0, 0, 1),
+                new Vector3f(FORWARD).negate(), 0.9f, true);
+            // 号嘴贴着嘴，号身朝前略往下
+            default -> body = span(mouth, new Vector3f(FORWARD).mul(10).add(mouth).sub(0, 1.2f, 0), new Vector3f(0.4f, 9, 8), new Vector3f(7.4f, 9, 8),
+                new Vector3f(0, 1, 0), UP, 0.65f, false);
+        }
+        draw(pose, collector, light, outline, body, held.instrument());
+    }
+
+    /**
+     * 物品像素里的 from 点放到 p，from→to 的方向指向 q，物品的 up 轴尽量朝 worldUp；返回模型像素里的摆放（同 HeldRig 的写法：
+     * 作用在以 8 为中心的物品像素上）。fit 为真时按 p 到 q 的距离把物品放大缩小一点（0.85–1.25 倍），两头正好落在两个点上。
+     */
+    private static Matrix4f span(Vector3f p, Vector3f q, Vector3f from, Vector3f to, Vector3f up, Vector3f worldUp, float scale, boolean fit) {
+        Vector3f ia = new Vector3f(to).sub(from);
+        float length = ia.length();
+        ia.normalize();
+        Vector3f iu = new Vector3f(up).sub(new Vector3f(ia).mul(ia.dot(up))).normalize();
+        Vector3f ic = new Vector3f(ia).cross(iu);
+        Vector3f wa = new Vector3f(q).sub(p);
+        float distance = wa.length();
+        if (distance < 1e-4f) wa.set(FORWARD);
+        wa.normalize();
+        Vector3f wu = new Vector3f(worldUp).sub(new Vector3f(wa).mul(wa.dot(worldUp)));
+        if (wu.lengthSquared() < 1e-6f) wu.set(Math.abs(wa.y) > 0.9f ? FORWARD : UP).sub(new Vector3f(wa).mul(wa.dot(Math.abs(wa.y) > 0.9f ? FORWARD : UP)));
+        wu.normalize();
+        Vector3f wc = new Vector3f(wa).cross(wu);
+        org.joml.Matrix3f item = new org.joml.Matrix3f(ia, iu, ic), world = new org.joml.Matrix3f(wa, wu, wc);
+        org.joml.Matrix3f r = world.mul(item.transpose());
+        if (fit && length > 1e-4f) scale *= Math.max(0.85f, Math.min(1.25f, distance / (length * scale)));
+        return new Matrix4f().translate(p).mul(new Matrix4f().set(r)).scale(scale).translate(8 - from.x, 8 - from.y, 8 - from.z);
+    }
+
+    /** 画在层的坐标（模型像素）里。 */
+    private static void draw(PoseStack pose, SubmitNodeCollector collector, int light, int outline, Matrix4f pixels, ItemStackRenderState item) {
+        pose.pushPose();
+        pose.scale(1 / 16f, 1 / 16f, 1 / 16f);
+        pose.mulPose(pixels);
+        pose.scale(16, 16, 16);
+        item.submit(pose, collector, light, OverlayTexture.NO_OVERLAY, outline);
+        pose.popPose();
     }
 
     /** 女仆模组找不到部件时给的空部件。 */

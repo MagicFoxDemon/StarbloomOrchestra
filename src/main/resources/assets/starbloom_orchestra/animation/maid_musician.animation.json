@@ -46,6 +46,56 @@
 				"LeftLeg": {"rotation": [0, -4, 0]},
 				"RightLeg": {"rotation": [0, 4, 0]}
 			}
+		},
+		"hold_mainhand#starbloom_orchestra:maid_pose/violin": {
+			"loop": true,
+			"animation_length": 1.5,
+			"bones": {
+				"LeftArm": {"rotation": [-70, -10, 0]},
+				"LeftForeArm": {"rotation": [-40, 0, 0]},
+				"RightArm": {"rotation": [-65, "35+ysm.is_passenger*math.sin(query.anim_time*240)*14", 0]},
+				"RightForeArm": {"rotation": ["-45+ysm.is_passenger*math.sin(query.anim_time*240)*12", 0, 0]}
+			}
+		},
+		"hold_mainhand#starbloom_orchestra:maid_pose/flute": {
+			"loop": true,
+			"animation_length": 2,
+			"bones": {
+				"LeftArm": {"rotation": [-80, 35, 0]},
+				"LeftForeArm": {"rotation": [-55, 0, 0]},
+				"RightArm": {"rotation": [-75, 45, 0]},
+				"RightForeArm": {"rotation": [-45, 0, 0]}
+			}
+		},
+		"hold_mainhand#starbloom_orchestra:maid_pose/oboe": {
+			"loop": true,
+			"animation_length": 2,
+			"bones": {
+				"LeftArm": {"rotation": [-45, 20, 4]},
+				"LeftForeArm": {"rotation": [-85, 0, 0]},
+				"RightArm": {"rotation": [-40, -20, -4]},
+				"RightForeArm": {"rotation": [-65, 0, 0]}
+			}
+		},
+		"hold_mainhand#starbloom_orchestra:maid_pose/bassoon": {
+			"loop": true,
+			"animation_length": 2,
+			"bones": {
+				"LeftArm": {"rotation": [-40, 15, 6]},
+				"LeftForeArm": {"rotation": [-75, 0, 0]},
+				"RightArm": {"rotation": [-15, -6, -8]},
+				"RightForeArm": {"rotation": [-35, 0, 0]}
+			}
+		},
+		"hold_mainhand#starbloom_orchestra:maid_pose/trumpet": {
+			"loop": true,
+			"animation_length": 2,
+			"bones": {
+				"LeftArm": {"rotation": [-82, 12, 4]},
+				"LeftForeArm": {"rotation": [-40, 0, 0]},
+				"RightArm": {"rotation": [-88, -12, -4]},
+				"RightForeArm": {"rotation": [-40, 0, 0]}
+			}
 		}
 	}
 }
