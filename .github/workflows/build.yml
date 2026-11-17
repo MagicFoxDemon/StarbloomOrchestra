@@ -26,6 +26,18 @@ jobs:
           java-version: '25'
           cache: gradle
 
+      # Ponder 和 catnip：官方发布的 1.0.52 在 26.1 上用不了，从上游固定的提交编译到 libs/ponder-maven
+      # （tools/ponder_build.py，docs/PONDER.md 第 4 节）；脚本不变（提交不变）就用缓存
+      - uses: actions/cache@v6
+        id: ponder
+        with:
+          path: libs/ponder-maven
+          key: ponder-${{ hashFiles('tools/ponder_build.py') }}
+
+      - name: Build Ponder from upstream
+        if: steps.ponder.outputs.cache-hit != 'true'
+        run: python3 tools/ponder_build.py
+
       # 车万女仆没有发布到 Maven，CI 里没有它的 jar：女仆的兼容代码（MaidMusicians）不参与编译，其余照常
       - name: Test and build
         run: sh ./gradlew test build

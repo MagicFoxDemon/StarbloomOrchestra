@@ -29,6 +29,15 @@ versionRange="[26.1.2]"
 ordering="NONE"
 side="BOTH"
 
+# 「思索」（按住 W 看图文讲解）：Ponder 和它要的 catnip 打包在本模组的 jar 里，不用另装；整合包里别的模组带着更新的版本时用那一份。
+# 官方的 1.0.52 在 26.1 上用不了（进不了世界、打不开思索界面），本模组带的是从上游编译的 1.0.52.1（docs/PONDER.md 第 4 节）
+[[dependencies.starbloom_orchestra]]
+modId="ponder"
+type="required"
+versionRange="[1.0.52.1+mc26.1.2,)"
+ordering="NONE"
+side="BOTH"
+
 [[dependencies.starbloom_orchestra]]
 modId="touhou_little_maid"
 type="optional"

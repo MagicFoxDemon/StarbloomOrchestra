@@ -21,6 +21,8 @@
   一定要带着它编译。
 - 乐器原先在附属里，`LegacyIds` 给每个注册项加了 `logos_dimension:<名字>` 的别名（世界测试 `legacy_addon_ids_resolve`）；
   新加的方块、物品不用管这件事。
-- 测试必须明确区分单元、世界和实际客户端检查；没测试过的光影包不能声称已验证。客户端场景（`client/music/*Views`，LDLib2 的
-  `DEV_ONLY` 场景）只在开发环境里跑，游戏本身不需要 LDLib2。
+- 「思索」（按住 W）的场景按 [docs/PONDER.md](docs/PONDER.md)：布置写在 `ponder/PonderLayouts`，世界测试 `ponder_layouts` 核对场景里讲的事、
+  导出蓝图；改了琴凳、工位、乐谱架、管风琴、指挥台的玩法，要回去改对应的场景和文字。
+- 测试必须明确区分单元、世界和实际客户端检查；没测试过的光影包不能声称已验证。客户端场景（`client/music/*Views`、
+  `client/ponder/PonderViews`，LDLib2 的 `DEV_ONLY` 场景）只在开发环境里跑，游戏本身不需要 LDLib2。
 - 不提交凭据、运行目录、存档、构建缓存、第三方模组 JAR 或光影包。
