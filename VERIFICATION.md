@@ -3,6 +3,28 @@
 本仓库从 Logos 附属「炼金釜」拆出来之前的验证记录在附属仓库的
 [VERIFICATION.md](https://github.com/wushuowei1145/Logos-Spellwrought-Expanse/blob/main/VERIFICATION.md)（乐器、乐团各节）。
 
+## 思索（Ponder）：按住 W 看乐器怎么摆
+
+2026-11-18：分支 `feat/ponder-scenes`，基于本仓库 main `b257282`。七个场景（琴凳归哪件乐器、乐谱架与手持乐器、大提琴与低音提琴、
+钟琴管钟与鼓、定音鼓与双人琴凳、搭一台管风琴、指挥台）和三个标签，做法见 [docs/PONDER.md](docs/PONDER.md)。官方发布的 Ponder / catnip 1.0.52
+在 26.1 上用不了（进不了世界、打不开思索界面），带的是 `tools/ponder_build.py` 从上游提交 `ef65d6ed` 编译的 1.0.52.1（第 4 节）。
+
+| 层级 | 结果 |
+|---|---|
+| 编译 Ponder | `tools/ponder_build.py` 在本机从上游编译成功（2 分 49 秒），两个 jar 的版本号和清单里记的上游提交（干净的 `ef65d6ed`）核对过；版本号用 NeoForge 加载器的 Maven 比较核对过：1.0.52.1 高于 1.0.52、低于 1.0.53，依赖范围 `[1.0.52.1+mc26.1.2,)` 不含 1.0.52 |
+| 单元 | 82 个，0 失败，1 个跳过（管风琴试听，要 `-PorganDemo`） |
+| 世界测试 | 全部 35 个通过。新的 `ponder_layouts`：七份布置在世界里像玩家那样放一遍，核对场景讲的事——琴键前的琴凳关联钢琴、旁边的不关联，双人琴凳关联钢琴，竖琴琴后的琴凳关联竖琴；乐谱架对着坐着拉小提琴的乐手，架上放着乐器时不再管琴凳；提琴的人在琴后、和琴同向；钟琴、管钟、小军鼓的工位在前面一格且空着，大鼓的鼓手在西边；双人琴凳对着两面鼓，单人琴凳只对着前面那一面；管风琴认出 9 个风箱、13 格锡管、6 格木管、2 个号角管，叠起来的音管上下形状不同；指挥台两格宽。`-PponderExport` 两次导出的蓝图逐字节一致（指挥台记的世界坐标换成了蓝图坐标）。新的 `command_tree_syncs`：命令树里每个参数的类型都注册过——用官方 1.0.52 时它列出 catnip 的三个参数，换成自编译版后通过 |
+| 实际客户端 | `ponder_scenes_ui` 1/1，43/43 项检查：Ponder 自己生成的 51 个文本键中英文都有、英文和场景代码一字不差；英文、中文各把七个场景经按住 W 的同一个入口（`ScreenOpener.transitionTo`）打开，场景自己往下放、关键帧数对得上；每个关键帧和刚打开时都截了图，看过：标题、标签图标、时间轴和按钮都在，乐器的朝向、描边的格子、文字框的位置都对，管风琴的音管在画面里 |
+| 未验证 | 真的按住 W（测试用的是同一个入口，没有真按键）；思索首页的标签索引没截图；和机械动力一起装；局域网、专用服务器（官方 1.0.52 的命令树问题出在服务端，世界测试就是在服务端跑的）；CI 里编译 Ponder 那一步（开 PR 后看）；光影包 |
+
+```text
+uv run --no-project python tools/ponder_build.py
+./gradlew test
+./gradlew runGameTestServer
+./gradlew runGameTestServer -PorchestraTests=starbloom_orchestra:ponder_layouts -PponderExport
+./gradlew runClient -PldTest=ponder_scenes_ui -PldTestHeadless -PldTestWindow=1600x900
+```
+
 ## GeckoLib 女仆用上乐器：端琴拉弓、乐器画在手上
 
 2026-11-17：分支 `feat/gecko-maid-playing`，基于本仓库 main `ca57e94`。这是附属里没来得及提交的分支（附属的 `feat/gecko-maid-playing`，

@@ -29,6 +29,13 @@
 | [Caecilia](https://github.com/alessonqueirozdev-hub/Caecilia) | Alesson Queiroz 与贡献者 | Apache-2.0 | 起音快慢随音高、簧管起音滑音、每根管确定的小差异、簧管共振峰 |
 | [zita-rev1](https://kokkinizita.linuxaudio.org/linuxaudio/zita-rev1-doc/quickguide.html) | Fons Adriaensen | GPL | 混响参数的定义（预延迟、低频 / 中频两段混响时间与分频点、「混响时间减半处」的高频阻尼）；网络结构按 Jot 的反馈延迟网络文献自写 |
 
+## 思索（Ponder）
+
+「按住 W 思索」的图文讲解（`client/ponder/`，[docs/PONDER.md](docs/PONDER.md)）用的是 [Ponder](https://github.com/Creators-of-Create/Ponder)
+和它要的 catnip，作者 simibubi、Pepper、zelophed（Creators of Create），**MIT**。官方发布的 1.0.52 在 26.1 上用不了，
+本模组带的是从上游 mc26.1/dev 分支的提交 `ef65d6ed` 原样编译的（`tools/ponder_build.py`，版本号记作 1.0.52.1+mc26.1.2，源码没改），
+打包在本模组的 jar 里（jar-in-jar，各自的 `LICENSE` 随 jar 一起）；场景、蓝图和文字是本模组自己做的。
+
 ## 车万女仆（Touhou Little Maid）
 
 女仆的演奏姿势（`client/music/MaidMusicians`）调用车万女仆的公开接口（事件、模型类），不复制它的代码或美术；
