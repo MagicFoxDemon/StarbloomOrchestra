@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " PS",
+    "PSP",
+    "SP "
+  ],
+  "key": {
+    "P": "minecraft:mangrove_planks",
+    "S": "minecraft:string"
+  },
+  "result": {
+    "id": "starbloom_orchestra:hexen_viola",
+    "count": 1
+  }
+}

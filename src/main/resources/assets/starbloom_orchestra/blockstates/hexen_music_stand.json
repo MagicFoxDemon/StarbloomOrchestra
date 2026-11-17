@@ -1,0 +1,109 @@
+{
+  "variants": {
+    "facing=north,holds=none": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_none"
+    },
+    "facing=north,holds=violin": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_violin"
+    },
+    "facing=north,holds=flute": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_flute"
+    },
+    "facing=north,holds=trumpet": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_trumpet"
+    },
+    "facing=north,holds=viola": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_viola"
+    },
+    "facing=north,holds=oboe": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_oboe"
+    },
+    "facing=north,holds=bassoon": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_bassoon"
+    },
+    "facing=east,holds=none": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_none",
+      "y": 90
+    },
+    "facing=east,holds=violin": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_violin",
+      "y": 90
+    },
+    "facing=east,holds=flute": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_flute",
+      "y": 90
+    },
+    "facing=east,holds=trumpet": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_trumpet",
+      "y": 90
+    },
+    "facing=east,holds=viola": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_viola",
+      "y": 90
+    },
+    "facing=east,holds=oboe": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_oboe",
+      "y": 90
+    },
+    "facing=east,holds=bassoon": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_bassoon",
+      "y": 90
+    },
+    "facing=south,holds=none": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_none",
+      "y": 180
+    },
+    "facing=south,holds=violin": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_violin",
+      "y": 180
+    },
+    "facing=south,holds=flute": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_flute",
+      "y": 180
+    },
+    "facing=south,holds=trumpet": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_trumpet",
+      "y": 180
+    },
+    "facing=south,holds=viola": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_viola",
+      "y": 180
+    },
+    "facing=south,holds=oboe": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_oboe",
+      "y": 180
+    },
+    "facing=south,holds=bassoon": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_bassoon",
+      "y": 180
+    },
+    "facing=west,holds=none": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_none",
+      "y": 270
+    },
+    "facing=west,holds=violin": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_violin",
+      "y": 270
+    },
+    "facing=west,holds=flute": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_flute",
+      "y": 270
+    },
+    "facing=west,holds=trumpet": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_trumpet",
+      "y": 270
+    },
+    "facing=west,holds=viola": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_viola",
+      "y": 270
+    },
+    "facing=west,holds=oboe": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_oboe",
+      "y": 270
+    },
+    "facing=west,holds=bassoon": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_bassoon",
+      "y": 270
+    }
+  }
+}

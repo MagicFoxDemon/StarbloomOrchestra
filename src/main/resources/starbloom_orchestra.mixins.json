@@ -1,0 +1,9 @@
+{
+  "required": true,
+  "package": "dev.starbloom.orchestra.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "mixins": [],
+  "client": ["OrganBufferMixin", "SoundBufferLoopMixin", "SoundManagerAccess", "SoundEngineAccess", "MusicianModelMixin", "MusicianDrawMixin",
+             "LeashLinkClearMixin", "PartOutlineMixin"],
+  "injectors": {"defaultRequire": 1}
+}

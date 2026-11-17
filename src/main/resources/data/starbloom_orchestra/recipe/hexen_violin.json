@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " PS",
+    "PSP",
+    "SP "
+  ],
+  "key": {
+    "P": "minecraft:jungle_planks",
+    "S": "minecraft:string"
+  },
+  "result": {
+    "id": "starbloom_orchestra:hexen_violin",
+    "count": 1
+  }
+}

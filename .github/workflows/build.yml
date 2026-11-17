@@ -1,0 +1,45 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: gradle
+
+      # 车万女仆没有发布到 Maven，CI 里没有它的 jar：女仆的兼容代码（MaidMusicians）不参与编译，其余照常
+      - name: Test and build
+        run: sh ./gradlew test build
+
+      - name: Run GameTests
+        run: sh ./gradlew runGameTestServer
+
+      - name: Upload test reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-reports
+          path: |
+            build/reports/tests/
+            build/gametest-results.xml
+          if-no-files-found: ignore
+          retention-days: 7

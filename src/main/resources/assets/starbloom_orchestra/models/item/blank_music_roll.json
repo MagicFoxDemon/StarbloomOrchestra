@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "starbloom_orchestra:item/blank_music_roll"
+  }
+}

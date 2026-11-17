@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "starbloom_orchestra:block/hexen_bass_drum",
+      "y": 90
+    },
+    "facing=east": {
+      "model": "starbloom_orchestra:block/hexen_bass_drum",
+      "y": 180
+    },
+    "facing=south": {
+      "model": "starbloom_orchestra:block/hexen_bass_drum",
+      "y": 270
+    },
+    "facing=west": {
+      "model": "starbloom_orchestra:block/hexen_bass_drum"
+    }
+  }
+}

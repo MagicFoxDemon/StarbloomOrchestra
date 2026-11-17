@@ -1,0 +1,31 @@
+{
+  "variants": {
+    "facing=north,half=lower": {
+      "model": "starbloom_orchestra:block/hexen_double_bass"
+    },
+    "facing=north,half=upper": {
+      "model": "starbloom_orchestra:block/hexen_double_bass_part"
+    },
+    "facing=east,half=lower": {
+      "model": "starbloom_orchestra:block/hexen_double_bass",
+      "y": 90
+    },
+    "facing=east,half=upper": {
+      "model": "starbloom_orchestra:block/hexen_double_bass_part"
+    },
+    "facing=south,half=lower": {
+      "model": "starbloom_orchestra:block/hexen_double_bass",
+      "y": 180
+    },
+    "facing=south,half=upper": {
+      "model": "starbloom_orchestra:block/hexen_double_bass_part"
+    },
+    "facing=west,half=lower": {
+      "model": "starbloom_orchestra:block/hexen_double_bass",
+      "y": 270
+    },
+    "facing=west,half=upper": {
+      "model": "starbloom_orchestra:block/hexen_double_bass_part"
+    }
+  }
+}

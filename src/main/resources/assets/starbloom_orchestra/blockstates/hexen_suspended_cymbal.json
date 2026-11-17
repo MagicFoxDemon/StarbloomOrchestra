@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "starbloom_orchestra:block/hexen_suspended_cymbal"
+    },
+    "facing=east": {
+      "model": "starbloom_orchestra:block/hexen_suspended_cymbal",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "starbloom_orchestra:block/hexen_suspended_cymbal",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "starbloom_orchestra:block/hexen_suspended_cymbal",
+      "y": 270
+    }
+  }
+}
