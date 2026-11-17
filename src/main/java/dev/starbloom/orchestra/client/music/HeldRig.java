@@ -218,6 +218,17 @@ public final class HeldRig {
         return p;
     }
 
+    /** 大提琴、低音提琴弓毛压在弦上的点（朝北放置的方块模型像素，同 {@link #seatedBlock}），GeckoLib 女仆画琴弓用。 */
+    static Vector3f stringContact(InstrumentKind kind) {
+        Layout l = kind == InstrumentKind.DOUBLE_BASS ? BASS : CELLO;
+        return onInstrument(l, new Matrix3f().rotationZYX(l.tilt() * DEG, 0, l.lean() * DEG), l.contact());
+    }
+
+    /** 大提琴、低音提琴的弓画多大（同 {@link #seatedBlock}）。 */
+    static float bowScale(InstrumentKind kind) {
+        return (kind == InstrumentKind.DOUBLE_BASS ? BASS : CELLO).bowScale();
+    }
+
     private static Vector3f onInstrument(Layout l, Matrix3f r, Vector3f local) {
         return r.transform(new Vector3f(local)).add(l.endpin());
     }
