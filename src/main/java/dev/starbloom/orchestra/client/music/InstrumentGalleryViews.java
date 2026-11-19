@@ -52,13 +52,15 @@ public class InstrumentGalleryViews implements UIScenario {
             Instruments.CONCERT_HARP_ITEM, Instruments.TUBULAR_BELLS_ITEM, Instruments.GLOCKENSPIEL_ITEM, Instruments.TIMPANI_ITEM,
             Instruments.CELLO_ITEM, Instruments.DOUBLE_BASS_ITEM, Instruments.VIOLIN, Instruments.VIOLA,
             Instruments.BASS_DRUM_ITEM, Instruments.SNARE_DRUM_ITEM, Instruments.SUSPENDED_CYMBAL_ITEM, Instruments.TRIANGLE_ITEM,
-            Instruments.FLUTE, Instruments.OBOE, Instruments.BASSOON, Instruments.TRUMPET,
+            Instruments.FLUTE, Instruments.OBOE, Instruments.BASSOON, Instruments.TRUMPET, Instruments.SHINOBUE, Instruments.KAGURA_SUZU, Instruments.SHAKUHACHI,
             Instruments.MUSIC_STAND_ITEM, Orchestra.PODIUM_ITEM, Orchestra.BATON, Benches.BENCH_ITEM, Benches.DUET_ITEM,
             Instruments.BLANK_ROLL, Instruments.MUSIC_ROLL_ITEM);
     }
 
     /** 第一人称拿着看的几件：大件方块、管风琴零件、手持乐器。 */
-    private static final int[] HELD = {0, 4, 5, 8, 16, 14, 18, 23, 24};
+    private static final int[] HELD = {0, 4, 5, 8, 16, 14, 18, 23, 27};
+    /** 和乐器（items() 里的下标）：快捷栏放不下，最后另拿着看。 */
+    private static final int[] WAGAKKI = {24, 25, 26};
 
     @Override
     public void configure(ScenarioOptions o) {
@@ -146,8 +148,9 @@ public class InstrumentGalleryViews implements UIScenario {
                 put(level, ORIGIN.offset(-15, 1, -6), Instruments.CELLO.get());
                 put(level, ORIGIN.offset(-12, 1, -6), Instruments.DOUBLE_BASS.get());
                 for (int i = 0; i < STANDS.length; i++) {
-                    put(level, ORIGIN.offset(-9 + 2 * i, 1, -6),
-                        facing(Instruments.MUSIC_STAND.get().defaultBlockState()).setValue(MusicStandBlock.HOLDS, STANDS[i]));
+                    // 前七个（空的、五件西洋手持乐器）在第二排；和乐器的两个放在第四排打击乐的右边
+                    BlockPos at = i < 7 ? ORIGIN.offset(-9 + 2 * i, 1, -6) : ORIGIN.offset(6 + 2 * (i - 7), 1, -16);
+                    put(level, at, facing(Instruments.MUSIC_STAND.get().defaultBlockState()).setValue(MusicStandBlock.HOLDS, STANDS[i]));
                 }
                 put(level, ORIGIN.offset(7, 1, -6), Benches.BENCH.get());
                 put(level, ORIGIN.offset(10, 1, -6), Benches.DUET.get());
@@ -191,6 +194,7 @@ public class InstrumentGalleryViews implements UIScenario {
         shot(s, "percussion_row", -1.0, 3.0, -10.4, 180f, 18f);
         shot(s, "percussion_close", -4.5, 2.2, -13.8, 200f, 24f);
         shot(s, "percussion_triangle", 4.8, 2.0, -13.6, 160f, 22f);
+        shot(s, "wagakki_stands", 8.0, 2.0, -13.4, 180f, 20f);
         shot(s, "back", 0, 7, -22, 0f, 22f);
         shot(s, "back_keyboards", -9, 2.8, -4.5, 0f, 22f);
         s.step("show the HUD", ctx -> Minecraft.getInstance().options.hideGui = false)
@@ -228,7 +232,15 @@ public class InstrumentGalleryViews implements UIScenario {
             .step("third person front, violin", ctx -> Minecraft.getInstance().player.getInventory().setSelectedSlot(5))
             .ticks(15)
             .screenshot("gallery_third_person_violin")
-            .step("first person", ctx -> Minecraft.getInstance().options.setCameraType(CameraType.FIRST_PERSON))
+            .step("first person", ctx -> Minecraft.getInstance().options.setCameraType(CameraType.FIRST_PERSON));
+        for (int k : WAGAKKI) {
+            final Item item = items().get(k).get();
+            s.server("hold " + item, ctx -> ctx.player().getInventory().setItem(8, new ItemStack(item)))
+                .step("select slot 8 for " + item, ctx -> Minecraft.getInstance().player.getInventory().setSelectedSlot(8))
+                .ticks(12)
+                .screenshot("gallery_held_" + net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item).getPath());
+        }
+        s
             .setGameMode(GameType.CREATIVE)
             .server("drop every item on the floor", ctx -> {
                 ServerLevel level = ctx.server().overworld();

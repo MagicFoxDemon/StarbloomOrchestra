@@ -21,6 +21,15 @@
     "facing=north,plays=bassoon": {
       "model": "starbloom_orchestra:block/starbloom_bench"
     },
+    "facing=north,plays=shinobue": {
+      "model": "starbloom_orchestra:block/starbloom_bench"
+    },
+    "facing=north,plays=kagura_suzu": {
+      "model": "starbloom_orchestra:block/starbloom_bench"
+    },
+    "facing=north,plays=shakuhachi": {
+      "model": "starbloom_orchestra:block/starbloom_bench"
+    },
     "facing=east,plays=none": {
       "model": "starbloom_orchestra:block/starbloom_bench",
       "y": 90
@@ -46,6 +55,18 @@
       "y": 90
     },
     "facing=east,plays=bassoon": {
+      "model": "starbloom_orchestra:block/starbloom_bench",
+      "y": 90
+    },
+    "facing=east,plays=shinobue": {
+      "model": "starbloom_orchestra:block/starbloom_bench",
+      "y": 90
+    },
+    "facing=east,plays=kagura_suzu": {
+      "model": "starbloom_orchestra:block/starbloom_bench",
+      "y": 90
+    },
+    "facing=east,plays=shakuhachi": {
       "model": "starbloom_orchestra:block/starbloom_bench",
       "y": 90
     },
@@ -77,6 +98,18 @@
       "model": "starbloom_orchestra:block/starbloom_bench",
       "y": 180
     },
+    "facing=south,plays=shinobue": {
+      "model": "starbloom_orchestra:block/starbloom_bench",
+      "y": 180
+    },
+    "facing=south,plays=kagura_suzu": {
+      "model": "starbloom_orchestra:block/starbloom_bench",
+      "y": 180
+    },
+    "facing=south,plays=shakuhachi": {
+      "model": "starbloom_orchestra:block/starbloom_bench",
+      "y": 180
+    },
     "facing=west,plays=none": {
       "model": "starbloom_orchestra:block/starbloom_bench",
       "y": 270
@@ -102,6 +135,18 @@
       "y": 270
     },
     "facing=west,plays=bassoon": {
+      "model": "starbloom_orchestra:block/starbloom_bench",
+      "y": 270
+    },
+    "facing=west,plays=shinobue": {
+      "model": "starbloom_orchestra:block/starbloom_bench",
+      "y": 270
+    },
+    "facing=west,plays=kagura_suzu": {
+      "model": "starbloom_orchestra:block/starbloom_bench",
+      "y": 270
+    },
+    "facing=west,plays=shakuhachi": {
       "model": "starbloom_orchestra:block/starbloom_bench",
       "y": 270
     }

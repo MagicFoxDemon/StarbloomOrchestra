@@ -1,0 +1,36 @@
+{
+ "format": 1,
+ "quality": "synth",
+ "source": "synthesized by tools/instrument_samples.py",
+ "range": 40,
+ "zones": [
+  {
+   "file": "instrument/kagura_suzu/k83",
+   "key": 83.0,
+   "lo": 83,
+   "hi": 83,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.4041,
+   "curve": 1.4,
+   "frames": 110250,
+   "release": 1.5
+  },
+  {
+   "file": "instrument/kagura_suzu/k84",
+   "key": 84.0,
+   "lo": 84,
+   "hi": 84,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.3923,
+   "curve": 1.4,
+   "frames": 264600,
+   "release": 0.3,
+   "loop": [
+    132300,
+    264600
+   ]
+  }
+ ]
+}

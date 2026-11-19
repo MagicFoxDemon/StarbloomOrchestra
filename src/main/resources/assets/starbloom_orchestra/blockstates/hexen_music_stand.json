@@ -21,6 +21,15 @@
     "facing=north,holds=bassoon": {
       "model": "starbloom_orchestra:block/hexen_music_stand_bassoon"
     },
+    "facing=north,holds=shinobue": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_shinobue"
+    },
+    "facing=north,holds=kagura_suzu": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_kagura_suzu"
+    },
+    "facing=north,holds=shakuhachi": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_shakuhachi"
+    },
     "facing=east,holds=none": {
       "model": "starbloom_orchestra:block/hexen_music_stand_none",
       "y": 90
@@ -47,6 +56,18 @@
     },
     "facing=east,holds=bassoon": {
       "model": "starbloom_orchestra:block/hexen_music_stand_bassoon",
+      "y": 90
+    },
+    "facing=east,holds=shinobue": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_shinobue",
+      "y": 90
+    },
+    "facing=east,holds=kagura_suzu": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_kagura_suzu",
+      "y": 90
+    },
+    "facing=east,holds=shakuhachi": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_shakuhachi",
       "y": 90
     },
     "facing=south,holds=none": {
@@ -77,6 +98,18 @@
       "model": "starbloom_orchestra:block/hexen_music_stand_bassoon",
       "y": 180
     },
+    "facing=south,holds=shinobue": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_shinobue",
+      "y": 180
+    },
+    "facing=south,holds=kagura_suzu": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_kagura_suzu",
+      "y": 180
+    },
+    "facing=south,holds=shakuhachi": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_shakuhachi",
+      "y": 180
+    },
     "facing=west,holds=none": {
       "model": "starbloom_orchestra:block/hexen_music_stand_none",
       "y": 270
@@ -103,6 +136,18 @@
     },
     "facing=west,holds=bassoon": {
       "model": "starbloom_orchestra:block/hexen_music_stand_bassoon",
+      "y": 270
+    },
+    "facing=west,holds=shinobue": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_shinobue",
+      "y": 270
+    },
+    "facing=west,holds=kagura_suzu": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_kagura_suzu",
+      "y": 270
+    },
+    "facing=west,holds=shakuhachi": {
+      "model": "starbloom_orchestra:block/hexen_music_stand_shakuhachi",
       "y": 270
     }
   }

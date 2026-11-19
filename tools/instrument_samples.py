@@ -13,6 +13,8 @@ assets/starbloom_orchestra/instruments/<乐器>.json（quality = synth）。装�
   所以循环终点正好接上起点。起音只是音量和亮度慢慢推起来，没有噪声冲击（第一版手持乐器像鼓的那一下就是它）。
 - 无音高的打击乐（大鼓、小军鼓、吊镲、三角铁）每个 GM 鼓键合成一个采样（不变调）：鼓皮按模态、镲和三角铁按一大把不谐和的分音
   加噪声，响弦、镲的嘶声用滤波噪声；各键之间的轻重按 DRUM_KEYS 里的电平（踩镲比强音镲轻）。
+- 神乐铃（手持）：十五颗小铃各有几支分音（基音 3.1–3.9 kHz），一振是一百多毫秒里铃子乱碰的十几下再加回摆的一下；
+  连摇是 3 秒里 18 下轻重交替的摇动，按 3 秒的周期排两遍、只循环第二遍，余音绕回开头，接缝处没有断口。
 - 每个采样放大到峰值 -1 dBFS 编码；播放音量按 K 计权响度写进采样表（与录音音源同一套标准，力度 127 时约 -16 dB）。
 - 随机数种子固定、ogg 用固定流序号编码，重复运行字节不变。
 """
@@ -427,6 +429,63 @@ def triangle(key, rng):
     return finish(out, fade_s=0.8 if key == 81 else 0.2)
 
 
+SUZU_LOOP_S = 3.0
+
+
+def _suzu_bells(rng):
+    """十五颗铃（下七、中五、上三）：每颗的基音和几支分音（比、相对振幅、衰减秒数）。"""
+    bells = []
+    for i in range(15):
+        f = rng.uniform(3100.0, 3900.0)
+        parts = [(1.0, 1.0, rng.uniform(0.45, 0.7)), (2.08 + rng.uniform(-0.05, 0.05), 0.32, rng.uniform(0.25, 0.4)),
+                 (2.92 + rng.uniform(-0.06, 0.06), 0.16, rng.uniform(0.15, 0.25)), (4.15 + rng.uniform(-0.1, 0.1), 0.07, 0.12)]
+        bells.append((f, parts))
+    return bells
+
+
+def _suzu_hit(bells, rng, out, at, strength, spread):
+    """一下摇动：每颗铃在 spread 秒里被碰到一两次（先碰的多），把它的分音叠到 out 的 at 处。"""
+    n = len(out)
+    for f, parts in bells:
+        for _ in range(1 + int(rng.random() < 0.45)):
+            t0 = at + rng.exponential(spread / 3)
+            i0 = int(t0 * RATE)
+            if i0 >= n:
+                continue
+            amp = strength * rng.uniform(0.35, 1.0)
+            m = min(n - i0, int(RATE * 1.0))
+            t = np.arange(m) / RATE
+            for ratio, a, t60 in parts:
+                fk = f * ratio
+                if fk > RATE * 0.45:
+                    continue
+                out[i0:i0 + m] += amp * a * np.exp(-6.9 * t / t60) * np.sin(2 * np.pi * fk * t + rng.uniform(0, 2 * np.pi))
+
+
+def kagura_suzu(key, rng):
+    """神乐铃：83 一振（返回信号）；84 连摇（返回 (信号, 循环点)，信号 = 两个 SUZU_LOOP_S 周期，循环第二个）。"""
+    bells = _suzu_bells(rng)
+    if key == 83:
+        out = np.zeros(int(RATE * 2.5))
+        _suzu_hit(bells, rng, out, 0.0, 1.0, 0.12)
+        _suzu_hit(bells, rng, out, 0.27, 0.35, 0.08)     # 铃子回摆
+        out = room(out, rng, length=0.7, wet=0.12, damp=9000.0)
+        return finish(out, fade_s=0.8)
+    loop = int(RATE * SUZU_LOOP_S)
+    out = np.zeros(2 * loop)
+    times = [(i + rng.uniform(-0.08, 0.08)) * SUZU_LOOP_S / 18 for i in range(18)]
+    strengths = [(0.9 if i % 2 == 0 else 0.55) * rng.uniform(0.8, 1.1) for i in range(18)]
+    hits = [(t, a, rng.uniform(0.05, 0.09)) for t, a in zip(times, strengths)]
+    for rep_i in range(2):
+        sub = np.random.default_rng(84)                     # 两个周期用同一串随机数：第二遍和第一遍一模一样
+        for t, a, spread in hits:
+            _suzu_hit(bells, sub, out, rep_i * SUZU_LOOP_S + max(0.0, t), a, spread)
+    out = room(out, np.random.default_rng(85), length=0.6, wet=0.10, damp=9000.0)
+    fade_in = int(RATE * 0.0015)
+    out[:fade_in] *= np.linspace(0.0, 1.0, fade_in)
+    return out, (loop, 2 * loop)
+
+
 # 鼓键 → (合成函数, 相对电平 dB)；同 InstrumentKind 里各件打击乐的键
 DRUM_KEYS = {
     "bass_drum": {35: (bass_drum, 0.0), 36: (bass_drum, 0.0)},
@@ -434,10 +493,13 @@ DRUM_KEYS = {
     "suspended_cymbal": {42: (cymbal, -9.0), 44: (cymbal, -12.0), 46: (cymbal, -6.0), 49: (cymbal, 0.0), 51: (cymbal, -5.0),
                          52: (cymbal, 0.0), 53: (cymbal, -4.0), 55: (cymbal, -3.0), 57: (cymbal, 0.0), 59: (cymbal, -5.0)},
     "triangle": {80: (triangle, -3.0), 81: (triangle, 0.0)},
+    "kagura_suzu": {83: (kagura_suzu, 0.0), 84: (kagura_suzu, -2.0)},
 }
 # 乐器之间的平衡、可闻距离（同 InstrumentKind）
 DRUM_SPEC = {"bass_drum": dict(level=1.0, range=64), "snare_drum": dict(level=-2.0, range=48),
-             "suspended_cymbal": dict(level=-3.0, range=64), "triangle": dict(level=-6.0, range=40)}
+             "suspended_cymbal": dict(level=-3.0, range=64), "triangle": dict(level=-6.0, range=40),
+             # 神乐铃会止音（连摇松手就停）：一振 1.5 秒的淡出比铃声自己散得慢，连摇 0.3 秒收住
+             "kagura_suzu": dict(level=-4.0, range=40, release={83: 1.5, 84: 0.3})}
 
 
 def build_drums(name):
@@ -450,13 +512,21 @@ def build_drums(name):
     for key, (fn, key_level) in DRUM_KEYS[name].items():
         rng = np.random.default_rng(7000 + key)
         sig = fn(key, rng)
-        loud = rec.loudness_db(sig, 0, min(len(sig), int(0.8 * RATE)), 0.4)
+        loop = None
+        if isinstance(sig, tuple):
+            sig, loop = sig
+            loud = rec.loudness_db(sig, loop[0], loop[1], None)
+        else:
+            loud = rec.loudness_db(sig, 0, min(len(sig), int(0.8 * RATE)), 0.4)
         store = 0.891 / (np.max(np.abs(sig)) + 1e-12)
         stored = loud + 20 * math.log10(store)
         gain = min(1.0, 10 ** ((rec.REF + spec["level"] + key_level - stored) / 20))
         rec.encode(sig * store, out_dir / f"k{key}.ogg", 4.0)
-        zones.append({"file": f"instrument/{name}/k{key}", "key": float(key), "lo": key, "hi": key, "vlo": 1, "vhi": 127,
-                      "gain": round(gain, 4), "curve": 1.4, "frames": len(sig), "release": 0.0})
+        zone = {"file": f"instrument/{name}/k{key}", "key": float(key), "lo": key, "hi": key, "vlo": 1, "vhi": 127,
+                "gain": round(gain, 4), "curve": 1.4, "frames": len(sig), "release": spec.get("release", {}).get(key, 0.0)}
+        if loop:
+            zone["loop"] = list(loop)
+        zones.append(zone)
         print(f"{name} k{key} {len(sig) / RATE:.2f} s gain {gain:.3f}", flush=True)
     rec.write_map_json(ASSETS / "instruments" / f"{name}.json", "synthesized by tools/instrument_samples.py", spec["range"], "synth", zones)
 
@@ -486,7 +556,16 @@ SUSTAINED = {
                     body=[(450, 2.0, 10), (1150, 2.5, 6)], roll=4000, boost=0.0),
     "trumpet": dict(vib=0, trem=0.0, attack=0.04, noise=0.004, band=(2000, 8000), shape="brass",
                     body=[(1300, 1.2, 8)], roll=5000, boost=0.5),
+    # 篠笛：录音几乎是纯音（二次泛音低约 17 dB、三次低约 31 dB），揉音不到 5 音分，气声很轻
+    "shinobue": dict(vib=4, trem=0.04, attack=0.07, noise=0.025, band=(2500, 12000), shape="shinobue", body=[], roll=9000, boost=0.0),
+    # 尺八：参照维护者买的 ikoa 尺八采样（只量了大致的参数，采样本身不进模组）：低音区二次泛音只低约 8 dB、高音区低约 17 dB，
+    # 谐波之间的气声比篠笛重得多（约 −31 dB），直音（揉音约 2 音分），起音 25–100 毫秒
+    "shakuhachi": dict(vib=2, trem=0.03, attack=0.07, noise=0.036, band=(1200, 9000), shape="shakuhachi", body=[], roll=9000, boost=0.0),
 }
+
+# 尺八的谐波（dB，第 1–8 根）：低音区（D4 附近）和高音区（D#6 附近），中间按对数频率插值
+SHAKUHACHI_LOW = (0, -8, -15, -24, -28, -32, -38, -44)
+SHAKUHACHI_HIGH = (0, -17, -27, -40, -45, -52, -58, -64)
 
 
 def partial_amp(spec, k, fk, f0):
@@ -495,6 +574,13 @@ def partial_amp(spec, k, fk, f0):
         a = 1.0 / k                                   # 弓弦的锯齿波（Helmholtz 运动）
     elif shape == "flute":
         a = 0.38 ** (k - 1) * (1.6 if k == 2 and f0 < 500 else 1.0)
+    elif shape == "shinobue":
+        a = 0.15 ** (k - 1)
+    elif shape == "shakuhachi":
+        if k > len(SHAKUHACHI_LOW):
+            return 0.0
+        x = min(1.0, max(0.0, math.log2(f0 / 294.0) / math.log2(1245.0 / 294.0)))
+        a = 10 ** ((SHAKUHACHI_LOW[k - 1] * (1 - x) + SHAKUHACHI_HIGH[k - 1] * x) / 20)
     elif shape == "oboe":
         a = 1.0 / k ** 0.45 * (0.5 if k == 1 else 1.0)  # 双簧管基音弱，鼻音靠共振峰
     elif shape == "bassoon":
@@ -567,6 +653,8 @@ INSTRUMENTS = {
     "oboe": dict(low=58, high=92, range=32, release=lambda m: 0.12, level=-2.0, curve=1.2),
     "bassoon": dict(low=34, high=76, range=32, release=lambda m: 0.15, level=-1.0, curve=1.2),
     "trumpet": dict(low=54, high=84, range=32, release=lambda m: 0.12, level=0.0, curve=1.4),
+    "shinobue": dict(low=69, high=101, range=32, release=lambda m: 0.12, level=-3.0, curve=1.2),
+    "shakuhachi": dict(low=62, high=88, range=32, release=lambda m: 0.15, level=-2.0, curve=1.2),
 }
 
 
@@ -641,10 +729,13 @@ def main():
             build_drums(name)
         else:
             build(name, args.demo)
-    drums = [n for n in names if n in DRUM_KEYS]
+    drums = [n for n in names if n in DRUM_KEYS and n != "kagura_suzu"]
     if args.demo and drums:
         rec.ASSETS = ASSETS
         rec.drum_demo(drums, args.demo, "demo_drums_synth")
+    if args.demo and "kagura_suzu" in names:
+        rec.ASSETS = ASSETS
+        rec.shake_demo("kagura_suzu", args.demo, "demo_kagura_suzu_synth")
     size = sum(f.stat().st_size for f in (ASSETS / "sounds/instrument").rglob("*.ogg"))
     print(f"synthesized instrument sounds in the mod: {size / 1e6:.2f} MB")
 

@@ -42,7 +42,7 @@ public final class OrchestraPonderPlugin implements PonderPlugin {
                 Instruments.CELESTA_ITEM, Instruments.CONCERT_HARP_ITEM))
             .addStoryBoard("benches", OrchestraScenes::benches, MUSICIANS);
         helper.forComponents(items(Instruments.MUSIC_STAND_ITEM, Benches.BENCH_ITEM, Instruments.VIOLIN, Instruments.VIOLA,
-                Instruments.FLUTE, Instruments.OBOE, Instruments.BASSOON, Instruments.TRUMPET))
+                Instruments.FLUTE, Instruments.OBOE, Instruments.BASSOON, Instruments.TRUMPET, Instruments.SHINOBUE, Instruments.KAGURA_SUZU, Instruments.SHAKUHACHI))
             .addStoryBoard("music_stand", OrchestraScenes::musicStand, MUSICIANS);
         helper.forComponents(items(Instruments.CELLO_ITEM, Instruments.DOUBLE_BASS_ITEM))
             .addStoryBoard("posts_strings", OrchestraScenes::postsStrings, MUSICIANS);

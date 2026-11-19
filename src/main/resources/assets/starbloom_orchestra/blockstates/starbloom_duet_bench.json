@@ -42,6 +42,24 @@
     "facing=north,plays=bassoon,side=true": {
       "model": "starbloom_orchestra:block/starbloom_duet_bench_part"
     },
+    "facing=north,plays=shinobue,side=false": {
+      "model": "starbloom_orchestra:block/starbloom_duet_bench"
+    },
+    "facing=north,plays=shinobue,side=true": {
+      "model": "starbloom_orchestra:block/starbloom_duet_bench_part"
+    },
+    "facing=north,plays=kagura_suzu,side=false": {
+      "model": "starbloom_orchestra:block/starbloom_duet_bench"
+    },
+    "facing=north,plays=kagura_suzu,side=true": {
+      "model": "starbloom_orchestra:block/starbloom_duet_bench_part"
+    },
+    "facing=north,plays=shakuhachi,side=false": {
+      "model": "starbloom_orchestra:block/starbloom_duet_bench"
+    },
+    "facing=north,plays=shakuhachi,side=true": {
+      "model": "starbloom_orchestra:block/starbloom_duet_bench_part"
+    },
     "facing=east,plays=none,side=false": {
       "model": "starbloom_orchestra:block/starbloom_duet_bench",
       "y": 90
@@ -89,6 +107,27 @@
       "y": 90
     },
     "facing=east,plays=bassoon,side=true": {
+      "model": "starbloom_orchestra:block/starbloom_duet_bench_part"
+    },
+    "facing=east,plays=shinobue,side=false": {
+      "model": "starbloom_orchestra:block/starbloom_duet_bench",
+      "y": 90
+    },
+    "facing=east,plays=shinobue,side=true": {
+      "model": "starbloom_orchestra:block/starbloom_duet_bench_part"
+    },
+    "facing=east,plays=kagura_suzu,side=false": {
+      "model": "starbloom_orchestra:block/starbloom_duet_bench",
+      "y": 90
+    },
+    "facing=east,plays=kagura_suzu,side=true": {
+      "model": "starbloom_orchestra:block/starbloom_duet_bench_part"
+    },
+    "facing=east,plays=shakuhachi,side=false": {
+      "model": "starbloom_orchestra:block/starbloom_duet_bench",
+      "y": 90
+    },
+    "facing=east,plays=shakuhachi,side=true": {
       "model": "starbloom_orchestra:block/starbloom_duet_bench_part"
     },
     "facing=south,plays=none,side=false": {
@@ -140,6 +179,27 @@
     "facing=south,plays=bassoon,side=true": {
       "model": "starbloom_orchestra:block/starbloom_duet_bench_part"
     },
+    "facing=south,plays=shinobue,side=false": {
+      "model": "starbloom_orchestra:block/starbloom_duet_bench",
+      "y": 180
+    },
+    "facing=south,plays=shinobue,side=true": {
+      "model": "starbloom_orchestra:block/starbloom_duet_bench_part"
+    },
+    "facing=south,plays=kagura_suzu,side=false": {
+      "model": "starbloom_orchestra:block/starbloom_duet_bench",
+      "y": 180
+    },
+    "facing=south,plays=kagura_suzu,side=true": {
+      "model": "starbloom_orchestra:block/starbloom_duet_bench_part"
+    },
+    "facing=south,plays=shakuhachi,side=false": {
+      "model": "starbloom_orchestra:block/starbloom_duet_bench",
+      "y": 180
+    },
+    "facing=south,plays=shakuhachi,side=true": {
+      "model": "starbloom_orchestra:block/starbloom_duet_bench_part"
+    },
     "facing=west,plays=none,side=false": {
       "model": "starbloom_orchestra:block/starbloom_duet_bench",
       "y": 270
@@ -187,6 +247,27 @@
       "y": 270
     },
     "facing=west,plays=bassoon,side=true": {
+      "model": "starbloom_orchestra:block/starbloom_duet_bench_part"
+    },
+    "facing=west,plays=shinobue,side=false": {
+      "model": "starbloom_orchestra:block/starbloom_duet_bench",
+      "y": 270
+    },
+    "facing=west,plays=shinobue,side=true": {
+      "model": "starbloom_orchestra:block/starbloom_duet_bench_part"
+    },
+    "facing=west,plays=kagura_suzu,side=false": {
+      "model": "starbloom_orchestra:block/starbloom_duet_bench",
+      "y": 270
+    },
+    "facing=west,plays=kagura_suzu,side=true": {
+      "model": "starbloom_orchestra:block/starbloom_duet_bench_part"
+    },
+    "facing=west,plays=shakuhachi,side=false": {
+      "model": "starbloom_orchestra:block/starbloom_duet_bench",
+      "y": 270
+    },
+    "facing=west,plays=shakuhachi,side=true": {
       "model": "starbloom_orchestra:block/starbloom_duet_bench_part"
     }
   }

@@ -1,14 +1,14 @@
 # 乐器采样
 
-魔女之森的乐器（钢琴、竖琴、钟琴、钢片琴、管钟、大键琴、小提琴、中提琴、大提琴、低音提琴、长笛、双簧管、巴松管、小号、定音鼓）
-有两层音源：
+魔女之森的乐器（钢琴、竖琴、钟琴、钢片琴、管钟、大键琴、小提琴、中提琴、大提琴、低音提琴、长笛、双簧管、巴松管、小号、定音鼓、
+大鼓、小军鼓、吊镲、三角铁）和和乐器（篠笛、神乐铃、尺八，[和乐器](JAPANESE_INSTRUMENTS.md)）有两层音源：
 
-- **模组本体：合成音源。** `tools/instrument_samples.py` 为每件采样乐器合成一套采样（全部 15 件共 3.4 MB），
+- **模组本体：合成音源。** `tools/instrument_samples.py` 为每件采样乐器合成一套采样（全部 22 件共 4.1 MB），
   写在 `src/main/resources/assets/starbloom_orchestra/` 的 `sounds/instrument/<乐器>/` 和采样表 `instruments/<乐器>.json`
   （`"quality": "synth"`）。不装资源包也能弹。
 - **「音乐厅音源」资源包：录音。** `tools/instrument_sources.py` 把公开采样库的录音做成同样格式的采样和采样表
   （`"quality": "recorded"`），放在仓库的 `resourcepacks/concert_hall/`，单独发布（`./gradlew concertHallPack`
-  打成 `build/libs/<mod_id>-concert_hall-<版本>.zip`，约 22 MB）。装上并启用后，除钢片琴外的 14 件乐器都换成录音；不装不影响。
+  打成 `build/libs/<mod_id>-concert_hall-<版本>.zip`，约 25 MB）。装上并启用后，除钢片琴外的 20 件乐器都换成录音；不装不影响。
 
 模组 jar 因此不随乐器变多而变大：录音全在资源包里，本体每件乐器只多 0.1–0.6 MB 的合成音。
 管风琴不在这里，它在客户端按音栓现场合成（[管风琴](PIPE_ORGAN.md)）；钢片琴两个库都没有，只有合成的一层。
@@ -33,6 +33,8 @@
 | [Salamander Grand Piano V3](https://github.com/sfzinstruments/SalamanderGrandPiano)（Alexander Holm；SFZ / FLAC 版 kinwie；重新调律 Markus Fiedler），提交 `3382bf94` | 钢琴 | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) | **署名**、附协议链接、说明做了修改。资源包根目录有 `NOTICE.txt`，源码里有 `CREDITS.md`。sfzinstruments 另请求注明「取自这个 SFZ 版本」，也写了 |
 | [VS Chamber Orchestra: Community Edition](https://github.com/sgossner/VSCO-2-CE)（Versilian Studios），提交 `44030090` | 小提琴、中提琴、大提琴、低音提琴、长笛、双簧管、巴松管、小号、定音鼓 | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | 无（公有领域）；仍在 NOTICE 和 CREDITS 里致谢 |
 | [Versilian Community Sample Library](https://github.com/sgossner/VCSL)（Versilian Studios 及贡献者），提交 `c1ea7bcc` | 竖琴、钟琴、管钟、大键琴 | CC0 1.0 | 同上 |
+| [Otowabi Shinobue](https://github.com/fumikomidori/OtowabiShinobue)（fumikomidori），提交 `26a14964` | 篠笛 | MIT | 附上版权声明与许可声明（`NOTICE.txt` 里有全文）。采样是 Kontakt 的 NCW 格式，`tools/ncw.py` 解码 |
+| [Otowabi Kagurasuzu](https://github.com/fumikomidori/OtowabiKagurasuzu)（fumikomidori），提交 `db1d22e5` | 神乐铃 | MIT | 同上 |
 
 VCSL 是 VSCO 2 CE 的扩展版，收了 VSCO 2 CE 的大部分采样（有的重新整理过）。同一件乐器两边都有时用 VCSL；
 管弦乐器多半只有 VSCO 2 CE 有。模组本体只有自己合成的音，没有第三方素材。
@@ -59,6 +61,8 @@ VCSL 是 VSCO 2 CE 的扩展版，收了 VSCO 2 CE 的大部分采样（有的�
 | 小军鼓 | VCSL `Snare Drum, Modern 1`、`Modern 3` | 37 边击（Modern 3 Xstick）一层；38 军鼓（Modern 1 响弦）五层；39 鼓边重击（Modern 3 rimshot）两层；40 重音（Modern 3 响弦）三层 | 响弦全开 |
 | 吊镲 | VCSL `Suspended Cymbal 1`、`2`、`Hi-Hat Cymbal` | 强音 49 / 57 = 两面吊镲软槌击 4 / 5 层；52 中国镲、55 水镲 = 其中两层；叮叮 51 / 59 = 鼓棒击 3 层；53 镲帽 3 层；踩镲 42 闭 4 层、44 踩、46 开各一层 | 踩镲的键在吊镲上奏成轻击（用踩镲的录音） |
 | 三角铁 | VCSL `Triangles`（Triangle1） | 81 开音两层；80 闷音一层 | |
+| 篠笛（手持） | Otowabi Shinobue `OtowabiShinobue Samples/*.ncw` | A4–F7 17 个音（C 大调为主），一层 | 文件名就是 MIDI 音号；最高的 F7 比别的音响十几 dB，音区起伏只留三成（`shape` 0.3）；加了循环点 |
+| 神乐铃（手持） | Otowabi Kagurasuzu `suzu_one_01–05`、`suzu_long_01–03` | 83 一振 5 层；84 连摇 3 层 | 无音高；最轻的 `suzu_one_06` 不用；连摇按响度找循环点（`find_shake_loop`），会止音：一振松手 1.5 秒、连摇 0.3 秒 |
 
 各库文件名的八度写法不一样（有的把中央 C 写成 C3），八度以库自带的 SFZ 为准；每个采样再量一遍音高：按谐波定出它实际在
 哪个八度、差多少音分，和预期不符时报出来，只取测出的音分。
@@ -77,7 +81,10 @@ VCSL 是 VSCO 2 CE 的扩展版，收了 VSCO 2 CE 的大部分采样（有的�
   军鼓的响弦、镲的嘶声是滤波噪声，镲和三角铁是一大把不谐和的分音（镲两百多支、高的衰减快）；各键之间的轻重按 `DRUM_KEYS` 的电平。
   大鼓的能量大多在 50 Hz 上下，K 计权对得上录音、耳朵和小音箱却听着轻 10 dB：上方模态、槌声按录音的倍频程能量补过，
   A 计权、切掉 120 Hz 以下后都和录音差在 1.5 dB 以内（新的低频乐器同样要用这两种量法对一下）。
-- 体积：钢琴 0.58 MB、大键琴 0.48、竖琴 0.38，其余每件 0.1–0.26 MB，打击乐四件共 0.34 MB，共 3.7 MB。
+- 篠笛照录音几乎纯音的样子：谐波按 0.15 的公比递减，揉音 4 音分，气声很轻；神乐铃是十五颗铃的金属分音，连摇按 3 秒的周期
+  排两遍、只循环第二遍，余音绕回开头（见 [和乐器](JAPANESE_INSTRUMENTS.md) 第 2 节）。尺八没有能发布的录音，只有这一层：
+  谐波和气声照维护者买的采样量出来的数调（同一节）。
+- 体积：钢琴 0.58 MB、大键琴 0.48、竖琴 0.38，其余每件 0.1–0.26 MB，打击乐四件共 0.34 MB，篠笛 0.16、神乐铃 0.09、尺八 0.13，共 4.1 MB。
 
 ## 5. 录音怎么做成游戏里的采样
 
@@ -123,7 +130,7 @@ uv run --no-project --with numpy --with scipy python tools/instrument_audit.py -
 - `--report` 只分析、打印每个采样的测量结果（音高、切头、循环点、响度、增益），不写文件。
 - `--demo` 另把每件乐器的音阶（轻、重各一遍）与和弦渲染成 ogg：取区、变调、循环、松键淡出都和游戏里一样。
 - 录音第一次运行要下载约 550 个文件（只下用得到的），以后不再下。资源包里的 ogg 共 22.5 MB：钢琴 8.3、大键琴 2.4、竖琴 2.4、
-  管钟 1.9、小提琴 1.2、中提琴 1.1、大提琴 1.0、低音提琴 0.9、巴松管 0.8、双簧管 0.8、小号 0.8、钟琴 0.7、定音鼓 0.5、长笛 0.4。
+  管钟 1.9、小提琴 1.2、中提琴 1.1、大提琴 1.0、低音提琴 0.9、巴松管 0.8、双簧管 0.8、小号 0.8、钟琴 0.7、定音鼓 0.5、长笛 0.4；后来加的打击乐四件约 1.6、篠笛 0.6、神乐铃 0.5，现在共 25 MB。
 - 调参数（层的划分、时长上限、松键时间、乐器之间的平衡）改两个脚本里的 `INSTRUMENTS` / `SPECS`。
 
 ## 8. 以后备用的乐器
@@ -157,7 +164,7 @@ uv run --no-project --with numpy --with scipy python tools/instrument_audit.py -
 
 ## 9. 验证
 
-- 单元：`SampleMapTest` 两层各核对一遍——模组本体每件采样乐器都有合成的表（`quality` 为 synth），资源包里至少 14 件是录音
+- 单元：`SampleMapTest` 两层各核对一遍——模组本体每件采样乐器都有合成的表（`quality` 为 synth），资源包里至少 20 件是录音
   （`quality` 为 recorded，没有钢片琴）、`pack.mcmeta` 的格式是 26.1 的 84、带 `NOTICE.txt`。每张表：音域内每个音、每个力度都有
   正好覆盖它的区，变调不超过 4 个半音，音量在 (0, 1]，同一区里力度越大越响；文件、循环点、松键声都在；只有弓弦、管乐循环；
   大键琴每个音都有松键声。

@@ -56,6 +56,33 @@
     },
     {
       "enum": "net/minecraft/client/model/HumanoidModel$ArmPose",
+      "name": "STARBLOOM_ORCHESTRA_SHINOBUE",
+      "constructor": "(ZZLnet/neoforged/neoforge/client/IArmPoseTransformer;)V",
+      "parameters": {
+        "class": "dev/starbloom/orchestra/client/music/HandheldPoses",
+        "field": "SHINOBUE"
+      }
+    },
+    {
+      "enum": "net/minecraft/client/model/HumanoidModel$ArmPose",
+      "name": "STARBLOOM_ORCHESTRA_KAGURA_SUZU",
+      "constructor": "(ZZLnet/neoforged/neoforge/client/IArmPoseTransformer;)V",
+      "parameters": {
+        "class": "dev/starbloom/orchestra/client/music/HandheldPoses",
+        "field": "KAGURA_SUZU"
+      }
+    },
+    {
+      "enum": "net/minecraft/client/model/HumanoidModel$ArmPose",
+      "name": "STARBLOOM_ORCHESTRA_SHAKUHACHI",
+      "constructor": "(ZZLnet/neoforged/neoforge/client/IArmPoseTransformer;)V",
+      "parameters": {
+        "class": "dev/starbloom/orchestra/client/music/HandheldPoses",
+        "field": "SHAKUHACHI"
+      }
+    },
+    {
+      "enum": "net/minecraft/client/model/HumanoidModel$ArmPose",
       "name": "STARBLOOM_ORCHESTRA_CELLO",
       "constructor": "(ZZLnet/neoforged/neoforge/client/IArmPoseTransformer;)V",
       "parameters": {

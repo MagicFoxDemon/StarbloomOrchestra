@@ -9,7 +9,8 @@
     uv run --no-project --with numpy --with scipy python tools/instrument_audit.py --ffmpeg <带 libvorbis 的 ffmpeg>
         [--only violin cello ...] [--layer mod|pack] [--cents 25]
 
-管钟、定音鼓的分音不谐和（耳朵听到的音高不是谐波的基音），只核对取区。管风琴不用采样表（客户端按音栓现场合成），
+管钟、定音鼓的分音不谐和（耳朵听到的音高不是谐波的基音），只核对取区；无音高的打击乐（每个区只管一个 GM 鼓键：
+大鼓、小军鼓、吊镲、三角铁、神乐铃）的「音高」是鼓键号，也只核对取区。管风琴不用采样表（客户端按音栓现场合成），
 由 OrganSynthTest 核对。纸带移调、键盘起点在 Java 的单元测试里核对（MusicRollTest、KeyLayoutTest）。
 """
 import argparse
@@ -29,6 +30,8 @@ LAYERS = {
     "pack": ROOT / "resourcepacks/concert_hall/assets/starbloom_orchestra",
 }
 INHARMONIC = {"tubular_bells", "timpani"}
+# 无音高的打击乐（InstrumentKind.unpitched()）：「音高」是 GM 鼓键号
+UNPITCHED = {"bass_drum", "snare_drum", "suspended_cymbal", "triangle", "kagura_suzu"}
 
 
 def cents_off(seg: np.ndarray, key: float) -> float | None:
@@ -80,14 +83,14 @@ def audit(layer: str, assets: Path, only: set[str] | None, limit: float) -> list
         problems = []
         for vlo, vhi in sorted({(z["vlo"], z["vhi"]) for z in zones}):
             for v in range(vlo, vhi + 1):
-                for p in range(low, high + 1):
+                for p in (sorted({z["lo"] for z in zones}) if kind in UNPITCHED else range(low, high + 1)):
                     z = rec.pick(zones, p, v)
                     if not (z["lo"] <= p <= z["hi"] and z["vlo"] <= v <= z["vhi"]):
                         problems.append(f"{rec.name_of(p)} v{v}: no zone covers it")
                     elif abs(p - z["key"]) > 4.01:
                         problems.append(f"{rec.name_of(p)} v{v}: zone {z['file']} is {abs(p - z['key']):.2f} semitones away")
         worst = 0.0
-        if kind not in INHARMONIC:
+        if kind not in INHARMONIC and kind not in UNPITCHED:
             for z in zones:
                 audio = rec.decode_ogg(assets / "sounds" / f"{z['file']}.ogg")
                 seg = segment(audio, z)
@@ -125,7 +128,8 @@ def main() -> None:
     failed = 0
     for layer, kind, rng, zones, worst, problems in rows:
         flag = "OK " if not problems else "BAD"
-        note = " (inharmonic: zones only)" if kind in INHARMONIC else f", worst {worst:4.1f} cents"
+        note = (" (inharmonic: zones only)" if kind in INHARMONIC else " (unpitched: zones only)" if kind in UNPITCHED
+                else f", worst {worst:4.1f} cents")
         print(f"{flag} {layer:4s} {kind:14s} {rng:9s} {zones:4d} zones{note}")
         for line in problems[:12]:
             print(f"      {line}")

@@ -50,6 +50,9 @@ public final class HeldRig {
             case FLUTE -> flute(head, leftHanded, t, move);
             case OBOE -> oboe(head, leftHanded, t, move);
             case BASSOON -> bassoon(body, leftHanded, t, move);
+            case SHINOBUE -> shinobue(head, leftHanded, t, move);
+            case KAGURA_SUZU -> suzu(body, leftHanded, t, move);
+            case SHAKUHACHI -> shakuhachi(head, leftHanded, t, move);
             default -> trumpet(head, leftHanded, t, move);
         };
     }
@@ -99,6 +102,46 @@ public final class HeldRig {
         return new Place(world(head, flute, mirror, FLIP_Z), null,
             point(head, flute, mirror, 11.5f, 5.3f, 8),     // 惯用手在笛尾那一段的下面
             point(head, flute, mirror, 6.5f, 5.3f, 8));     // 非惯用手靠近吹孔
+    }
+
+    /**
+     * 篠笛：同长笛横在嘴边、伸向惯用手一侧，只是短得多（约四十厘米）；歌口 = tools/instrument_models/wagakki.py 的 SHINOBUE_MOUTH，
+     * 两手按在两组指孔下面。
+     */
+    private static Place shinobue(Matrix4f head, boolean mirror, float t, float move) {
+        float sway = 2 * DEG * move * (float) Math.sin(t * 0.12f);
+        Matrix4f rot = new Matrix4f().rotateY(-18 * DEG + sway).rotateZ(-8 * DEG).rotateZ(180 * DEG);
+        Matrix4f fue = local(new Vector3f(0, -1.4f, -4.4f), rot, 0.62f, 3.4f, 8, 8);
+        return new Place(world(head, fue, mirror, FLIP_Z), null,
+            point(head, fue, mirror, 11.1f, 5.2f, 8),       // 惯用手按下面一组指孔
+            point(head, fue, mirror, 7.1f, 5.2f, 8));       // 非惯用手按靠歌口的一组
+    }
+
+    /**
+     * 神乐铃：惯用手握着柄（wagakki.py 的 SUZU_GRIP）举在身前偏外侧、下巴的高度，铃朝上、略往前并往外倾（从正面看不挡脸）；
+     * 非惯用手捏着垂下来的五色布末端（SUZU_TAIL）。在摇时整串铃左右摆（每秒约五下）。
+     */
+    private static Place suzu(Matrix4f body, boolean mirror, float t, float move) {
+        float shake = 14 * DEG * move * (float) Math.sin(t * 1.6f);
+        Matrix4f rot = new Matrix4f().rotateZ(-10 * DEG + shake).rotateX(12 * DEG).rotateX(180 * DEG);
+        Matrix4f suzu = local(new Vector3f(-8, 0, -7.5f), rot, 0.5f, 8, 3.6f, 8);
+        return new Place(world(body, suzu, mirror, FLIP_X), null,
+            point(body, suzu, mirror, 8, 3.6f, 8),            // 惯用手握柄
+            point(body, suzu, mirror, 8, -4.4f, 8));          // 非惯用手捏着五色布
+    }
+
+    /**
+     * 尺八：竖吹，歌口（wagakki.py 的 SHAKUHACHI_MOUTH）贴在下唇，管身朝前下方斜出（比双簧管再低一点），
+     * 两手一上一下按在管身后面；指孔那面朝前上。
+     */
+    private static Place shakuhachi(Matrix4f head, boolean mirror, float t, float move) {
+        float a = (46 + 1.5f * move * (float) Math.sin(t * 0.12f)) * DEG;
+        float sa = (float) Math.sin(a), ca = (float) Math.cos(a);
+        Matrix4f rot = new Matrix4f(-1, 0, 0, 0, 0, -sa, ca, 0, 0, ca, sa, 0, 0, 0, 0, 1);
+        Matrix4f pipe = local(new Vector3f(0, -1.5f, -4.4f), rot, 0.72f, 8, 15.6f, 8);
+        return new Place(world(head, pipe, mirror, FLIP_X), null,
+            point(head, pipe, mirror, 8, 4.6f, 10.6f),        // 惯用手在下面一组指孔
+            point(head, pipe, mirror, 8, 9.4f, 10.6f));       // 非惯用手在上面
     }
 
     /** 双簧管：哨片含在嘴里，管身朝前下方斜出（与身体约成 40°），两手一上一下扶着管身。 */

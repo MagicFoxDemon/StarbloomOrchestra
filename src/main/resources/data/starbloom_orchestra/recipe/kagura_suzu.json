@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "NNN",
+    "NSN",
+    " D "
+  ],
+  "key": {
+    "N": "minecraft:gold_nugget",
+    "S": "minecraft:stick",
+    "D": "minecraft:red_dye"
+  },
+  "result": {
+    "id": "starbloom_orchestra:kagura_suzu",
+    "count": 1
+  }
+}

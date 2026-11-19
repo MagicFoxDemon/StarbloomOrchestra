@@ -1,11 +1,12 @@
 # 星辰花乐团 Starbloom Orchestra
 
 Minecraft 26.1.2 / NeoForge 的乐器模组：可以演奏的三角钢琴、竖琴、管风琴、大键琴、钢片琴、钟琴、管钟、大提琴、低音提琴、
-定音鼓、大鼓、小军鼓、吊镲、三角铁，手持的小提琴、中提琴、长笛、双簧管、巴松管、小号；用电脑键盘、MIDI 键盘、打孔纸带或
+定音鼓、大鼓、小军鼓、吊镲、三角铁，手持的小提琴、中提琴、长笛、双簧管、巴松管、小号，和乐器篠笛、尺八、神乐铃；用电脑键盘、MIDI 键盘、打孔纸带或
 导入的 MIDI 文件演奏。玩家、生物和车万女仆可以坐上琴凳、站上工位，拿指挥棒指挥整个乐团。
 
 Playable instruments for Minecraft 26.1.2 (NeoForge): grand piano, harp, pipe organ, harpsichord, celesta, glockenspiel,
-tubular bells, cello, double bass, timpani, orchestral percussion and handheld strings, winds and trumpet. Play them with the
+tubular bells, cello, double bass, timpani, orchestral percussion, handheld strings, winds and trumpet, and the Japanese
+shinobue, shakuhachi and kagura suzu. Play them with the
 computer keyboard, a MIDI keyboard, punched music rolls or imported MIDI files; seat players, mobs and Touhou Little Maid maids
 at benches and posts and conduct the orchestra with a baton.
 
@@ -22,7 +23,8 @@ at benches and posts and conduct the orchestra with a baton.
 游戏里鼠标停在乐器、琴凳、指挥台上按住 **W**，看「思索」场景讲琴凳归哪件乐器、乐手站在哪、管风琴怎么搭（[docs/PONDER.md](docs/PONDER.md)）。
 
 玩法和每件乐器的做法见 [docs/ORCHESTRA.md](docs/ORCHESTRA.md)（乐团、工位、指挥）、
-[docs/HEXENWALD_INSTRUMENTS.md](docs/HEXENWALD_INSTRUMENTS.md)（第一批乐器、打孔纸带、MIDI）、[docs/PIPE_ORGAN.md](docs/PIPE_ORGAN.md)（管风琴）。
+[docs/HEXENWALD_INSTRUMENTS.md](docs/HEXENWALD_INSTRUMENTS.md)（第一批乐器、打孔纸带、MIDI）、[docs/PIPE_ORGAN.md](docs/PIPE_ORGAN.md)（管风琴）、
+[docs/JAPANESE_INSTRUMENTS.md](docs/JAPANESE_INSTRUMENTS.md)（篠笛、尺八、神乐铃）。
 
 ## 构建与测试
 

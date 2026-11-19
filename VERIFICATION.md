@@ -3,6 +3,32 @@
 本仓库从 Logos 附属「炼金釜」拆出来之前的验证记录在附属仓库的
 [VERIFICATION.md](https://github.com/wushuowei1145/Logos-Spellwrought-Expanse/blob/main/VERIFICATION.md)（乐器、乐团各节）。
 
+## 和乐器：篠笛、神乐铃、尺八
+
+2026-11-18：分支 `feat/japanese-bells-flute`，基于本仓库 main `6fabbac`。两件手持和乐器，做法见 [docs/JAPANESE_INSTRUMENTS.md](docs/JAPANESE_INSTRUMENTS.md)。
+录音来自 fumikomidori 的 Otowabi Shinobue / Kagurasuzu（MIT，资源包 `NOTICE.txt` 附全文）；篠笛的 NCW 由新写的 `tools/ncw.py` 解码。
+尺八只有合成的一层：维护者买的 ikoa 尺八采样（利用规约禁止再分发）只拿来量谐波和气声，另做了一个只给维护者自己用的录音包（仓库外）。
+
+| 层级 | 结果 |
+|---|---|
+| 声音 | `tools/ncw.py` 解开篠笛的 17 个 NCW：块与块的接缝处跳变和块内一样（第 99 百分位之比 0.96–1.04），实测音高和文件名差 0.21 个半音以内。`tools/instrument_audit.py` 两层 41/41 干净（篠笛合成 2 音分、录音 8.3 音分；这次让它对无音高的打击乐只核对取区，以前大鼓、吊镲、三角铁都被当成有音高的量，报的是假错）。新循环（篠笛两层、神乐铃连摇两层）解码后绕回那一步都不大于附近 2400 个点里第 99 百分位的一步（最大 0.95 倍）。两件的采样重跑一遍逐字节不变（其他乐器这次没重新生成） |
+| 尺八 | 量 ikoa 的 12 个长音：八度都是「文件名 + 12」（`measure_harmonic`），低音区二次泛音约 −8 dB、高音区约 −17 dB，谐波之间的气声约 −31 dB，揉音约 2 音分；合成后同样的量法：各次谐波照两张表、气声 −30.5 dB，`instrument_audit` 2.1 音分。个人用录音包：12 个区、循环接缝最大 0.92 倍；`--private-out` 指到仓库里会被拒绝 |
+| 模型 | `tools/instrument_art.py` 全部重新生成：其他乐器的模型、贴图、数据逐字节不变，只多了两件的文件和谱架、琴凳状态的新值；篠笛 16 个元素、神乐铃 57 个、尺八 14 个（预算 70），没有共面闪烁；离线预览看过四个角度和物品栏图标 |
+| 单元 | 82 个，0 失败，1 个跳过（管风琴试听）。`SampleMapTest` 改成按键判断哪些区循环（神乐铃只有连摇循环），资源包至少 20 件录音、两件都在；`OrchestraArrangerTest` 多了 77 → 尺八、78 → 篠笛、轨道名、三种笛子互为替身 |
+| 世界测试 | 全部 35 个通过（`instrument_music_stand` 多核对三件在谱架上各有自己的样子，`creative_tabs_cover_items` 照常） |
+| 实际客户端 | `handheld_play_ui`、`instrument_gallery_ui`、`music_stand_views` 3/3，19/19 项检查：篠笛、尺八各按三个键三路在响（尺八最低 D4，按 X、C、B）、神乐铃按 Z、Q 两路在响，跟着玩家；神乐铃按住连摇 7 秒一直在响、松手 0.7 秒内停下。看过截图：篠笛横在嘴边（朱漆笛头露在外面，管身大半被手挡住，同长笛）；尺八竖在嘴边、朝前下方斜出，两手在管身上；神乐铃举在身侧下巴高度、铃朝上，从正面看不挡脸（第一版挡脸，往外挪过一次）；打击板「一振 Z–M」「按住连摇 Q–P」；谱架上的三件、物品栏图标 |
+| 未验证 | 真的按键试玩（测试用模拟按键）、音色只能人工试听（试玩包里有试听）；多人只靠现有的模拟一批音；车万女仆（GeckoLib 没有神乐铃的专门动作）；附属 NPC 当乐手（用本模组的 `HeldRig`，没在附属里跑过）；光影包 |
+
+```text
+uv run --no-project --with numpy --with scipy python tools/instrument_sources.py --cache <下载目录> --ffmpeg <ffmpeg> --only shinobue kagura_suzu
+uv run --no-project --with numpy --with scipy python tools/instrument_samples.py --ffmpeg <ffmpeg> --only shinobue kagura_suzu
+uv run --no-project --with numpy --with scipy python tools/instrument_audit.py --ffmpeg <ffmpeg>
+uv run --no-project --with pillow --with numpy python tools/instrument_art.py
+./gradlew test
+./gradlew runGameTestServer
+./gradlew runClient "-PldTest=handheld_play_ui,instrument_gallery_ui,music_stand_views" -PldTestHeadless -PldTestWindow=1280x720
+```
+
 ## 思索（Ponder）：按住 W 看乐器怎么摆
 
 2026-11-18：分支 `feat/ponder-scenes`，基于本仓库 main `b257282`。七个场景（琴凳归哪件乐器、乐谱架与手持乐器、大提琴与低音提琴、

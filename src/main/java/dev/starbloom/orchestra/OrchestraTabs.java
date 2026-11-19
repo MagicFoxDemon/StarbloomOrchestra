@@ -31,7 +31,8 @@ public final class OrchestraTabs {
             "hexen_cello", "hexen_double_bass", "hexen_timpani",
             "hexen_bass_drum", "hexen_snare_drum", "hexen_suspended_cymbal", "hexen_triangle",
             "hexen_music_stand", "hexen_podium", "starbloom_bench", "starbloom_duet_bench",
-            "blank_music_roll", "hexen_violin", "hexen_viola", "hexen_flute", "hexen_oboe", "hexen_bassoon", "hexen_trumpet", "hexen_baton");
+            "blank_music_roll", "hexen_violin", "hexen_viola", "hexen_flute", "hexen_oboe", "hexen_bassoon", "hexen_trumpet",
+            "shinobue", "shakuhachi", "kagura_suzu", "hexen_baton");
 
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> INSTRUMENTS = TABS.register("instruments", () -> CreativeModeTab.builder()
             .title(Component.translatable("itemGroup." + StarbloomOrchestra.ID))

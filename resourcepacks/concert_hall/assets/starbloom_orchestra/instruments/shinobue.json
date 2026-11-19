@@ -1,0 +1,280 @@
+{
+ "format": 1,
+ "quality": "recorded",
+ "source": "Otowabi Shinobue 1.0 (MIT) fumikomidori/OtowabiShinobue@26a149648d66",
+ "range": 32,
+ "zones": [
+  {
+   "file": "instrument/shinobue/69_0",
+   "key": 69.105,
+   "lo": 69,
+   "hi": 70,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.191,
+   "curve": 1.2,
+   "frames": 125628,
+   "release": 0.12,
+   "loop": [
+    35280,
+    125628
+   ]
+  },
+  {
+   "file": "instrument/shinobue/72_0",
+   "key": 71.943,
+   "lo": 71,
+   "hi": 72,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.2285,
+   "curve": 1.2,
+   "frames": 109327,
+   "release": 0.12,
+   "loop": [
+    52038,
+    109327
+   ]
+  },
+  {
+   "file": "instrument/shinobue/74_0",
+   "key": 73.865,
+   "lo": 73,
+   "hi": 74,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.288,
+   "curve": 1.2,
+   "frames": 175013,
+   "release": 0.12,
+   "loop": [
+    119952,
+    175013
+   ]
+  },
+  {
+   "file": "instrument/shinobue/76_0",
+   "key": 75.986,
+   "lo": 75,
+   "hi": 76,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.1989,
+   "curve": 1.2,
+   "frames": 82899,
+   "release": 0.12,
+   "loop": [
+    25578,
+    82899
+   ]
+  },
+  {
+   "file": "instrument/shinobue/77_0",
+   "key": 76.982,
+   "lo": 77,
+   "hi": 77,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.1889,
+   "curve": 1.2,
+   "frames": 89103,
+   "release": 0.12,
+   "loop": [
+    31752,
+    89103
+   ]
+  },
+  {
+   "file": "instrument/shinobue/79_0",
+   "key": 78.955,
+   "lo": 78,
+   "hi": 79,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.2238,
+   "curve": 1.2,
+   "frames": 137147,
+   "release": 0.12,
+   "loop": [
+    24696,
+    137147
+   ]
+  },
+  {
+   "file": "instrument/shinobue/81_0",
+   "key": 80.953,
+   "lo": 80,
+   "hi": 81,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.2357,
+   "curve": 1.2,
+   "frames": 164535,
+   "release": 0.12,
+   "loop": [
+    47628,
+    164535
+   ]
+  },
+  {
+   "file": "instrument/shinobue/83_0",
+   "key": 82.948,
+   "lo": 82,
+   "hi": 83,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.2723,
+   "curve": 1.2,
+   "frames": 155717,
+   "release": 0.12,
+   "loop": [
+    43218,
+    155717
+   ]
+  },
+  {
+   "file": "instrument/shinobue/84_0",
+   "key": 83.798,
+   "lo": 84,
+   "hi": 84,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.2287,
+   "curve": 1.2,
+   "frames": 170229,
+   "release": 0.12,
+   "loop": [
+    104076,
+    170229
+   ]
+  },
+  {
+   "file": "instrument/shinobue/86_0",
+   "key": 85.911,
+   "lo": 85,
+   "hi": 86,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.2455,
+   "curve": 1.2,
+   "frames": 112890,
+   "release": 0.12,
+   "loop": [
+    37926,
+    112890
+   ]
+  },
+  {
+   "file": "instrument/shinobue/88_0",
+   "key": 88.013,
+   "lo": 87,
+   "hi": 88,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.2323,
+   "curve": 1.2,
+   "frames": 105372,
+   "release": 0.12,
+   "loop": [
+    50274,
+    105372
+   ]
+  },
+  {
+   "file": "instrument/shinobue/89_0",
+   "key": 88.983,
+   "lo": 89,
+   "hi": 89,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.2166,
+   "curve": 1.2,
+   "frames": 97039,
+   "release": 0.12,
+   "loop": [
+    26460,
+    97039
+   ]
+  },
+  {
+   "file": "instrument/shinobue/91_0",
+   "key": 90.827,
+   "lo": 90,
+   "hi": 91,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.2063,
+   "curve": 1.2,
+   "frames": 141568,
+   "release": 0.12,
+   "loop": [
+    64386,
+    141568
+   ]
+  },
+  {
+   "file": "instrument/shinobue/93_0",
+   "key": 92.83,
+   "lo": 92,
+   "hi": 94,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.186,
+   "curve": 1.2,
+   "frames": 164503,
+   "release": 0.12,
+   "loop": [
+    56448,
+    164503
+   ]
+  },
+  {
+   "file": "instrument/shinobue/96_0",
+   "key": 95.907,
+   "lo": 95,
+   "hi": 97,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.2347,
+   "curve": 1.2,
+   "frames": 119059,
+   "release": 0.12,
+   "loop": [
+    48510,
+    119059
+   ]
+  },
+  {
+   "file": "instrument/shinobue/98_0",
+   "key": 98.151,
+   "lo": 98,
+   "hi": 99,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.2936,
+   "curve": 1.2,
+   "frames": 162726,
+   "release": 0.12,
+   "loop": [
+    59094,
+    162726
+   ]
+  },
+  {
+   "file": "instrument/shinobue/101_0",
+   "key": 100.786,
+   "lo": 100,
+   "hi": 101,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.154,
+   "curve": 1.2,
+   "frames": 99658,
+   "release": 0.12,
+   "loop": [
+    24696,
+    99658
+   ]
+  }
+ ]
+}

@@ -143,6 +143,11 @@ public abstract class HandheldViews implements UIScenario {
         }
 
         private static ScenarioBuilder hold(ScenarioBuilder s, String name, Item item) {
+            return hold(s, name, item, new char[]{'Z', 'C', 'B'}, 3);
+        }
+
+        /** keys：按下的几个键；sounding：至少几路在响（神乐铃只有两个键：Z 一振、Q 连摇）。 */
+        private static ScenarioBuilder hold(ScenarioBuilder s, String name, Item item, char[] keys, int sounding) {
             s = s.server("hold the " + name, ctx -> {
                     ctx.player().getInventory().setItem(0, new ItemStack(item));
                     ctx.player().getInventory().setSelectedSlot(0);
@@ -153,18 +158,19 @@ public abstract class HandheldViews implements UIScenario {
                     mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
                 })
                 .waitUntil(name + " play bar opens", ctx -> Minecraft.getInstance().screen instanceof HandheldScreen)
-                .waitUntilServer(name + " is in use on the server", ctx -> ctx.player().isUsingItem())
-                .keyDown('Z').keyDown('C').keyDown('B')
-                .ticks(6)
+                .waitUntilServer(name + " is in use on the server", ctx -> ctx.player().isUsingItem());
+            for (char k : keys) s = s.keyDown(k);
+            s = s.ticks(6)
                 .check(name + " sounds and follows the player", ctx -> {
                     var me = Minecraft.getInstance().player;
-                    return VoiceBank.sounding(MusicClient.heldKey(me.getId())) >= 3 && MusicClient.recentlyPlayed(me.getId());
+                    return VoiceBank.sounding(MusicClient.heldKey(me.getId())) >= sounding && MusicClient.recentlyPlayed(me.getId());
                 })
                 .screenshot("handheld_play_" + name);
             s = view(s, "handheld_play_" + name + "_left", 1.5, 1.9);
             s = view(s, "handheld_play_" + name + "_right", -1.5, 1.9);
             s = view(s, "handheld_play_" + name + "_side", 2.3, 0.2);
-            return s.keyUp('Z').keyUp('C').keyUp('B')
+            for (char k : keys) s = s.keyUp(k);
+            return s
                 .step("put the " + name + " away", ctx -> Minecraft.getInstance().setScreen(null))
                 .ticks(6)
                 .check(name + " is put down", ctx -> !Minecraft.getInstance().player.isUsingItem());
@@ -185,6 +191,30 @@ public abstract class HandheldViews implements UIScenario {
             b = hold(b, "violin", Instruments.VIOLIN.get());
             b = hold(b, "flute", Instruments.FLUTE.get());
             b = hold(b, "trumpet", Instruments.TRUMPET.get());
+            b = hold(b, "shinobue", Instruments.SHINOBUE.get());
+            b = hold(b, "kagura_suzu", Instruments.KAGURA_SUZU.get(), new char[]{'Z', 'Q'}, 2);
+            // 尺八最低 D4：键盘从 C4 起，Z（C4）不在音域里，按 X、C、B（D4、E4、G4）
+            b = hold(b, "shakuhachi", Instruments.SHAKUHACHI.get(), new char[]{'X', 'C', 'B'}, 3);
+            // 神乐铃按住连摇 7 秒：录音的循环段只有几秒，靠循环点一直摇；松手后 0.3 秒收住
+            b = b.server("hold the kagura suzu again", ctx -> {
+                    ctx.player().getInventory().setItem(0, new ItemStack(Instruments.KAGURA_SUZU.get()));
+                    ctx.player().getInventory().setSelectedSlot(0);
+                })
+                .ticks(5)
+                .step("raise the kagura suzu again", ctx -> {
+                    var mc = Minecraft.getInstance();
+                    mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
+                })
+                .waitUntil("kagura suzu pads open again", ctx -> Minecraft.getInstance().screen instanceof HandheldScreen)
+                .screenshot("handheld_play_kagura_suzu_pads")
+                .keyDown('Q')
+                .ticks(140)
+                .check("the held shake keeps going", ctx -> VoiceBank.sounding(MusicClient.heldKey(Minecraft.getInstance().player.getId())) >= 1)
+                .keyUp('Q')
+                .ticks(14)
+                .check("and stops soon after letting go", ctx -> VoiceBank.sounding(MusicClient.heldKey(Minecraft.getInstance().player.getId())) == 0)
+                .step("put the kagura suzu away again", ctx -> Minecraft.getInstance().setScreen(null))
+                .ticks(4);
             // 按住一个长笛的音 7 秒：采样最长约 5 秒，靠循环点一直响下去
             b = b.server("hold the flute again", ctx -> {
                     ctx.player().getInventory().setItem(0, new ItemStack(Instruments.FLUTE.get()));
