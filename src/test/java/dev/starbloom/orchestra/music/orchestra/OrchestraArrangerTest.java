@@ -73,6 +73,15 @@ class OrchestraArrangerTest {
         assertEquals(InstrumentKind.CELLO, OrchestraArranger.ofProgram(42));
         assertEquals(InstrumentKind.TIMPANI, OrchestraArranger.ofProgram(47));
         assertNull(OrchestraArranger.ofProgram(30));
+        assertEquals(InstrumentKind.SHAKUHACHI, OrchestraArranger.ofProgram(77));
+        assertEquals(InstrumentKind.SHINOBUE, OrchestraArranger.ofProgram(78), "GM has no shinobue; the whistle stands in");
+        assertEquals(78, OrchestraArranger.programOfName("Shinobue"));
+        assertEquals(78, OrchestraArranger.programOfName("篠笛"));
+        assertEquals(77, OrchestraArranger.programOfName("尺八"));
+        assertEquals(73, OrchestraArranger.programOfName("Flute 1"), "a flute is still a flute");
+        assertTrue(OrchestraArranger.substitutes(73).containsKey(InstrumentKind.SHINOBUE), "a shinobue covers a flute part");
+        assertTrue(OrchestraArranger.substitutes(78).containsKey(InstrumentKind.FLUTE), "and a flute covers a shinobue part");
+        assertTrue(OrchestraArranger.substitutes(77).containsKey(InstrumentKind.SHINOBUE), "a shinobue covers a shakuhachi part");
         assertArrayEquals(new int[]{0, 3, 15}, OrchestraArranger.parts(1 | 1 << 3 | 1 << 15));
     }
 

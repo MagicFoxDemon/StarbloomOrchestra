@@ -434,6 +434,14 @@ public final class MaidMusicians {
             // 管靴在右手（胯前），管身斜着伸到左手
             case BASSOON -> body = span(a.right(), a.left(), new Vector3f(9.4f, 0.5f, 10.6f), new Vector3f(6.6f, 7.5f, 10.6f), new Vector3f(0, 0, 1),
                 new Vector3f(FORWARD).negate(), 0.9f, true);
+            // 篠笛：同长笛，短一些
+            case SHINOBUE -> body = span(mouth, a.right(), new Vector3f(3.4f, 8, 8), new Vector3f(11.1f, 8, 8), new Vector3f(0, 1, 0), UP, 0.62f, true);
+            // 尺八：同双簧管竖着吹，歌口在嘴边
+            case SHAKUHACHI -> body = span(mouth, a.right(), new Vector3f(8, 15.6f, 8), new Vector3f(8, 4.6f, 8), new Vector3f(0, 0, 1),
+                new Vector3f(FORWARD).negate(), 0.72f, true);
+            // 神乐铃：柄握在右手里，铃朝上
+            case KAGURA_SUZU -> body = span(a.right(), new Vector3f(UP).mul(10).add(a.right()), new Vector3f(8, 3.6f, 8), new Vector3f(8, 15, 8),
+                new Vector3f(0, 0, 1), new Vector3f(FORWARD).negate(), 0.5f, false);
             // 号嘴贴着嘴，号身朝前略往下
             default -> body = span(mouth, new Vector3f(FORWARD).mul(10).add(mouth).sub(0, 1.2f, 0), new Vector3f(0.4f, 9, 8), new Vector3f(7.4f, 9, 8),
                 new Vector3f(0, 1, 0), UP, 0.65f, false);

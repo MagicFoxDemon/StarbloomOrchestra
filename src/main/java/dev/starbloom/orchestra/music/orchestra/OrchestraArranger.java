@@ -55,6 +55,8 @@ public final class OrchestraArranger {
             case 68, 69 -> InstrumentKind.OBOE;
             case 70 -> InstrumentKind.BASSOON;
             case 72, 73, 74, 75 -> InstrumentKind.FLUTE;
+            case 77 -> InstrumentKind.SHAKUHACHI;
+            case 78 -> InstrumentKind.SHINOBUE;   // GM 没有篠笛：借哨笛（Whistle）这一号，都是又高又亮的笛子
             // 打击乐一类的音色：钟、钢鼓给钟琴，太鼓、通通鼓、合成鼓给定音鼓
             case 112, 114 -> InstrumentKind.GLOCKENSPIEL;
             case 116, 117, 118 -> InstrumentKind.TIMPANI;
@@ -79,6 +81,8 @@ public final class OrchestraArranger {
         if (has(n, "violin", "violine", "violino", "geige", "小提琴") || word(words, "vn", "vln", "vl")) return 40;
         if (has(n, "english horn", "cor anglais", "englischhorn", "corno inglese", "英国管")) return 69;
         if (has(n, "oboe", "hautbois", "双簧管") || word(words, "ob")) return 68;
+        if (has(n, "shakuhachi", "尺八")) return 77;
+        if (has(n, "shinobue", "篠笛", "ryuteki", "龙笛", "龍笛", "nohkan", "能管", "竹笛", "笛子", "dizi") || word(words, "fue")) return 78;
         if (has(n, "piccolo", "短笛")) return 72;
         if (has(n, "flute", "flöte", "flote", "flauto", "长笛") || word(words, "fl")) return 73;
         if (has(n, "clarinet", "klarinette", "clarinetto", "单簧管") || word(words, "cl", "clar")) return 71;
@@ -144,7 +148,7 @@ public final class OrchestraArranger {
 
     /**
      * 乐团里没有的乐器找替身：{乐器, 加分}。单簧管由双簧管、长笛接；圆号由小号、巴松管接；长号、大号由巴松管、大提琴、低音提琴接；
-     * 萨克斯同单簧管；人声、合唱由提琴、长笛接。
+     * 萨克斯同单簧管；人声、合唱由提琴、长笛接；长笛、篠笛、尺八互相接。
      */
     private static final Map<InstrumentKind, Integer> NONE = Map.of();
 
@@ -156,6 +160,10 @@ public final class OrchestraArranger {
             case 57 -> { m.put(InstrumentKind.BASSOON, 60); m.put(InstrumentKind.TRUMPET, 45); m.put(InstrumentKind.CELLO, 40); }
             case 58 -> { m.put(InstrumentKind.BASSOON, 60); m.put(InstrumentKind.DOUBLE_BASS, 50); m.put(InstrumentKind.CELLO, 40); }
             case 52, 53, 54 -> { m.put(InstrumentKind.VIOLIN, 40); m.put(InstrumentKind.FLUTE, 40); m.put(InstrumentKind.VIOLA, 40); }
+            // 长笛、篠笛、尺八互为替身：乐团里没有写给的那种笛子时，由别的笛子接（横吹的更像横吹的）
+            case 72, 73, 74, 75 -> { m.put(InstrumentKind.SHINOBUE, 55); m.put(InstrumentKind.SHAKUHACHI, 45); }
+            case 77 -> { m.put(InstrumentKind.SHINOBUE, 50); m.put(InstrumentKind.FLUTE, 45); }
+            case 78 -> { m.put(InstrumentKind.FLUTE, 55); m.put(InstrumentKind.SHAKUHACHI, 45); }
             default -> { return NONE; }
         }
         return m;

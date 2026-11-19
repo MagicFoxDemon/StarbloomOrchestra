@@ -5,7 +5,7 @@
 ## 乐器采样
 
 模组本体只带自己合成的乐器音（`tools/instrument_samples.py`），没有第三方素材。单独发布的「音乐厅音源」资源包
-（仓库的 `resourcepacks/concert_hall/`）里的录音采样取自下面三个采样库，由 `tools/instrument_sources.py` 从固定提交下载、改编
+（仓库的 `resourcepacks/concert_hall/`）里的录音采样取自下面五个采样库，由 `tools/instrument_sources.py` 从固定提交下载、改编
 （混成单声道、重采样、切头截尾、加循环点、调整音量、重新编码）。资源包根目录的 `NOTICE.txt` 是随包的协议说明，
 做法见 [乐器采样](docs/INSTRUMENT_SAMPLES.md)。
 
@@ -14,8 +14,10 @@
 | 星辰花三角钢琴 | [Salamander Grand Piano V3](https://github.com/sfzinstruments/SalamanderGrandPiano)（提交 `3382bf94`，原始发布 <https://archive.org/details/SalamanderGrandPianoV3>） | Alexander Holm；SFZ / FLAC 版 kinwie（sfzinstruments）；重新调律 Markus Fiedler | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/)，**须署名**；本模组的钢琴采样是它的改编 |
 | 小提琴、中提琴、大提琴、低音提琴、长笛、双簧管、巴松管、小号、定音鼓 | [VS Chamber Orchestra: Community Edition](https://github.com/sgossner/VSCO-2-CE)（提交 `44030090`） | Versilian Studios（Sam Gossner、Simon Dalzell 录音，Elan Hickler 切采样） | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)，不要求署名，这里致谢 |
 | 灵猫竖琴、钟琴、管钟、大键琴、大鼓、小军鼓、吊镲、三角铁 | [Versilian Community Sample Library](https://github.com/sgossner/VCSL)（提交 `c1ea7bcc`） | Versilian Studios 及贡献者 | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)，不要求署名，这里致谢 |
+| 篠笛 | [Otowabi Shinobue 1.0](https://github.com/fumikomidori/OtowabiShinobue)（提交 `26a14964`，Kontakt 的 NCW 格式，用 `tools/ncw.py` 解码） | fumikomidori（<https://otowabi.com/>） | MIT，**须附版权声明与许可声明**（`NOTICE.txt` 里有全文） |
+| 神乐铃 | [Otowabi Kagurasuzu 1.1](https://github.com/fumikomidori/OtowabiKagurasuzu)（提交 `db1d22e5`） | fumikomidori | MIT，同上 |
 
-转载资源包、放进整合包、二次修改时保留 Salamander 的署名与协议链接（资源包根目录的 `NOTICE.txt`）。
+转载资源包、放进整合包、二次修改时保留 Salamander 的署名与协议链接、Otowabi 两个库的 MIT 声明（都在资源包根目录的 `NOTICE.txt`）。
 
 ## 管风琴合成的参考（没有使用其代码或数据）
 

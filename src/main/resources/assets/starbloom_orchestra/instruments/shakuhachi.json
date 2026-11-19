@@ -1,0 +1,168 @@
+{
+ "format": 1,
+ "quality": "synth",
+ "source": "synthesized by tools/instrument_samples.py",
+ "range": 32,
+ "zones": [
+  {
+   "file": "instrument/shakuhachi/s62",
+   "key": 61.98,
+   "lo": 62,
+   "hi": 63,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.2792,
+   "curve": 1.2,
+   "frames": 56007,
+   "release": 0.15,
+   "loop": [
+    3087,
+    56007
+   ]
+  },
+  {
+   "file": "instrument/shakuhachi/s65",
+   "key": 64.997,
+   "lo": 64,
+   "hi": 66,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.2526,
+   "curve": 1.2,
+   "frames": 56007,
+   "release": 0.15,
+   "loop": [
+    3087,
+    56007
+   ]
+  },
+  {
+   "file": "instrument/shakuhachi/s68",
+   "key": 67.987,
+   "lo": 67,
+   "hi": 69,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.2846,
+   "curve": 1.2,
+   "frames": 56007,
+   "release": 0.15,
+   "loop": [
+    3087,
+    56007
+   ]
+  },
+  {
+   "file": "instrument/shakuhachi/s71",
+   "key": 71.01,
+   "lo": 70,
+   "hi": 72,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.2504,
+   "curve": 1.2,
+   "frames": 56007,
+   "release": 0.15,
+   "loop": [
+    3087,
+    56007
+   ]
+  },
+  {
+   "file": "instrument/shakuhachi/s74",
+   "key": 74.005,
+   "lo": 73,
+   "hi": 75,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.2723,
+   "curve": 1.2,
+   "frames": 56007,
+   "release": 0.15,
+   "loop": [
+    3087,
+    56007
+   ]
+  },
+  {
+   "file": "instrument/shakuhachi/s77",
+   "key": 76.997,
+   "lo": 76,
+   "hi": 78,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.2297,
+   "curve": 1.2,
+   "frames": 56007,
+   "release": 0.15,
+   "loop": [
+    3087,
+    56007
+   ]
+  },
+  {
+   "file": "instrument/shakuhachi/s80",
+   "key": 80.005,
+   "lo": 79,
+   "hi": 81,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.2242,
+   "curve": 1.2,
+   "frames": 56007,
+   "release": 0.15,
+   "loop": [
+    3087,
+    56007
+   ]
+  },
+  {
+   "file": "instrument/shakuhachi/s83",
+   "key": 82.995,
+   "lo": 82,
+   "hi": 84,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.2197,
+   "curve": 1.2,
+   "frames": 56007,
+   "release": 0.15,
+   "loop": [
+    3087,
+    56007
+   ]
+  },
+  {
+   "file": "instrument/shakuhachi/s86",
+   "key": 86.005,
+   "lo": 85,
+   "hi": 87,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.213,
+   "curve": 1.2,
+   "frames": 56007,
+   "release": 0.15,
+   "loop": [
+    3087,
+    56007
+   ]
+  },
+  {
+   "file": "instrument/shakuhachi/s89",
+   "key": 88.997,
+   "lo": 88,
+   "hi": 88,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.1923,
+   "curve": 1.2,
+   "frames": 56007,
+   "release": 0.15,
+   "loop": [
+    3087,
+    56007
+   ]
+  }
+ ]
+}

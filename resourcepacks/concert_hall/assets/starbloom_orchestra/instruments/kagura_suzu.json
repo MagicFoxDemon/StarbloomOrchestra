@@ -1,0 +1,116 @@
+{
+ "format": 1,
+ "quality": "recorded",
+ "source": "Otowabi Kagurasuzu 1.1 (MIT) fumikomidori/OtowabiKagurasuzu@db1d22e5a156",
+ "range": 40,
+ "zones": [
+  {
+   "file": "instrument/kagura_suzu/83_0",
+   "key": 83.0,
+   "lo": 83,
+   "hi": 83,
+   "vlo": 1,
+   "vhi": 32,
+   "gain": 0.0777,
+   "curve": 1.4,
+   "frames": 132300,
+   "release": 1.5
+  },
+  {
+   "file": "instrument/kagura_suzu/84_0",
+   "key": 84.0,
+   "lo": 84,
+   "hi": 84,
+   "vlo": 1,
+   "vhi": 56,
+   "gain": 0.2965,
+   "curve": 1.4,
+   "frames": 304290,
+   "release": 0.3,
+   "loop": [
+    132300,
+    304290
+   ]
+  },
+  {
+   "file": "instrument/kagura_suzu/83_1",
+   "key": 83.0,
+   "lo": 83,
+   "hi": 83,
+   "vlo": 33,
+   "vhi": 60,
+   "gain": 0.1346,
+   "curve": 1.4,
+   "frames": 132300,
+   "release": 1.5
+  },
+  {
+   "file": "instrument/kagura_suzu/84_1",
+   "key": 84.0,
+   "lo": 84,
+   "hi": 84,
+   "vlo": 57,
+   "vhi": 96,
+   "gain": 0.2937,
+   "curve": 1.4,
+   "frames": 302967,
+   "release": 0.3,
+   "loop": [
+    89082,
+    302967
+   ]
+  },
+  {
+   "file": "instrument/kagura_suzu/83_2",
+   "key": 83.0,
+   "lo": 83,
+   "hi": 83,
+   "vlo": 61,
+   "vhi": 86,
+   "gain": 0.2268,
+   "curve": 1.4,
+   "frames": 132300,
+   "release": 1.5
+  },
+  {
+   "file": "instrument/kagura_suzu/84_2",
+   "key": 84.0,
+   "lo": 84,
+   "hi": 84,
+   "vlo": 97,
+   "vhi": 127,
+   "gain": 0.4238,
+   "curve": 1.4,
+   "frames": 355446,
+   "release": 0.3,
+   "loop": [
+    218736,
+    355446
+   ]
+  },
+  {
+   "file": "instrument/kagura_suzu/83_3",
+   "key": 83.0,
+   "lo": 83,
+   "hi": 83,
+   "vlo": 87,
+   "vhi": 108,
+   "gain": 0.296,
+   "curve": 1.4,
+   "frames": 132300,
+   "release": 1.5
+  },
+  {
+   "file": "instrument/kagura_suzu/83_4",
+   "key": 83.0,
+   "lo": 83,
+   "hi": 83,
+   "vlo": 109,
+   "vhi": 127,
+   "gain": 0.4278,
+   "curve": 1.4,
+   "frames": 132300,
+   "release": 1.5
+  }
+ ]
+}

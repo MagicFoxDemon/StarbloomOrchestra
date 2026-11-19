@@ -12,6 +12,8 @@
   合成的小体积采样，追求高保真的录音放在单独发布的「音乐厅音源」资源包（`resourcepacks/concert_hall`，`tools/instrument_sources.py`
   从固定提交下载、改编）。录音的来源和协议登记在 CREDITS.md 和资源包的 `NOTICE.txt`。低音乐器的合成音除了 K 计权，还要用
   A 计权、切掉 120 Hz 以下的响度和录音对一下。
+- 和乐器（篠笛、神乐铃……）按 [docs/JAPANESE_INSTRUMENTS.md](docs/JAPANESE_INSTRUMENTS.md)：按日本的样子画，不套魔女之森的配色；
+  买来的商用采样库先看授权能不能再分发，不能就只做合成层。
 - 管风琴按 [docs/PIPE_ORGAN.md](docs/PIPE_ORGAN.md)：音色在客户端现场合成、经 `OrganBufferMixin` 交给声音引擎。
 - 服务端从不读 MIDI 或玩家给的路径，只收客户端解析好的纸带并重新校验（`ServerConfig` 的 `[instruments]`）。
 - 乐团、工位、指挥按 [docs/ORCHESTRA.md](docs/ORCHESTRA.md)。演奏姿势的落点写在方块模型的像素里，原版人形（`MusicianPoses`）、

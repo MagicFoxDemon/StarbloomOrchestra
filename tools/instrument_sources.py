@@ -10,6 +10,8 @@
 - 竖琴、钟琴、管钟、大键琴：Versilian Community Sample Library（VCSL，CC0）
 - 小提琴、长笛、小号：VS Chamber Orchestra: Community Edition（VSCO 2 CE，CC0）
 - 大鼓、小军鼓、吊镲、三角铁（无音高打击乐，按 GM 第 10 通道的鼓键一键一套录音）：VCSL
+- 篠笛：Otowabi Shinobue（fumikomidori，MIT），Kontakt 的 NCW 格式，用 tools/ncw.py 解码
+- 神乐铃：Otowabi Kagurasuzu（fumikomidori，MIT），一振（83）五层、连摇（84，循环）三层
 两个库都没有钢片琴，资源包里就没有钢片琴（用本体合成的）；管风琴在客户端按音栓现场合成，也不在资源包里。
 
 每个采样的处理：
@@ -25,6 +27,9 @@
   --report  只分析、打印每个采样的测量结果，不写文件
   --demo    另把每件乐器的音阶与和弦渲染成 ogg，方便不进游戏先听
   --reserve 只下载并分析「以后备用」的乐器（见 RESERVES），渲染试听到 --demo 目录，不写进模组
+  --private-shakuhachi <采样目录> --private-out <目录>
+            用维护者自己买的 ikoa「和楽器 尺八 サンプルパック」做一个只给自己用的资源包（PRIVATE）。
+            那套采样的利用规约禁止再分发：输出只写到 --private-out（不进仓库、不进音乐厅音源包），不要发布、不要放进整合包
 """
 from __future__ import annotations
 
@@ -92,8 +97,16 @@ REPOS = {
     "vcsl": Repo("sgossner/VCSL", "c1ea7bcc3c7309650ab0da9d15c9cd1fbc4a4c7e",
                  "Versilian Community Sample Library", "CC0 1.0", "https://creativecommons.org/publicdomain/zero/1.0/",
                  "Versilian Studios and contributors"),
+    "shinobue": Repo("fumikomidori/OtowabiShinobue", "26a149648d668cc8af8ef2a93fd470b25160e5e4",
+                     "Otowabi Shinobue 1.0", "MIT", "https://opensource.org/license/mit", "fumikomidori (https://otowabi.com/)"),
+    "kagurasuzu": Repo("fumikomidori/OtowabiKagurasuzu", "db1d22e5a15654fa4306c0d25a9040978d7f7926",
+                       "Otowabi Kagurasuzu 1.1", "MIT", "https://opensource.org/license/mit", "fumikomidori (https://otowabi.com/)"),
     "local": Repo("", "", "synthesized by tools/instrument_samples.py", "same as this mod", "", "Logos: Spellwrought Expanse"),
+    # 维护者自己买的商用采样（--private-shakuhachi 给出本机目录）：利用规约只许个人使用，禁止再分发
+    "ikoa_shakuhachi": Repo("", "", "ikoa 和楽器 尺八 サンプルパック std v1.0 (personal use only, do not redistribute)",
+                            "ikoa terms of use", "", "ikoa"),
 }
+LOCAL: dict[str, Path] = {}   # 本机目录里的采样库（不下载）：库的键 → 目录
 
 
 class Cache:
@@ -104,6 +117,8 @@ class Cache:
         self.trees: dict[str, list[str]] = {}
 
     def tree(self, key: str) -> list[str]:
+        if key in LOCAL:
+            return sorted(f.relative_to(LOCAL[key]).as_posix() for f in LOCAL[key].rglob("*") if f.is_file())
         if key not in self.trees:
             repo = REPOS[key]
             path = self.root / f"tree-{repo.slug.replace('/', '_')}-{repo.commit[:12]}.json"
@@ -122,6 +137,8 @@ class Cache:
     def file(self, key: str, rel: str) -> Path:
         if key == "local":
             return ASSETS / "sounds" / rel
+        if key in LOCAL:
+            return LOCAL[key] / Path(*rel.split("/"))
         repo = REPOS[key]
         dest = self.root / repo.slug.replace("/", "_") / Path(*rel.split("/"))
         if dest.exists() and dest.stat().st_size > 0:
@@ -175,11 +192,12 @@ class Spec:
     auto_range: bool = False       # 音域按采样实际音高定（备用乐器）
     note: str = ""
     drums: bool = False            # 无音高打击乐：每个 GM 鼓键用自己的录音，层数各自定；音区不拉平，各键响度按 key_level
+    loops: tuple = ()              # 无音高打击乐里按住一直响的鼓键（神乐铃的连摇）：不按音高、按响度找循环点
     key_level: dict = field(default_factory=dict)   # 鼓键 → 相对电平（dB）：踩镲比强音镲轻、边击比军鼓轻
 
 
 def files_in(cache: Cache, key: str, folder: str) -> list[str]:
-    prefix = folder.rstrip("/") + "/"
+    prefix = folder.rstrip("/") + "/" if folder else ""
     return [p for p in cache.tree(key) if p.startswith(prefix)]
 
 
@@ -316,6 +334,16 @@ def bassoon_sources(cache: Cache) -> list[Src]:
 
 
 # 定音鼓：VSCO 2 CE 的五面鼓（Timpani1–5），文件名不写音名，音高按它的 SFZ：F#2 A#2 C#3 E3 F#3
+def shinobue_sources(cache: Cache) -> list[Src]:
+    """文件名就是 MIDI 音号（69–101，C 大调为主，最多隔三个半音），只有一层。"""
+    out = []
+    for p in files_in(cache, "shinobue", "OtowabiShinobue Samples"):
+        m = re.search(r"/(\d+)\.ncw$", p)
+        if m:
+            out.append(Src(p, int(m.group(1)), 0))
+    return out
+
+
 TIMPANI_KEYS = {1: 42, 2: 46, 3: 49, 4: 52, 5: 54}
 
 
@@ -393,6 +421,11 @@ SPECS: dict[str, Spec] = {
         "bassoon", "vsco", 34, 76, [(1, 84), (85, 127)], bassoon_sources, shift=12, sustain=True,
         max_seconds=lambda m: 7.0, release=lambda m: 0.15, level=-1.0, curve=1.2,
         note="Bassoon sus（长音），v1 / v2 两层，文件名比实际发声低一个八度"),
+    # 和乐器：篠笛（手持，横吹）。音域、松键、电平与模组本体的合成音源一致
+    "shinobue": Spec(
+        "shinobue", "shinobue", 69, 101, [(1, 127)], shinobue_sources, sustain=True,
+        max_seconds=lambda m: 7.0, release=lambda m: 0.12, level=-3.0, curve=1.2, shape=0.3,
+        note="Otowabi Shinobue（篠笛长音，一层），文件名是 MIDI 音号，NCW 格式（tools/ncw.py）"),
     "timpani": Spec(
         "timpani", "vsco", 38, 57, [(1, 56), (57, 96), (97, 127)], timpani_sources, pitch="label",
         max_seconds=lambda m: 5.0, level=-2.0, range=48,
@@ -404,9 +437,17 @@ SPECS: dict[str, Spec] = {
 
 
 def decode(path: Path) -> np.ndarray:
-    """解码成 44.1 kHz 单声道 float64（soxr 高精度重采样）。"""
-    raw = subprocess.run([FFMPEG, "-v", "error", "-i", str(path), "-af", "aresample=resampler=soxr:precision=28",
-                          "-ar", str(SR), "-ac", "2", "-f", "f32le", "-"], capture_output=True, check=True).stdout
+    """解码成 44.1 kHz 单声道 float64（soxr 高精度重采样）。Kontakt 的 NCW（篠笛）先用 tools/ncw.py 解开，再交给 ffmpeg 重采样。"""
+    if path.suffix.lower() == ".ncw":
+        import ncw
+        rate, data = ncw.read(path)
+        pcm = (data if len(data) == 2 else np.vstack([data[0], data[0]])).T.astype("<f4").tobytes()
+        raw = subprocess.run([FFMPEG, "-v", "error", "-f", "f32le", "-ar", str(rate), "-ac", "2", "-i", "-",
+                              "-af", "aresample=resampler=soxr:precision=28", "-ar", str(SR), "-ac", "2", "-f", "f32le", "-"],
+                             input=pcm, capture_output=True, check=True).stdout
+    else:
+        raw = subprocess.run([FFMPEG, "-v", "error", "-i", str(path), "-af", "aresample=resampler=soxr:precision=28",
+                              "-ar", str(SR), "-ac", "2", "-f", "f32le", "-"], capture_output=True, check=True).stdout
     x = np.frombuffer(raw, dtype="<f4").reshape(-1, 2).astype(np.float64)
     mono = 0.5 * (x[:, 0] + x[:, 1])
     sos = signal.butter(2, 12, btype="highpass", fs=SR, output="sos")
@@ -640,6 +681,30 @@ def find_loop(x: np.ndarray, f0: float, limit_s: float) -> Loop:
     return Loop(s, e, xf, total, vib)
 
 
+def find_shake_loop(x: np.ndarray, limit_s: float) -> Loop:
+    """没有音高的持续声（神乐铃一直摇）：在 0.8 秒以后的一段里挑 2.5–5 秒长的循环，两头 50 毫秒的响度、
+    前后 0.4 秒的平均响度和亮度都接近；终点挪到一次摇动之前的低谷（交叉淡化时盖住的是余音，不是一下铃响）。"""
+    hop = int(0.01 * SR)
+    x = x[:int(limit_s * SR)]
+    lvl = 20 * np.log10(rms_track(x, 0.05)[::hop] + 1e-12)
+    slow = 20 * np.log10(rms_track(x, 0.8)[::hop] + 1e-12)
+    hi = x - signal.sosfiltfilt(signal.butter(2, 5000, fs=SR, output="sos"), x)
+    bright = 20 * np.log10(rms_track(hi, 0.8)[::hop] + 1e-12) - slow
+    a, b = int(0.8 * SR / hop), len(lvl) - int(0.3 * SR / hop)
+    best = None
+    for span in range(int(2.5 * SR / hop), int(5.0 * SR / hop) + 1, 5):
+        for s in range(a, b - span, 2):
+            e = s + span
+            c = (abs(lvl[s] - lvl[e]) + 2 * abs(slow[s] - slow[e]) + 2 * abs(bright[s] - bright[e])
+                 + 0.15 * max(0.0, lvl[s] - np.median(lvl[a:b])) + 0.15 * max(0.0, lvl[e] - np.median(lvl[a:b])))
+            if best is None or c < best[0]:
+                best = (c, s * hop, e * hop)
+    if best is None:
+        raise RuntimeError("sample too short to loop")
+    c, s, e = best
+    return Loop(s, e, int(0.25 * SR), c, None)
+
+
 def apply_loop(x: np.ndarray, loop: Loop) -> np.ndarray:
     """循环终点前 crossfade 个点与循环起点前的同样长度交叉淡化：放到终点时波形正好接上起点。"""
     s, e, n = loop.start, loop.end, loop.crossfade
@@ -726,13 +791,17 @@ def process(spec: Spec, cache: Cache, src: Src, log) -> Sample:
         loop = find_loop(y, hz(key), min(4.5, spec.max_seconds(expected)))
         y = apply_loop(y, loop)
         loud = loudness_db(y, loop.start, loop.end, None)
+    elif expected in spec.loops:
+        loop = find_shake_loop(y, spec.max_seconds(expected))
+        y = apply_loop(y, loop)
+        loud = loudness_db(y, loop.start, loop.end, None)
     else:
         loop = None
         end = decay_end(y, 0, spec.max_seconds(expected))
         y = y[:end].copy()
         y = fade_out(y, int(min(0.8 * SR, 0.3 * len(y))))
         loud = loudness_db(y, 0, min(len(y), int(0.8 * SR)), 0.4)
-    fade_in = int((0.008 if spec.sustain else 0.001) * SR)
+    fade_in = int((0.008 if spec.sustain or expected in spec.loops else 0.001) * SR)
     y[:fade_in] *= np.linspace(0, 1, fade_in)
     return Sample(src, y, key, measured, loud, float(np.abs(y).max()), loop)
 
@@ -1100,6 +1169,35 @@ def drum_demo(kinds: list[str], out: Path, name: str = "demo_drums") -> None:
     encode(mix, out / f"{name}.ogg", 6)
 
 
+def shake_demo(kind: str, out: Path, name: str) -> None:
+    """神乐铃的试听：一振按「一、一、一一一」的节奏轻重各摇一遍，再按住连摇两秒半（轻、重各一次），同游戏里松手时收住。"""
+    data = json.loads((ASSETS / "instruments" / f"{kind}.json").read_text(encoding="utf-8"))
+    cache: dict[str, np.ndarray] = {}
+    events = []   # (秒, 鼓键, 力度, 按住秒)
+    t = 0.3
+    for v in (64, 118):
+        for d in (0.0, 0.9, 1.8, 2.25, 2.7):
+            events.append((t + d, 83, v, 0.12))
+        t += 4.4
+    for v in (64, 118):
+        events.append((t, 84, v, 2.5))
+        t += 4.0
+    mix = np.zeros(int((t + 3) * SR))
+    for start, key, v, hold in events:
+        z = pick(data["zones"], key, v)
+        if z["file"] not in cache:
+            cache[z["file"]] = decode_ogg(ASSETS / "sounds" / f"{z['file']}.ogg")
+        y = render_note(cache[z["file"]], z, key, v, hold, True)
+        i = int(start * SR)
+        n = min(len(y), len(mix) - i)
+        mix[i:i + n] += y[:n]
+    peak = float(np.abs(mix).max())
+    if peak > 0.98:
+        mix *= 0.98 / peak
+    out.mkdir(parents=True, exist_ok=True)
+    encode(mix, out / f"{name}.ogg", 6)
+
+
 # ---------------------------------------------------------------- 以后备用的乐器（--reserve：只做出来量体积、渲染试听，不写进模组）
 
 
@@ -1145,19 +1243,19 @@ IDIO = "Idiophones/Struck Idiophones/"
 
 
 def drum_kit(kind: str, keys: dict, seconds: dict, level: float = 0.0, key_level: dict | None = None, rng: int = 48,
-             note: str = "") -> Spec:
+             note: str = "", repo: str = "vcsl", release: Callable[[int], float] = lambda m: 0.0, loops: tuple = ()) -> Spec:
     """无音高打击乐（docs/ORCHESTRA.md 第 20 节）：keys = {GM 鼓键: (文件夹, 正则, {力度标记: 由轻到重的序号})}，
     每个键用自己那几个录音（同一个文件夹里按正则挑，dyn 组是力度标记）；音高就是鼓键号，不量、不变调。"""
     def sources(cache: Cache) -> list[Src]:
         out = []
         for key, (folder, regex, layers) in keys.items():
-            got = pattern("vcsl", folder, regex, layers, label=key)(cache)
+            got = pattern(repo, folder, regex, layers, label=key)(cache)
             assert got, (kind, key, folder, regex)
             out += got
         return out
-    return Spec(kind, "vcsl", min(keys), max(keys), VEL_SPLITS[5], sources, pitch="label",
+    return Spec(kind, repo, min(keys), max(keys), VEL_SPLITS[5], sources, pitch="label",
                 max_seconds=lambda m: seconds.get(m, 2.0), level=level, range=rng, drums=True, key_level=key_level or {},
-                note=note)
+                note=note, release=release, loops=loops)
 
 
 DRUM_SPECS: dict[str, Spec] = {
@@ -1190,8 +1288,34 @@ DRUM_SPECS: dict[str, Spec] = {
         80: (IDIO + "Triangles", r"Triangle1_HitM_v1_rr(?P<dyn>2)_Mid\.wav$", {"2": 0}),
         81: (IDIO + "Triangles", r"Triangle1_Hit_v(?P<dyn>[12])_rr1_Mid\.wav$", {"1": 0, "2": 1}),
     }, {80: 0.8, 81: 4.0}, level=-6.0, key_level={80: -3.0}, rng=40, note="80 闷音 = HitM，81 开音 = Hit 两层"),
+    # 神乐铃（手持）：83 一振 = 五段单摇按响度从轻到重（最轻的 one_06 比别的轻十几 dB，不用）；84 连摇 = 三段一直摇的录音，
+    # 按住一直响（循环）、松手 0.3 秒收住；一振松手不切，1.5 秒的淡出比铃声自己散得还慢
+    "kagura_suzu": drum_kit("kagura_suzu", {
+        83: ("OtowabiKagurasuzu1.1 Samples", r"suzu_one_0(?P<dyn>[1-5])\.wav$", {"5": 0, "4": 1, "3": 2, "2": 3, "1": 4}),
+        84: ("OtowabiKagurasuzu1.1 Samples", r"suzu_long_0(?P<dyn>[1-3])\.wav$", {"3": 0, "2": 1, "1": 2}),
+    }, {83: 3.0, 84: 12.0}, level=-4.0, key_level={84: -2.0}, rng=40, repo="kagurasuzu",
+        release=lambda m: 1.5 if m == 83 else 0.3, loops=(84,),
+        note="83 一振 = suzu_one_01–05 五层，84 连摇 = suzu_long_01–03 三层（循环）"),
 }
 SPECS.update(DRUM_SPECS)
+
+def ikoa_shakuhachi_sources(cache: Cache) -> list[Src]:
+    """ikoa 的尺八：一尺八寸管（D），长音 12 个（D3–D#5，文件名按 C3 = 中央 C 写，比实际低一个八度），一层。"""
+    out = []
+    for p in files_in(cache, "ikoa_shakuhachi", ""):
+        m = re.fullmatch(r"([A-G]#?\d)_Sustain\.wav", p)
+        if m:
+            out.append(Src(p, midi_of(m.group(1)), 0))
+    return out
+
+
+# 只给维护者自己用、不发布的录音（--private-*）：音域、松键、电平和模组本体的合成音源一致
+PRIVATE: dict[str, Spec] = {
+    "shakuhachi": Spec(
+        "shakuhachi", "ikoa_shakuhachi", 62, 88, [(1, 127)], ikoa_shakuhachi_sources, shift=12, sustain=True,
+        max_seconds=lambda m: 5.0, release=lambda m: 0.15, level=-2.0, curve=1.2, shape=0.3,
+        note="ikoa 和楽器 尺八 サンプルパック std v1.0 Sustain，一层；个人使用，不能再分发"),
+}
 
 RESERVES: dict[str, Spec] = {
     "piccolo": sustained("piccolo", "Woodwinds/Piccolo/Sus", rf"piccolo_{N}_sustain(?P<dyn>1)\.wav$", {"1": 0}, [(1, 127)], curve=1.2),
@@ -1206,6 +1330,37 @@ RESERVES: dict[str, Spec] = {
     "dan_tranh": struck("dan_tranh", "vcsl", "Chordophones/Zithers/Dan Tranh/Normal", rf"^{N}_(?P<dyn>mf|ff)_1\.wav$",
                         {"mf": 0, "ff": 1}, TWO, 5.0),
 }
+PRIVATE_README = """Starbloom Orchestra · private shakuhachi recordings / 尺八录音（个人使用）
+
+Made by tools/instrument_sources.py --private-shakuhachi from the maintainer's own copy of
+ikoa「和楽器 尺八 サンプルパック」std v1.0. The pack's terms of use allow copying only for personal use and music
+production, and forbid distributing the data or any part of it, paid or free. Do not share, upload or put this
+resource pack into a modpack.
+本资源包由维护者自己买的 ikoa「和楽器 尺八 サンプルパック」做成。那套采样的利用规约只许个人使用和音乐制作，
+禁止颁布全部或一部分（不论收费与否）。不要分享、上传或放进整合包。
+"""
+
+
+def build_private(samples: Path, out: Path, cache: Cache, demo_dir: Path | None) -> None:
+    """个人用资源包：只有尺八一张采样表和它的录音，叠在模组本体的合成音上面（和音乐厅音源包互不覆盖）。"""
+    global ASSETS
+    if out is None:
+        raise SystemExit("--private-out is required")
+    out = out.resolve()
+    if ROOT.resolve() in out.parents or out == ROOT.resolve():
+        raise SystemExit("--private-out must be outside the repository (the samples may not be redistributed)")
+    LOCAL["ikoa_shakuhachi"] = samples.resolve()
+    ASSETS = out / "assets/starbloom_orchestra"
+    spec = PRIVATE["shakuhachi"]
+    build(spec, cache, True, lambda m: print(m, flush=True))
+    (out / "pack.mcmeta").write_text(json.dumps({"pack": {
+        "description": "星辰花乐团 · 尺八录音（个人使用，勿分发）\nStarbloom Orchestra · shakuhachi, personal use only",
+        "min_format": 84, "max_format": 84}}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
+    (out / "README.txt").write_text(PRIVATE_README, encoding="utf-8", newline="\n")
+    if demo_dir:
+        demo(spec, demo_dir)
+
+
 def main() -> None:
     global FFMPEG
     ap = argparse.ArgumentParser()
@@ -1215,9 +1370,14 @@ def main() -> None:
     ap.add_argument("--report", action="store_true")
     ap.add_argument("--demo", type=Path)
     ap.add_argument("--reserve", type=Path, help="把以后备用的乐器做到这个目录（不写进模组），列出体积并渲染试听")
+    ap.add_argument("--private-shakuhachi", type=Path, help="维护者自己买的 ikoa 尺八采样所在目录（只做个人用的资源包）")
+    ap.add_argument("--private-out", type=Path, help="个人用资源包写到这里（必须在仓库外面）")
     args = ap.parse_args()
     FFMPEG = args.ffmpeg
     cache = Cache(args.cache)
+    if args.private_shakuhachi:
+        build_private(args.private_shakuhachi, args.private_out, cache, args.demo)
+        return
     if args.reserve:
         global ASSETS
         ASSETS = args.reserve / "assets/starbloom_orchestra"
@@ -1235,7 +1395,7 @@ def main() -> None:
         print(f"total {sum(r[6] for r in rows) / 1e6:.1f} MB, {sum(r[5] for r in rows):.0f} s of audio")
         return
     kinds = args.only or list(SPECS)
-    drum_kinds = [k for k in kinds if k in DRUM_SPECS]
+    drum_kinds = [k for k in kinds if k in DRUM_SPECS and not SPECS[k].loops]
 
     def log(msg: str) -> None:
         print(msg, flush=True)
@@ -1244,6 +1404,8 @@ def main() -> None:
         build(SPECS[kind], cache, not args.report, log)
         if args.demo and not args.report and kind not in DRUM_SPECS:
             demo(SPECS[kind], args.demo)
+        elif args.demo and not args.report and SPECS[kind].loops:
+            shake_demo(kind, args.demo, f"demo_{kind}_recorded")
     if args.demo and not args.report and drum_kinds:
         drum_demo(drum_kinds, args.demo, "demo_drums_recorded")
     if not args.report:

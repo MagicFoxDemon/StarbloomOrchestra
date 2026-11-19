@@ -101,7 +101,7 @@ class SampleMapTest {
                 assertTrue(z.loopEnd() - z.loopStart() >= 44100 / 2, z.file() + " loop at least half a second");
             }
             if (z.releaseSound() != null) assertTrue(layer.has("assets/starbloom_orchestra/sounds/" + z.releaseSound() + ".ogg"), name + " missing " + z.releaseSound());
-            assertEquals(kind.handheld() || kind.seated(), z.loops(), name + " " + kind + " " + z.file() + " loops only for bowed and blown notes");
+            assertEquals(kind.sustains(z.lo()), z.loops(), name + " " + kind + " " + z.file() + " loops only for bowed and blown notes and the held shake");
             if (kind.dampsOnRelease()) assertTrue(z.release() > 0, name + " " + kind + " fades on key up");
         }
     }
@@ -127,7 +127,9 @@ class SampleMapTest {
             coversEverything(kind, map, "pack");
             filesExist(RECORDED, kind, map, "pack");
         }
-        assertTrue(found >= 14, "the pack records the piano, harp, mallets, harpsichord, strings, winds, brass and timpani (" + found + ")");
+        assertTrue(found >= 20, "the pack records the piano, harp, mallets, harpsichord, strings, winds, brass, percussion, shinobue and kagura suzu (" + found + ")");
+        assertNotNull(load(RECORDED, InstrumentKind.SHINOBUE), "the pack records the shinobue");
+        assertNotNull(load(RECORDED, InstrumentKind.KAGURA_SUZU), "the pack records the kagura suzu");
         assertTrue(load(RECORDED, InstrumentKind.HARPSICHORD).zones().stream().allMatch(z -> z.releaseSound() != null),
             "every recorded harpsichord note has its jack falling back");
         assertTrue(load(RECORDED, InstrumentKind.GRAND_PIANO).zones().size() >= 5 * 29, "five velocity layers of the piano");
@@ -147,6 +149,10 @@ class SampleMapTest {
         assertTrue(InstrumentKind.CELLO.seated() && InstrumentKind.DOUBLE_BASS.seated() && !InstrumentKind.VIOLA.seated());
         assertTrue(InstrumentKind.VIOLA.handheld() && InstrumentKind.OBOE.handheld() && InstrumentKind.BASSOON.handheld());
         assertFalse(InstrumentKind.TIMPANI.dampsOnRelease(), "timpani ring on");
+        assertTrue(InstrumentKind.SHINOBUE.handheld() && InstrumentKind.KAGURA_SUZU.handheld() && InstrumentKind.KAGURA_SUZU.unpitched());
+        assertTrue(InstrumentKind.KAGURA_SUZU.dampsOnRelease(), "letting go stops the held shake");
+        assertTrue(InstrumentKind.KAGURA_SUZU.sustains(InstrumentKind.SUZU_ROLL) && !InstrumentKind.KAGURA_SUZU.sustains(InstrumentKind.SUZU_SHAKE));
+        assertSame(InstrumentKind.KAGURA_SUZU, InstrumentKind.ofDrumKey(83));
     }
 
     @Test void picksTheCoveringZoneOrTheNearestOne() {

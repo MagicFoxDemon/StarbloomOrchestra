@@ -67,6 +67,12 @@ public final class HandheldPoses {
         true, true, (IArmPoseTransformer) (m, s, a) -> pose(InstrumentKind.OBOE, m, s));
     public static final EnumProxy<HumanoidModel.ArmPose> BASSOON = new EnumProxy<>(HumanoidModel.ArmPose.class,
         true, true, (IArmPoseTransformer) (m, s, a) -> pose(InstrumentKind.BASSOON, m, s));
+    public static final EnumProxy<HumanoidModel.ArmPose> SHINOBUE = new EnumProxy<>(HumanoidModel.ArmPose.class,
+        true, true, (IArmPoseTransformer) (m, s, a) -> pose(InstrumentKind.SHINOBUE, m, s));
+    public static final EnumProxy<HumanoidModel.ArmPose> KAGURA_SUZU = new EnumProxy<>(HumanoidModel.ArmPose.class,
+        true, true, (IArmPoseTransformer) (m, s, a) -> pose(InstrumentKind.KAGURA_SUZU, m, s));
+    public static final EnumProxy<HumanoidModel.ArmPose> SHAKUHACHI = new EnumProxy<>(HumanoidModel.ArmPose.class,
+        true, true, (IArmPoseTransformer) (m, s, a) -> pose(InstrumentKind.SHAKUHACHI, m, s));
     public static final EnumProxy<HumanoidModel.ArmPose> CELLO = new EnumProxy<>(HumanoidModel.ArmPose.class,
         true, true, (IArmPoseTransformer) (m, s, a) -> pose(InstrumentKind.CELLO, m, s));
     public static final EnumProxy<HumanoidModel.ArmPose> DOUBLE_BASS = new EnumProxy<>(HumanoidModel.ArmPose.class,
@@ -79,6 +85,9 @@ public final class HandheldPoses {
             case VIOLA -> VIOLA.getValue();
             case OBOE -> OBOE.getValue();
             case BASSOON -> BASSOON.getValue();
+            case SHINOBUE -> SHINOBUE.getValue();
+            case KAGURA_SUZU -> KAGURA_SUZU.getValue();
+            case SHAKUHACHI -> SHAKUHACHI.getValue();
             case CELLO -> CELLO.getValue();
             case DOUBLE_BASS -> DOUBLE_BASS.getValue();
             default -> TRUMPET.getValue();
@@ -107,7 +116,8 @@ public final class HandheldPoses {
             }
         };
         event.registerItem(ext, Instruments.VIOLIN.get(), Instruments.FLUTE.get(), Instruments.TRUMPET.get(),
-            Instruments.VIOLA.get(), Instruments.OBOE.get(), Instruments.BASSOON.get());
+            Instruments.VIOLA.get(), Instruments.OBOE.get(), Instruments.BASSOON.get(), Instruments.SHINOBUE.get(), Instruments.KAGURA_SUZU.get(),
+            Instruments.SHAKUHACHI.get());
     }
 
     @SubscribeEvent
@@ -192,6 +202,9 @@ public final class HandheldPoses {
                 case VIOLA -> Instruments.VIOLA.get();
                 case OBOE -> Instruments.OBOE.get();
                 case BASSOON -> Instruments.BASSOON.get();
+                case SHINOBUE -> Instruments.SHINOBUE.get();
+                case KAGURA_SUZU -> Instruments.KAGURA_SUZU.get();
+                case SHAKUHACHI -> Instruments.SHAKUHACHI.get();
                 default -> Instruments.TRUMPET.get();
             });
             stack.set(DataComponents.ITEM_MODEL, StarbloomOrchestra.id("held/" + k.id()));

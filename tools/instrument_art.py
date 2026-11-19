@@ -20,7 +20,7 @@ ASSETS = RES / "assets/starbloom_orchestra"
 DATA = RES / "data/starbloom_orchestra"
 YROT = {"north": 0, "east": 90, "south": 180, "west": 270}
 # 琴凳 / 双人琴凳记着坐在上面的人拿的手持乐器
-PLAYS = ("none", "violin", "flute", "trumpet", "viola", "oboe", "bassoon")
+PLAYS = ("none", "violin", "flute", "trumpet", "viola", "oboe", "bassoon", "shinobue", "kagura_suzu", "shakuhachi")
 
 
 def write(path, obj):
@@ -223,9 +223,9 @@ def mallet():
 
 # —— 手持乐器与乐谱架 ——
 
-HANDHELD = ("hexen_violin", "hexen_flute", "hexen_trumpet", "hexen_viola", "hexen_oboe", "hexen_bassoon")
+HANDHELD = ("hexen_violin", "hexen_flute", "hexen_trumpet", "hexen_viola", "hexen_oboe", "hexen_bassoon", "shinobue", "kagura_suzu", "shakuhachi")
 # 只供渲染的模型（items/held/，不是物品）：演奏时画在身上的乐器（弓弦乐器不带弓）、弓、工位上手里的琴槌
-HELD = ("hexen_violin", "hexen_flute", "hexen_trumpet", "hexen_viola", "hexen_oboe", "hexen_bassoon",
+HELD = ("hexen_violin", "hexen_flute", "hexen_trumpet", "hexen_viola", "hexen_oboe", "hexen_bassoon", "shinobue", "kagura_suzu", "shakuhachi",
         "hexen_violin_bow", "hexen_glockenspiel_mallet", "hexen_chime_hammer", "hexen_timpani_mallet")
 
 
@@ -253,6 +253,11 @@ def handheld():
     shaped("hexen_viola", [" PS", "PSP", "SP "], {"P": "minecraft:mangrove_planks", "S": "minecraft:string"})
     shaped("hexen_oboe", ["  R", " P ", "P  "], {"R": "minecraft:sugar_cane", "P": "minecraft:dark_oak_planks"})
     shaped("hexen_bassoon", ["  R", "PIP", "PP "], {"R": "minecraft:sugar_cane", "P": "minecraft:mangrove_planks", "I": "minecraft:iron_ingot"})
+    # 和乐器：篠笛 = 竹子斜放、两头缠线（籐卷）；神乐铃 = 金粒三层（铃）、木棍作柄、红色染料（朱漆）
+    shaped("shinobue", [" SB", " B ", "BS "], {"B": "minecraft:bamboo", "S": "minecraft:string"})
+    shaped("kagura_suzu", ["NNN", "NSN", " D "], {"N": "minecraft:gold_nugget", "S": "minecraft:stick", "D": "minecraft:red_dye"})
+    # 尺八 = 竹子竖着三根、底下一个骨头（竹根和歌口的牛角）
+    shaped("shakuhachi", ["B", "B", "N"], {"B": "minecraft:bamboo", "N": "minecraft:bone"})
     # 小号上垂下来的魔女之森旗（管乐组的模型引用这张）
     png(ASSETS / "textures/block/instrument/hexenwald_banner.png", hexenwald_banner("night"))
 

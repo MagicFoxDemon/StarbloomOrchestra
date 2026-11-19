@@ -51,7 +51,20 @@ public enum InstrumentKind {
     /** 吊镲：49、57 强音镲，55 水镲，52 中国镲（奏成强音）；51、59 叮叮镲，53 镲帽；42、44、46 踩镲（闭、踩、开，奏成轻击）。 */
     SUSPENDED_CYMBAL("suspended_cymbal", "hexen_suspended_cymbal", new int[]{42, 44, 46, 49, 51, 52, 53, 55, 57, 59}, 64),
     /** 三角铁：80 闷音、81 开音。 */
-    TRIANGLE("triangle", "hexen_triangle", new int[]{80, 81}, 40);
+    TRIANGLE("triangle", "hexen_triangle", new int[]{80, 81}, 40),
+    // 以下第五批：和乐器（手持，docs/JAPANESE_INSTRUMENTS.md）
+    /** 篠笛（手持，横吹）：A4–F7，竹管，几乎是纯音的清亮长音。 */
+    SHINOBUE("shinobue", "shinobue", 69, 101, 40, true, true, false),
+    /**
+     * 神乐铃（手持）：83 一振（GM 的 Jingle Bell）、84 连摇（GM 的 Bell Tree，按住一直摇）。会止音：连摇松手就收住，
+     * 一振松手时的淡出比铃声自己散得还慢，听不出来。
+     */
+    KAGURA_SUZU("kagura_suzu", "kagura_suzu", new int[]{83, 84}, 40, true),
+    /** 尺八（手持，竖吹，一尺八寸管）：D4–E6，竹管、带气声的长音。只有合成的一层（参照的采样不能再分发）。 */
+    SHAKUHACHI("shakuhachi", "shakuhachi", 62, 88, 40, true, true, false);
+
+    /** 神乐铃的两个键：一振、连摇。 */
+    public static final int SUZU_SHAKE = 83, SUZU_ROLL = 84;
 
     private final String id;
     private final int low;
@@ -79,6 +92,11 @@ public enum InstrumentKind {
 
     /** 无音高打击乐：敲响后自然衰减（不止音）、感力度、没有踏板；音域是最低到最高的那个键。 */
     InstrumentKind(String id, String blockId, int[] keys, int broadcastRange) {
+        this(id, blockId, keys, broadcastRange, false);
+    }
+
+    /** dampsOnRelease：松键止音（神乐铃的连摇）。 */
+    InstrumentKind(String id, String blockId, int[] keys, int broadcastRange, boolean dampsOnRelease) {
         this.id = id;
         this.blockId = blockId;
         this.velocitySensitive = true;
@@ -86,7 +104,7 @@ public enum InstrumentKind {
         this.low = keys[0];
         this.high = keys[keys.length - 1];
         this.broadcastRange = broadcastRange;
-        this.dampsOnRelease = false;
+        this.dampsOnRelease = dampsOnRelease;
         this.keys = keys.clone();
     }
 
@@ -105,11 +123,20 @@ public enum InstrumentKind {
     /** 声音由客户端现场合成（只有管风琴），没有采样表。 */
     public boolean synthesized() { return this == PIPE_ORGAN; }
     /** 拿在手上演奏的乐器（物品），也能放在乐谱架上。 */
-    public boolean handheld() { return this == VIOLIN || this == FLUTE || this == TRUMPET || this == VIOLA || this == OBOE || this == BASSOON; }
+    public boolean handheld() {
+        return this == VIOLIN || this == FLUTE || this == TRUMPET || this == VIOLA || this == OBOE || this == BASSOON
+            || this == SHINOBUE || this == KAGURA_SUZU || this == SHAKUHACHI;
+    }
     /** 坐在乐器后面的凳子上演奏的方块乐器（大提琴、低音提琴）：长音循环，有坐姿和琴弓。 */
     public boolean seated() { return this == CELLO || this == DOUBLE_BASS; }
     /** 无音高的打击乐（大鼓、小军鼓、吊镲、三角铁）：音高是 GM 鼓键号，只认自己的几个键。 */
     public boolean unpitched() { return keys != null; }
+
+    /** 按住这个音（键）会一直响（采样有循环点）：弓弦、管乐的每个音，神乐铃的连摇。 */
+    public boolean sustains(int pitch) {
+        if (keys != null) return this == KAGURA_SUZU && pitch == SUZU_ROLL;
+        return handheld() || seated();
+    }
 
     /** 这件乐器的键（无音高打击乐），有音高的乐器返回空数组。 */
     public int[] keys() { return keys == null ? new int[0] : keys.clone(); }

@@ -154,6 +154,14 @@ public final class Instruments {
     public static final DeferredItem<?> SUSPENDED_CYMBAL_ITEM = OrchestraRegistries.ITEMS.registerSimpleBlockItem("hexen_suspended_cymbal", SUSPENDED_CYMBAL);
     public static final DeferredItem<?> TRIANGLE_ITEM = OrchestraRegistries.ITEMS.registerSimpleBlockItem("hexen_triangle", TRIANGLE);
 
+    /** 第五批：和乐器（手持）——篠笛、神乐铃、尺八（docs/JAPANESE_INSTRUMENTS.md）。 */
+    public static final DeferredItem<HandheldInstrumentItem> SHINOBUE = OrchestraRegistries.ITEMS.registerItem("shinobue",
+        p -> new HandheldInstrumentItem(InstrumentKind.SHINOBUE, p.stacksTo(1)));
+    public static final DeferredItem<HandheldInstrumentItem> KAGURA_SUZU = OrchestraRegistries.ITEMS.registerItem("kagura_suzu",
+        p -> new HandheldInstrumentItem(InstrumentKind.KAGURA_SUZU, p.stacksTo(1)));
+    public static final DeferredItem<HandheldInstrumentItem> SHAKUHACHI = OrchestraRegistries.ITEMS.registerItem("shakuhachi",
+        p -> new HandheldInstrumentItem(InstrumentKind.SHAKUHACHI, p.stacksTo(1)));
+
     /** 大提琴、低音提琴后面的座位（看不见、不存盘）。 */
     private static final DeferredRegister<net.minecraft.world.entity.EntityType<?>> ENTITY_TYPES =
         DeferredRegister.create(Registries.ENTITY_TYPE, StarbloomOrchestra.ID);

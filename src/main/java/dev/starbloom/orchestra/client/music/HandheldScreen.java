@@ -20,6 +20,9 @@ import net.minecraft.world.InteractionHand;
  * 拿在手上的乐器的演奏条：贴在屏幕底部的一条羊皮纸，上面是屏幕键盘，世界照常显示（不模糊、不暂停），
  * 自己的演奏姿势别人也看得到。键位同乐器界面的演奏页（{@link KeyLayout}），←→ 换八度、↑↓ 改力度；
  * 电子琴也能弹（{@link MidiKeyboard}）。乐器离手或关掉演奏条时全部松开，附近的人那里也一起松开。
+ * <p>
+ * 无音高的手持乐器（神乐铃）没有键盘，每个键一块大的打击板：下面两排字母都是第一块（一振），最上一排字母和数字是第二块
+ * （连摇，按住一直摇）；两只手轮流按同一排的不同字母就是连着几下。
  */
 public class HandheldScreen extends Screen implements MidiKeyboard.Target {
     private static final int W = 400, H = 104;
@@ -33,6 +36,10 @@ public class HandheldScreen extends Screen implements MidiKeyboard.Target {
     private final Set<Integer> midiHeld = new HashSet<>();
     private int mousePitch = -1;
     private int x0, y0;
+    /** 无音高的乐器：打击板代替键盘。 */
+    private final boolean pads;
+    /** 打击板的键位：下两排 → 第一块，最上一排和数字 → 第二块。 */
+    private static final String[] PAD_ROWS = {"ZXCVBNM,./ASDFGHJKL;'", "QWERTYUIOP1234567890"};
 
     public HandheldScreen(InstrumentKind kind, InteractionHand hand) {
         super(Component.translatable(kind.nameKey()));
@@ -40,6 +47,7 @@ public class HandheldScreen extends Screen implements MidiKeyboard.Target {
         this.hand = hand;
         // 键盘从和音域重合最多的那个 C 开始（以前固定从 C4，巴松管的低音一半弹不到）
         this.base = KeyLayout.defaultBase(kind, KeyLayout.chromatic().length(), 60);
+        this.pads = kind.unpitched();
     }
 
     private static Component tr(String key, Object... args) {
@@ -99,9 +107,18 @@ public class HandheldScreen extends Screen implements MidiKeyboard.Target {
         base = KeyLayout.clampBase(kind, base + 12 * d, KeyLayout.chromatic().length());
     }
 
-    /** 不在这件乐器音域里的键不出声（不按八度折叠，界面上画暗）。 */
+    /** 不在这件乐器音域里的键不出声（不按八度折叠，界面上画暗）；无音高的乐器只认自己的键。 */
     private boolean playable(int pitch) {
-        return pitch >= kind.low() && pitch <= kind.high();
+        return kind.sounds(pitch);
+    }
+
+    /** 打击板模式下这个键码按的是哪个鼓键，没有映射时 -1。 */
+    private int padPitch(int key) {
+        int[] keys = kind.keys();
+        for (int i = 0; i < PAD_ROWS.length && i < keys.length; i++) {
+            if (PAD_ROWS[i].indexOf((char) key) >= 0) return keys[i];
+        }
+        return -1;
     }
 
     private void releaseAll() {
@@ -119,15 +136,16 @@ public class HandheldScreen extends Screen implements MidiKeyboard.Target {
         if (event.isEscape()) return super.keyPressed(event);
         int key = event.key();
         switch (key) {
-            case KEY_LEFT -> shiftOctave(-1);
-            case KEY_RIGHT -> shiftOctave(1);
+            case KEY_LEFT -> { if (!pads) shiftOctave(-1); }
+            case KEY_RIGHT -> { if (!pads) shiftOctave(1); }
             case KEY_UP -> velocity = Math.min(127, velocity + 16);
             case KEY_DOWN -> velocity = Math.max(16, velocity - 16);
             default -> {
                 int off = KeyLayout.chromaticOffset(KeyLayout.chromatic(), key);
-                if (off >= 0 && !held.containsKey(key) && playable(base + off)) {
-                    held.put(key, base + off);
-                    note(base + off, velocity, System.nanoTime());
+                int pitch = pads ? padPitch(key) : off >= 0 ? base + off : -1;
+                if (pitch >= 0 && !held.containsKey(key) && playable(pitch)) {
+                    held.put(key, pitch);
+                    note(pitch, velocity, System.nanoTime());
                 }
             }
         }
@@ -181,6 +199,16 @@ public class HandheldScreen extends Screen implements MidiKeyboard.Target {
 
     private List<KeyRect> keyboard() {
         List<KeyRect> keys = new ArrayList<>();
+        if (pads) {
+            int[] drum = kind.keys();
+            int left = x0 + 20, top = y0 + 30, gap = 10, w = (W - 40 - gap * (drum.length - 1)) / drum.length;
+            for (int i = 0; i < drum.length; i++) {
+                String row = i < PAD_ROWS.length ? PAD_ROWS[i] : "";
+                String label = row.isEmpty() ? "" : row.charAt(0) + "–" + row.charAt(i == 0 ? 6 : 9);
+                keys.add(new KeyRect(drum[i], left + i * (w + gap), top, w, 44, false, label));
+            }
+            return keys;
+        }
         String layout = KeyLayout.chromatic();
         int left = x0 + 20, top = y0 + 30, area = W - 40, height = 44;
         int whites = 0;
@@ -237,13 +265,13 @@ public class HandheldScreen extends Screen implements MidiKeyboard.Target {
     public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
         Parchment.draw(g, x0, y0, W, H, 20);
         g.text(font, title, x0 + 20, y0 + 16, Parchment.INK_TITLE, false);
-        Component status = tr("held_status", KeyLayout.noteName(base), velocity,
+        Component status = pads ? tr("held_status_pads", velocity) : tr("held_status", KeyLayout.noteName(base), velocity,
             Component.translatable(KeyLayout.noteName(kind.low()) + "–" + KeyLayout.noteName(kind.high())));
         int statusX = x0 + 20 + font.width(title) + 12;
         g.text(font, status, statusX, y0 + 16, Parchment.INK, false);
         // 音源写在右上角；名字、状态太长挤不下时挪到底下提示行的右边，那里也挤不下就不写
         Component source = SampleMaps.sourceLabel(kind);
-        Component hint = tr("held_hint");
+        Component hint = tr(pads ? "held_hint_pads" : "held_hint");
         if (source != null) {
             int sx = x0 + W - 20 - font.width(source);
             if (sx >= statusX + font.width(status) + 8) g.text(font, source, sx, y0 + 16, Parchment.INK_HINT, false);
@@ -251,6 +279,14 @@ public class HandheldScreen extends Screen implements MidiKeyboard.Target {
         }
         for (KeyRect k : keyboard()) {
             boolean on = sounding(k.pitch);
+            if (pads) {
+                g.fill(k.x, k.y, k.x + k.w, k.y + k.h, on ? 0xFFF4D27A : 0xFFF6F0E2);
+                g.outline(k.x, k.y, k.w, k.h, 0xFF8C7A60);
+                Component name = Component.translatable("screen.starbloom_orchestra.instrument.pad." + kind.id() + "." + k.pitch);
+                g.text(font, name, k.x + (k.w - font.width(name)) / 2, k.y + 12, Parchment.INK_TITLE, false);
+                g.text(font, Component.literal(k.label), k.x + (k.w - font.width(k.label)) / 2, k.y + k.h - 12, Parchment.INK_HINT, false);
+                continue;
+            }
             boolean out = k.pitch < kind.low() || k.pitch > kind.high();
             int fill = k.black ? (on ? Parchment.GOLD : out ? 0xFF5A4A40 : 0xFF241812)
                 : (on ? 0xFFF4D27A : out ? 0xFFD8CCB4 : 0xFFF6F0E2);

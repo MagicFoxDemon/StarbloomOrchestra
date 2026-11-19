@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " SB",
+    " B ",
+    "BS "
+  ],
+  "key": {
+    "B": "minecraft:bamboo",
+    "S": "minecraft:string"
+  },
+  "result": {
+    "id": "starbloom_orchestra:shinobue",
+    "count": 1
+  }
+}

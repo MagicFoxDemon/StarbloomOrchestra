@@ -1,0 +1,200 @@
+{
+ "format": 1,
+ "quality": "synth",
+ "source": "synthesized by tools/instrument_samples.py",
+ "range": 32,
+ "zones": [
+  {
+   "file": "instrument/shinobue/s69",
+   "key": 69.0,
+   "lo": 69,
+   "hi": 70,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.2134,
+   "curve": 1.2,
+   "frames": 56007,
+   "release": 0.12,
+   "loop": [
+    3087,
+    56007
+   ]
+  },
+  {
+   "file": "instrument/shinobue/s72",
+   "key": 72.003,
+   "lo": 71,
+   "hi": 73,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.1968,
+   "curve": 1.2,
+   "frames": 56007,
+   "release": 0.12,
+   "loop": [
+    3087,
+    56007
+   ]
+  },
+  {
+   "file": "instrument/shinobue/s75",
+   "key": 75.007,
+   "lo": 74,
+   "hi": 76,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.2107,
+   "curve": 1.2,
+   "frames": 56007,
+   "release": 0.12,
+   "loop": [
+    3087,
+    56007
+   ]
+  },
+  {
+   "file": "instrument/shinobue/s78",
+   "key": 78.0,
+   "lo": 77,
+   "hi": 79,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.2031,
+   "curve": 1.2,
+   "frames": 56007,
+   "release": 0.12,
+   "loop": [
+    3087,
+    56007
+   ]
+  },
+  {
+   "file": "instrument/shinobue/s81",
+   "key": 81.0,
+   "lo": 80,
+   "hi": 82,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.205,
+   "curve": 1.2,
+   "frames": 56007,
+   "release": 0.12,
+   "loop": [
+    3087,
+    56007
+   ]
+  },
+  {
+   "file": "instrument/shinobue/s84",
+   "key": 84.003,
+   "lo": 83,
+   "hi": 85,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.1983,
+   "curve": 1.2,
+   "frames": 56007,
+   "release": 0.12,
+   "loop": [
+    3087,
+    56007
+   ]
+  },
+  {
+   "file": "instrument/shinobue/s87",
+   "key": 86.995,
+   "lo": 86,
+   "hi": 88,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.1702,
+   "curve": 1.2,
+   "frames": 56007,
+   "release": 0.12,
+   "loop": [
+    3087,
+    56007
+   ]
+  },
+  {
+   "file": "instrument/shinobue/s90",
+   "key": 90.0,
+   "lo": 89,
+   "hi": 91,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.1588,
+   "curve": 1.2,
+   "frames": 56007,
+   "release": 0.12,
+   "loop": [
+    3087,
+    56007
+   ]
+  },
+  {
+   "file": "instrument/shinobue/s93",
+   "key": 93.0,
+   "lo": 92,
+   "hi": 94,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.1511,
+   "curve": 1.2,
+   "frames": 56007,
+   "release": 0.12,
+   "loop": [
+    3087,
+    56007
+   ]
+  },
+  {
+   "file": "instrument/shinobue/s96",
+   "key": 96.003,
+   "lo": 95,
+   "hi": 97,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.1503,
+   "curve": 1.2,
+   "frames": 56007,
+   "release": 0.12,
+   "loop": [
+    3087,
+    56007
+   ]
+  },
+  {
+   "file": "instrument/shinobue/s99",
+   "key": 99.001,
+   "lo": 98,
+   "hi": 100,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.1424,
+   "curve": 1.2,
+   "frames": 56007,
+   "release": 0.12,
+   "loop": [
+    3087,
+    56007
+   ]
+  },
+  {
+   "file": "instrument/shinobue/s102",
+   "key": 102.0,
+   "lo": 101,
+   "hi": 101,
+   "vlo": 1,
+   "vhi": 127,
+   "gain": 0.1312,
+   "curve": 1.2,
+   "frames": 56007,
+   "release": 0.12,
+   "loop": [
+    3087,
+    56007
+   ]
+  }
+ ]
+}

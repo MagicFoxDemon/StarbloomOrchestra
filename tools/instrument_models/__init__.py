@@ -1,4 +1,4 @@
-"""乐器新模型，按组分文件（keyboards、organ、strings、winds、percussion）。约定见 docs/INSTRUMENT_ART.md。
+"""乐器新模型，按组分文件（keyboards、organ、strings、winds、percussion、drums、wagakki）。约定见 docs/INSTRUMENT_ART.md。
 
 tools/instrument_art.py 生成完旧资源（方块状态、掉落、配方……）之后调用 build_all()，用这里的模型覆盖旧模型。
 单独跑一组并出预览：
@@ -11,7 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-GROUPS = ["keyboards", "organ", "strings", "winds", "percussion", "drums"]
+GROUPS = ["keyboards", "organ", "strings", "winds", "percussion", "drums", "wagakki"]
 
 
 def build_all(only=None):

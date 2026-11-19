@@ -244,7 +244,8 @@ public final class InstrumentGameTests {
         h.assertTrue(!be.playable() && !be.play(), "an empty stand cannot play");
         h.assertTrue(Instruments.heldKind(new ItemStack(Instruments.VIOLIN.get())) == dev.starbloom.orchestra.music.InstrumentKind.VIOLIN, "violin item kind");
         h.assertTrue(Instruments.heldKind(new ItemStack(Instruments.BLANK_ROLL.get())) == null, "a roll is not an instrument");
-        for (Item item : List.of(Instruments.VIOLA.get(), Instruments.OBOE.get(), Instruments.BASSOON.get())) {
+        for (Item item : List.of(Instruments.VIOLA.get(), Instruments.OBOE.get(), Instruments.BASSOON.get(),
+                Instruments.SHINOBUE.get(), Instruments.KAGURA_SUZU.get(), Instruments.SHAKUHACHI.get())) {
             InstrumentKind kind = Instruments.heldKind(new ItemStack(item));
             h.assertTrue(kind != null && MusicStandBlock.Holds.of(kind).kind() == kind, item + " has its own look on the stand");
         }

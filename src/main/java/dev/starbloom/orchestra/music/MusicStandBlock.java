@@ -36,7 +36,8 @@ public class MusicStandBlock extends InstrumentBlock {
     public enum Holds implements StringRepresentable {
         NONE("none", null), VIOLIN("violin", InstrumentKind.VIOLIN), FLUTE("flute", InstrumentKind.FLUTE),
         TRUMPET("trumpet", InstrumentKind.TRUMPET), VIOLA("viola", InstrumentKind.VIOLA), OBOE("oboe", InstrumentKind.OBOE),
-        BASSOON("bassoon", InstrumentKind.BASSOON);
+        BASSOON("bassoon", InstrumentKind.BASSOON), SHINOBUE("shinobue", InstrumentKind.SHINOBUE),
+        KAGURA_SUZU("kagura_suzu", InstrumentKind.KAGURA_SUZU), SHAKUHACHI("shakuhachi", InstrumentKind.SHAKUHACHI);
 
         private final String name;
         private final @Nullable InstrumentKind kind;
