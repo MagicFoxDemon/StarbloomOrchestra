@@ -1,0 +1,11 @@
+{
+    "vertex": "starbloom_orchestra:part_outline",
+    "fragment": "starbloom_orchestra:part_outline",
+    "samplers": [
+        { "name": "InSampler" }
+    ],
+    "uniforms": [
+        { "name": "Color", "type": "float", "count": 4, "values": [ 1.0, 1.0, 1.0, 0.95 ] },
+        { "name": "Style", "type": "float", "count": 4, "values": [ 2.0, 0.36, 0.0, 0.0 ] }
+    ]
+}

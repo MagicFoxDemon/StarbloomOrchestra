@@ -4,7 +4,8 @@
     "hexen_concert_harp": "starbloom_orchestra:block/instrument/hexen_concert_harp",
     "particle": "starbloom_orchestra:block/instrument/particle_maple"
   },
-  "elements": [
+  "loader": "starbloom_orchestra:rotated_cuboids",
+  "cuboids": [
     {
       "from": [
         2.4,

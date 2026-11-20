@@ -1,6 +1,5 @@
 package dev.starbloom.orchestra.client.music;
 
-import dev.starbloom.orchestra.StarbloomOrchestra;
 import dev.starbloom.orchestra.music.InstrumentBlock;
 import dev.starbloom.orchestra.music.InstrumentKind;
 import dev.starbloom.orchestra.music.InstrumentPosts;
@@ -10,25 +9,21 @@ import dev.starbloom.orchestra.music.StarbloomBenchBlock;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import org.joml.Matrix4f;
+import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
-import org.jspecify.annotations.Nullable;
 
 /**
  * 工位上的演奏者（docs/ORCHESTRA.md 第 15 节）：大提琴、低音提琴琴后（拉弓），钟琴、管钟前面和定音鼓后的琴凳上（敲）。
  * 算出 {@link MusicianPoses.Musician}：坐标都在「演奏者面朝北」的方块像素里（x 向东、y 向上、z 向南，同琴凳坐标），
  * 原版人形模型、附属 NPC 的骨架各自换算（同琴凳上的手位）。
  * <p>
- * 琴槌不是物品：在工位上演奏时画在手上（钟琴两支小琴槌、管钟右手一把皮锤、定音鼓两支毡头槌，模型在 items/held/）。
+ * 琴槌不是物品：在工位上演奏时画在手上（钟琴两支小琴槌、管钟右手一把皮锤、定音鼓两支毡头槌，模型是 models/item/ 下单独加载的
+ * *_held，{@link HeldModel}）。
  * 一个音落下时那只手的槌头落到音条 / 管顶 / 鼓皮上，其余时间抬起 3 像素。
  */
 public final class StationPoses {
@@ -36,7 +31,7 @@ public final class StationPoses {
     private static final float LIFT = 3;
     /** 一个音落下后槌头贴着的时间（毫秒）。 */
     private static final float STRIKE_MS = 140;
-    private static final Map<InstrumentKind, ItemStack> TOOLS = new EnumMap<>(InstrumentKind.class);
+    private static final Map<InstrumentKind, HeldModel> TOOLS = new EnumMap<>(InstrumentKind.class);
 
     private StationPoses() {}
 
@@ -58,24 +53,17 @@ public final class StationPoses {
         };
     }
 
-    /** 画琴槌用的物品状态。 */
-    public static ItemStackRenderState tool(InstrumentKind kind, LivingEntity entity) {
-        ItemStack stack = TOOLS.computeIfAbsent(kind, k -> {
-            ItemStack s = new ItemStack(Instruments.VIOLIN.get());
-            s.set(DataComponents.ITEM_MODEL, StarbloomOrchestra.id(switch (k) {
-                case TUBULAR_BELLS -> "held/chime_hammer";
-                case TIMPANI -> "held/timpani_mallet";
-                case BASS_DRUM -> "held/bass_drum_beater";
-                case SNARE_DRUM -> "held/snare_stick";
-                case SUSPENDED_CYMBAL -> "held/cymbal_mallet";
-                case TRIANGLE -> "held/triangle_beater";
-                default -> "held/glockenspiel_mallet";
-            }));
-            return s;
-        });
-        ItemStackRenderState state = new ItemStackRenderState();
-        Minecraft.getInstance().getItemModelResolver().updateForLiving(state, stack, ItemDisplayContext.NONE, entity);
-        return state;
+    /** 画琴槌用的模型（models/item/ 下单独加载的那一份，{@link HeldModel}）。 */
+    public static HeldModel tool(InstrumentKind kind, LivingEntity entity) {
+        return TOOLS.computeIfAbsent(kind, k -> HeldModel.of(new ItemStack(Instruments.VIOLIN.get()), switch (k) {
+            case TUBULAR_BELLS -> "hexen_chime_hammer_held";
+            case TIMPANI -> "hexen_timpani_mallet_held";
+            case BASS_DRUM -> "hexen_bass_drum_beater_held";
+            case SNARE_DRUM -> "hexen_snare_stick_held";
+            case SUSPENDED_CYMBAL -> "hexen_cymbal_mallet_held";
+            case TRIANGLE -> "hexen_triangle_beater_held";
+            default -> "hexen_glockenspiel_mallet_held";
+        }));
     }
 
     // —— 工位（大提琴、低音提琴、钟琴、管钟）——

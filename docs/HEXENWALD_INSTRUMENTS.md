@@ -267,7 +267,7 @@
 | `client/music/InstrumentScreen`、`RollEditorScreen`、`MidiImportScreen`、`MidiLibrary`、`KeyLayout` | 界面、键位、MIDI 文件夹 |
 | `tools/instrument_sources.py` | 下载录音采样、做成 ogg、写采样表 `instruments/<乐器>.json`（第 15 节） |
 | `tools/instrument_samples.py` | 合成钢片琴的采样（两个采样库都没有钢片琴） |
-| `tools/instrument_art.py` | 方块状态、掉落、配方、物品定义、纸带图标、魔女之森旗 |
+| `tools/instrument_art.py` | 方块状态、掉落、配方、纸带图标、魔女之森旗 |
 | `tools/instrument_models/`、`tools/instrument_kit.py` | 模型与模型贴图（按组：键盘、管风琴、弦乐、管乐、打击乐与指挥台），见 [INSTRUMENT_ART.md](INSTRUMENT_ART.md) |
 
 设置：服务端 `[instruments] allowRollUpload`、`uploadsPerMinute`；客户端 `instrumentVoices`、`instrumentTotalVoices`、`instrumentKeys`。
@@ -278,9 +278,9 @@
 uv run --no-project --with numpy --with scipy python tools/instrument_sources.py --cache <下载目录> --ffmpeg <带 libvorbis 的 ffmpeg> [--demo <试听目录>]
 uv run --no-project --with numpy python tools/instrument_samples.py --ffmpeg <带 libvorbis 的 ffmpeg>   # 只有钢片琴
 uv run --no-project --with pillow --with numpy python tools/instrument_art.py
-./gradlew test --tests "dev.starbloom.orchestra.music.*" -PlogosJar=...
-./gradlew runGameTestServer -PlogosJar=... "-PdimensionTests=starbloom_orchestra:instrument_*"
-./gradlew runClient -PlogosJar=... "-PldTest=instrument_views,instrument_play_ui,roll_editor_ui,midi_import_ui" -PldTestHeadless -PldTestWindow=1280x720
+./gradlew test --tests "dev.starbloom.orchestra.music.*"
+./gradlew runGameTestServer "-PorchestraTests=starbloom_orchestra:instrument_*"
+./gradlew runClient "-PldTest=instrument_views,instrument_play_ui,roll_editor_ui,midi_import_ui" -PldTestHeadless -PldTestWindow=1280x720
 ```
 
 脚本的输出都是固定的（下载钉在固定提交上、合成的随机种子固定、ogg 用固定流序号编码），重复运行不会改动文件。
@@ -359,7 +359,7 @@ uv run --no-project --with pillow --with numpy python tools/instrument_art.py
 - 声音：第一版在客户端现场合成（`HeldSynth`，带一段起音噪声，试玩时听起来像一下鼓声）；2026-11-11 起换成录音采样，循环点让按住的音一直响下去，见第 15 节。附近有人拿着手持乐器、或打开演奏条时，先把它的采样解码好。
 - 同步：`MusicPayloads.HeldNotes`（客户端 → 服务端，一批音）→ 服务端核对手上确实拿着这件乐器、限速、清理 → `HeldNotesOut` 发给附近的人（按乐器的广播距离）。收到的一批同实时演奏一样延后 100 毫秒、按批内偏移排开；声音每 tick 跟到演奏者身上。
 - 物品：`HandheldInstrumentItem`（「使用中」不限时、动画为 NONE），右键时客户端打开 `HandheldScreen`。「使用中」本来就同步给附近的人，姿势不用另发包。
-- 姿势与画法：`HandheldPoses` 经 NeoForge 的枚举扩展加三个 `ArmPose`（`META-INF/enumextensions.json`），只在「使用中」生效。`HeldRig` 算出乐器的位置（小提琴跟着身体，长笛、小号跟着头）和两只手该到的位置；姿势里两只手臂直接指向手位（蹲下时原版在这之后才加的偏移先算进去），玩家层按同一份位置画乐器（`items/held/` 下的四个物品定义，只供渲染、不是物品，模型不带显示变换），所以手总落在乐器上。
+- 姿势与画法：`HandheldPoses` 经 NeoForge 的枚举扩展加三个 `ArmPose`（`META-INF/enumextensions.json`），只在「使用中」生效。`HeldRig` 算出乐器的位置（小提琴跟着身体，长笛、小号跟着头）和两只手该到的位置；姿势里两只手臂直接指向手位（蹲下时原版在这之后才加的偏移先算进去），玩家层按同一份位置画乐器（`models/item/` 下只供渲染的 `*_held` 模型，不是物品，客户端按模型 id 单独加载（`HeldModel`），模型不带显示变换），所以手总落在乐器上。
 - 乐谱架：`MusicStandBlock`（继承 `InstrumentBlock`），方块状态 `holds` = none / violin / flute / trumpet 决定模型和乐器种类；放上去的那件乐器存在方块实体里（`InstrumentBlockEntity.instrument`）。空架子 `playable()` 为否：不能演奏、不能被占用。`InstrumentBlock.kind(BlockState)` 让同一种方块按状态当不同的乐器。
 
 ### 14.3 验证与限制
@@ -426,12 +426,14 @@ uv run --no-project --with pillow --with numpy python tools/instrument_art.py
 - 座位：`InstrumentSeat`（看不见的实体，不存盘、打不坏）。`SeatedInstrumentBlock`（继承 `TallInstrumentBlock`）空手右键时在琴后
   生成座位、让玩家骑上；座位的位置就是演奏者双脚的位置（`SeatedInstrumentBlock.feet`，按方块朝向转过去，抵消玩家自己 0.6 格的骑乘挂点）。
   身体朝向固定为琴的朝向，头最多转 75°（同原版的船；生物看前方或指挥，见 [ORCHESTRA.md](ORCHESTRA.md) 14.2「往哪看」）。没人坐了、琴不在了，座位自己消失。
-- 姿势：`HandheldPoses` 多三个手持姿势和两个坐姿（`META-INF/enumextensions.json`）。骑在座位上时，玩家层把双手原来拿的东西清掉、
-  右臂姿势换成大提琴 / 低音提琴：两腿（大提琴分开前伸、低音提琴伸直），右臂瞄向弓根，左臂瞄向指板。
+- 姿势：`HandheldPoses` 多三个手持姿势和两个坐姿（`META-INF/enumextensions.json`）。骑在座位上时，画之前（`RenderLivingEvent.Pre`）
+  记下双手原来拿的东西不画（`MusicianHandItemMixin`）、右臂姿势换成大提琴 / 低音提琴：两腿（大提琴分开前伸、低音提琴伸直），右臂瞄向弓根，左臂瞄向指板。
   原版手臂是直的：`HeldRig.seated` 让右手瞄准弓根该在的位置，手实际到哪弓根就在哪，弓总从琴弦上的那一点穿过（弓毛贴着琴弦）；
   左手沿指板从琴枕往下，找第一个离肩正好一臂远的点（落在指板下段，像高把位）。
 - 美术：`tools/instrument_models/strings.py`（2026-11-14 重做；当初是 `tools/instrument_art.py` 的 `orchestra()`、`handheld()`）。大提琴、低音提琴按竖直的样子画在琴自己的坐标里，再整体后仰、
-  向左倾（26.1 的模型元素认 x/y/z 欧拉角转动，`rigid()` 把整组元素当刚体转，已带转动的元素与它合成）；琴的摆放与 `HeldRig` 的
+  向左倾（模型元素按 x/y/z 欧拉角转动，`rigid()` 把整组元素当刚体转，已带转动的元素与它合成；1.21.1 原版不认欧拉角，这类模型由
+  `tools/instrument_kit.py` 写成本模组的几何加载器 `starbloom_orchestra:rotated_cuboids`（`client/music/RotatedCuboidModel`），元素放在 `cuboids` 里，
+  见 [INSTRUMENT_ART.md](INSTRUMENT_ART.md) 第 9 节）；琴的摆放与 `HeldRig` 的
   `CELLO` / `BASS` 布局是同一组数（脚本运行时打印弓根离右肩的距离、左手的位置，核对直臂够不够得着）。
   中提琴是小提琴的模型换成原版红树木板的清漆；资源包图标（深红幕布、金色帷幔、聚光灯下一把大提琴）也由这个脚本画。
 
@@ -446,6 +448,7 @@ uv run --no-project --with pillow --with numpy python tools/instrument_art.py
   起身后座位消失；低音提琴同样；定音鼓敲三下，松键后仍在响）、`concert_hall_pack_ui`（见第 16.1 节）。
 - 只在开发客户端里测过；专用服务器、两个真实客户端同时坐琴没测。座位不存盘：坐着退出存档，重进时是站着的。
 - 原版手臂不能弯：左手只能按在指板下段（像高把位），够不到琴枕附近；以后可以做弯臂的姿势层。
+- 1.21.1：坐在大提琴、低音提琴后用副手吃东西这类时候，那一帧右臂不摆运弓的姿势（1.21.1 原版使用物品时只摆正在用东西的那只手），弓照常画。
 - 音色只能人工试听：合成的六件和录音的六件都未经维护者试听。
 
 ## 17. 合奏哑音、管风琴不出声与音高错乱（#243，2026-11-11）

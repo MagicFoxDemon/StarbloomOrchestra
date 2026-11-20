@@ -7,8 +7,12 @@
     "P  "
   ],
   "key": {
-    "R": "minecraft:sugar_cane",
-    "P": "minecraft:dark_oak_planks"
+    "R": {
+      "item": "minecraft:sugar_cane"
+    },
+    "P": {
+      "item": "minecraft:dark_oak_planks"
+    }
   },
   "result": {
     "id": "starbloom_orchestra:hexen_oboe",

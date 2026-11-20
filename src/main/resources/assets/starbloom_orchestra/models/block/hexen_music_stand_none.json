@@ -4,7 +4,8 @@
     "hexen_music_stand": "starbloom_orchestra:block/instrument/hexen_music_stand",
     "particle": "starbloom_orchestra:block/instrument/particle_walnut"
   },
-  "elements": [
+  "loader": "starbloom_orchestra:rotated_cuboids",
+  "cuboids": [
     {
       "from": [
         8.5,

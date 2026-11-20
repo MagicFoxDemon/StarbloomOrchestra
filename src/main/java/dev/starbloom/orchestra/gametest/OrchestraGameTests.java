@@ -1,6 +1,5 @@
 package dev.starbloom.orchestra.gametest;
 
-import dev.starbloom.orchestra.StarbloomOrchestra;
 import dev.starbloom.orchestra.music.InstrumentBlock;
 import dev.starbloom.orchestra.music.InstrumentBlockEntity;
 import dev.starbloom.orchestra.music.Instruments;
@@ -12,6 +11,7 @@ import dev.starbloom.orchestra.music.orchestra.Orchestra;
 import dev.starbloom.orchestra.music.orchestra.PodiumBlock;
 import dev.starbloom.orchestra.music.orchestra.PodiumBlockEntity;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,14 +20,10 @@ import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.gametest.framework.FunctionGameTestInstance;
+import net.minecraft.gametest.framework.GameTestGenerator;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.gametest.framework.TestData;
-import net.minecraft.gametest.framework.TestEnvironmentDefinition;
+import net.minecraft.gametest.framework.TestFunction;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
@@ -35,15 +31,12 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.event.RegisterGameTestsEvent;
-import net.neoforged.neoforge.registries.DeferredRegister;
 
 /**
  * 乐团（docs/ORCHESTRA.md）：指挥台两格、拆任一格整座拆掉，只掉一座和谱架上的总谱；指挥棒先绑定指挥台、再点选乐器加入 / 退出；
@@ -51,11 +44,14 @@ import net.neoforged.neoforge.registries.DeferredRegister;
  * 乐器被拆、乐谱架上的乐器被拿走时退出；跟着乐团演奏时乐器不放自己的纸带，红石也不行，停下后恢复。
  */
 public final class OrchestraGameTests {
-    private static final DeferredRegister<Consumer<GameTestHelper>> FUNCTIONS = DeferredRegister.create(Registries.TEST_FUNCTION, StarbloomOrchestra.ID);
-
     private OrchestraGameTests() {}
 
     public static void register(IEventBus bus) {
+        GameTestFunctions.register(bus, OrchestraGameTests.class);
+    }
+
+    @GameTestGenerator
+    public static Collection<TestFunction> tests() {
         Map<String, Consumer<GameTestHelper>> tests = new LinkedHashMap<>();
         tests.put("orchestra_podium_breaks_whole", OrchestraGameTests::podiumBreaksWhole);
         tests.put("orchestra_baton_links", OrchestraGameTests::batonLinks);
@@ -65,16 +61,7 @@ public final class OrchestraGameTests {
         tests.put("orchestra_members_leave", OrchestraGameTests::membersLeave);
         tests.put("orchestra_conducted_instruments_wait", OrchestraGameTests::conductedInstrumentsWait);
         tests.put("orchestra_follows_the_beat", OrchestraGameTests::followsTheBeat);
-        tests.forEach((name, test) -> FUNCTIONS.register(name, () -> test));
-        FUNCTIONS.register(bus);
-        bus.addListener((RegisterGameTestsEvent event) -> {
-            var env = event.registerEnvironment(StarbloomOrchestra.id("orchestra_default"), new TestEnvironmentDefinition.AllOf());
-            for (var name : tests.keySet()) {
-                event.registerTest(StarbloomOrchestra.id(name), new FunctionGameTestInstance(
-                    ResourceKey.create(Registries.TEST_FUNCTION, StarbloomOrchestra.id(name)), new TestData<>(env,
-                        Identifier.withDefaultNamespace("empty"), 100, 0, true, Rotation.NONE, false, 1, 1, false, 6)));
-            }
-        });
+        return GameTestFunctions.batch("orchestra_default", 6, 100, 0, tests);
     }
 
     private static BlockState place(ServerLevel level, BlockPos pos, BlockState state) {
@@ -268,7 +255,7 @@ public final class OrchestraGameTests {
         be.toggle(right);
         net.minecraft.world.entity.player.Player player = h.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
         net.minecraft.world.phys.Vec3 stand = be.standAt();
-        player.snapTo(stand.x, stand.y, stand.z, 0, 0);
+        player.moveTo(stand.x, stand.y, stand.z, 0, 0);
         player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(Orchestra.BATON.get()));
         h.assertTrue(PodiumBlock.conducting(player) && be.getBlockPos().equals(PodiumBlock.under(player)), "the player conducts from the podium");
         // 120 bpm 的 4/4：一拍 500 毫秒；起奏前两拍隔 400 毫秒，就是快了 25%
@@ -281,7 +268,7 @@ public final class OrchestraGameTests {
         h.assertTrue(be.held() && be.positionMs() == 1500, "a fermata holds");
         h.runAfterDelay(3, () -> {
             h.assertTrue(be.held() && be.positionMs() == 1500, "still holding while the conductor stands there");
-            player.snapTo(stand.x + 4, stand.y - 0.5, stand.z + 3, 0, 0);
+            player.moveTo(stand.x + 4, stand.y - 0.5, stand.z + 3, 0, 0);
             h.runAfterDelay(2, () -> {
                 h.assertTrue(be.leader() == null && !be.held() && Math.abs(be.rate() - 1.0) < 1e-6, "stepping down gives the tempo back");
                 h.assertTrue(be.positionMs() >= 1500, "it goes on from where it held");

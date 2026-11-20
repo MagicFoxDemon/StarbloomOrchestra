@@ -1,11 +1,11 @@
 package dev.starbloom.orchestra.music;
 
-import com.mojang.serialization.Codec;
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
@@ -15,8 +15,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -35,12 +33,12 @@ public final class BenchSeat extends Entity {
 
     public void bind(BlockPos bench, Vec3 at, float yaw) {
         entityData.set(BENCH, bench.immutable());
-        snapTo(at.x, at.y, at.z, yaw, 0);
+        moveTo(at.x, at.y, at.z, yaw, 0);
     }
 
     /** 挪到 at、朝 yaw（琴凳前的乐器放上、拆掉时）；没变就不动。 */
     public void align(Vec3 at, float yaw) {
-        if (position().distanceToSqr(at) > 1.0e-8 || Mth.wrapDegrees(getYRot() - yaw) != 0) snapTo(at.x, at.y, at.z, yaw, 0);
+        if (position().distanceToSqr(at) > 1.0e-8 || Mth.wrapDegrees(getYRot() - yaw) != 0) moveTo(at.x, at.y, at.z, yaw, 0);
     }
 
     public BlockPos bench() {
@@ -53,13 +51,13 @@ public final class BenchSeat extends Entity {
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput input) {
-        input.read("bench", Codec.LONG).ifPresent(p -> entityData.set(BENCH, BlockPos.of(p)));
+    protected void readAdditionalSaveData(CompoundTag tag) {
+        if (tag.contains("bench", Tag.TAG_ANY_NUMERIC)) entityData.set(BENCH, BlockPos.of(tag.getLong("bench")));
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput output) {
-        output.store("bench", Codec.LONG, bench().asLong());
+    protected void addAdditionalSaveData(CompoundTag tag) {
+        tag.putLong("bench", bench().asLong());
     }
 
     /** 坐着生物时存盘（连同乘客）；空座位、坐着玩家时不存。 */
@@ -70,7 +68,7 @@ public final class BenchSeat extends Entity {
     }
 
     @Override
-    public boolean hurtServer(ServerLevel level, DamageSource source, float damage) {
+    public boolean hurt(DamageSource source, float damage) {
         return false;
     }
 

@@ -4,7 +4,8 @@
     "hexen_glockenspiel": "starbloom_orchestra:block/instrument/hexen_glockenspiel",
     "particle": "starbloom_orchestra:block/instrument/particle_walnut"
   },
-  "elements": [
+  "loader": "starbloom_orchestra:rotated_cuboids",
+  "cuboids": [
     {
       "from": [
         1.0,

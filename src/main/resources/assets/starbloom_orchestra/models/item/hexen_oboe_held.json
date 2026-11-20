@@ -4,7 +4,8 @@
     "hexen_oboe": "starbloom_orchestra:block/instrument/hexen_oboe",
     "particle": "starbloom_orchestra:block/instrument/hexen_oboe"
   },
-  "elements": [
+  "loader": "starbloom_orchestra:rotated_cuboids",
+  "cuboids": [
     {
       "from": [
         8.58,

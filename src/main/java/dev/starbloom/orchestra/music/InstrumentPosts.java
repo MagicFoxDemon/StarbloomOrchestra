@@ -3,14 +3,13 @@ package dev.starbloom.orchestra.music;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * 乐器的工位（docs/ORCHESTRA.md 第 15、20 节）：大提琴琴后的凳子、低音提琴琴后、钟琴和管钟以及大鼓、小军鼓、吊镲、三角铁前面站的地方。
@@ -92,12 +91,12 @@ public final class InstrumentPosts {
         InstrumentKind kind = block.kind(state);
         if (!has(kind) || occupant(level, main) != null) return false;
         if (who.isPassenger()) who.stopRiding();
-        InstrumentSeat seat = (standing(kind) ? Instruments.STANDING_POST : Instruments.SEAT).get().create(level, EntitySpawnReason.TRIGGERED);
+        InstrumentSeat seat = (standing(kind) ? Instruments.STANDING_POST : Instruments.SEAT).get().create(level);
         if (seat == null) return false;
         Direction facing = state.getValue(InstrumentBlock.FACING);
         seat.bind(main, position(main, facing, kind), performerFacing(kind, facing).toYRot());
         level.addFreshEntity(seat);
-        if (!who.startRiding(seat, true, true)) {
+        if (!who.startRiding(seat, true)) {
             seat.discard();
             return false;
         }
@@ -121,7 +120,7 @@ public final class InstrumentPosts {
         Mob led = StarbloomBenchBlock.nearestLed(player);
         if (led == null) return false;
         if (!level.isClientSide() && occupant(level, main) == null) {
-            led.removeLeash();
+            led.dropLeash(true, false);
             if (!player.getAbilities().instabuild) player.getInventory().add(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.LEAD));
             take(level, main, led);
         }

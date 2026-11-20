@@ -7,6 +7,12 @@
 // Then:  gradlew runClient -PldTest=all
 // Docs:  https://github.com/Low-Drag-MC/LDLib2 -> docs/uitest.md
 //
+// 本工程现在跑在 Minecraft 1.21.1 / NeoForge 21.1 / LDLib2 2.2.46.a（ModDevGradle 2.0.x）上：下面读的系统属性
+// 与 2.2.46.a 的 uitest.RunConfig 一一对应（run、exclude、out、guiScale、window、inputMode、watchdogSec、keepOpen、headless），
+// 另外接上了 2.2.46.a 才有的录屏（UIRecording、ScenarioBuilder#take）：gradlew runClient -PldRecord=<name|all|group:x|tag:y|mod:z>，
+// 视频写到 build/ldlib2-recordings/<名字>/；-PldRecordFps、-PldRecordFfmpeg、-PldRecordCodec、-PldRecordQuality 对应
+// RunConfig 的 recordFps、recordFfmpeg、recordCodec、recordQuality。-PldTest 与 -PldRecord 一次只能给一个。
+//
 // Inert unless -PldTest is given, and scoped to the invocation that gives it: nothing is written to
 // build/moddev, so a later `gradlew runClient` - or a launch from the IDE, which reuses whatever
 // ModDev last wrote there - is completely unaffected. The run plays in runs/uiTest, emptied first, so
@@ -20,6 +26,15 @@
 // delegate rather than the project, so ldTestOutDir would not be visible where it is needed.
 def ldTestOutDir = layout.buildDirectory.dir('ldlib2-uitest').get().asFile.absolutePath
 def ldTestRequested = project.hasProperty('ldTest')
+// 录屏（UIRecording）跑在自己的输出目录里，report.json 也写在那里；测试的输出目录不受影响。
+def ldRecordOutDir = layout.buildDirectory.dir('ldlib2-recordings').get().asFile.absolutePath
+def ldRecordRequested = project.hasProperty('ldRecord')
+// RunConfig 同时收到 ldlib2.uitest.run 和 ldlib2.uitest.recordings 会在客户端里抛错，这里在启动前就拦下。
+if (ldTestRequested && ldRecordRequested) {
+    throw new GradleException("-PldTest and -PldRecord select tests and recordings; a run does one or the other.")
+}
+// 跑测试或录屏，二者之一：游戏目录、清旧报告、verifyUiTest 都按这个开关。
+def ldRunRequested = ldTestRequested || ldRecordRequested
 
 // ⚠️ A UI test run gets a game directory of its own, emptied before every run, rather than the developer's
 // run/. Whatever their own sessions leave there is read back by the scenarios: measured, an editor's
@@ -122,10 +137,13 @@ if (ldTestHeadless) {
 // Resolved here, once, rather than inside the task closure: with the configuration cache on, a body
 // that runs later may not reach back into `project`.
 def ldTestJvmArgs = []
-if (ldTestRequested) {
+if (ldRunRequested) {
     ldTestJvmArgs = [
-            "-Dldlib2.uitest.run=${project.property('ldTest')}",
-            "-Dldlib2.uitest.out=${ldTestOutDir}",
+            // 测试选 ldlib2.uitest.run，录屏选 ldlib2.uitest.recordings（RunConfig#fromSystemProperties 二者只认一个）
+            ldRecordRequested
+                    ? "-Dldlib2.uitest.recordings=${project.property('ldRecord')}"
+                    : "-Dldlib2.uitest.run=${project.property('ldTest')}",
+            "-Dldlib2.uitest.out=${ldRecordRequested ? ldRecordOutDir : ldTestOutDir}",
             "-Dldlib2.uitest.exclude=${project.findProperty('ldTestExclude') ?: ''}",
             // Run-wide default; individual scenarios override it via ScenarioOptions#guiScale.
             "-Dldlib2.uitest.guiScale=${project.findProperty('ldTestGuiScale') ?: '2'}",
@@ -137,7 +155,18 @@ if (ldTestRequested) {
     if (project.hasProperty('ldTestKeepOpen')) {
         ldTestJvmArgs += '-Dldlib2.uitest.keepOpen=true'
     }
+    // 录屏的编码设置：不给就用 RunConfig 的默认值（PATH 上的 ffmpeg、60 fps、auto 编码器、质量 18）
+    if (ldRecordRequested) {
+        ['ldRecordFps': 'recordFps', 'ldRecordFfmpeg': 'recordFfmpeg', 'ldRecordCodec': 'recordCodec',
+         'ldRecordQuality': 'recordQuality'].each { gradleKey, propKey ->
+            if (project.hasProperty(gradleKey)) {
+                ldTestJvmArgs += "-Dldlib2.uitest.${propKey}=${project.property(gradleKey)}".toString()
+            }
+        }
+    }
 }
+// 游戏里用 record 命令录的视频（RunConfig#interactiveRecording）也放进 build/ldlib2-recordings，不论这次是不是测试启动的。
+def ldRecordingsOutArg = "-Dldlib2.uitest.recordingsOut=${ldRecordOutDir}".toString()
 
 // Turns report.json into a build failure.
 //
@@ -145,18 +174,19 @@ if (ldTestRequested) {
 // is written is exactly the case that must not pass silently, so a missing report is a failure too.
 // Captured outside the task closures: with the configuration cache on, a doLast/onlyIf body may
 // not reach back into `project` at execution time, and both `file(...)` and `hasProperty` do.
-def ldTestOutFile = file(ldTestOutDir)
+// 录屏的 report.json 在 build/ldlib2-recordings 里：录屏的检查不通过同样让构建失败（UIRecording 的说明）。
+def ldTestOutFile = file(ldRecordRequested ? ldRecordOutDir : ldTestOutDir)
 
 tasks.register('verifyUiTest') {
     group = 'verification'
     description = 'Fails the build if the LDLib2 in-client UI test report contains failures.'
-    onlyIf { ldTestRequested }
+    onlyIf { ldRunRequested }
     doLast {
         def dir = ldTestOutFile
         def reportFile = new File(dir, 'report.json')
         if (!reportFile.exists()) {
             throw new GradleException("LDLib2 UI test: no report at ${reportFile}.\n" +
-                    "The client crashed, never reached the runner, or -PldTest matched no scenarios.")
+                    "The client crashed, never reached the runner, or -PldTest/-PldRecord matched no scenarios.")
         }
         def report = new groovy.json.JsonSlurper().parse(reportFile)
         logger.lifecycle("LDLib2 UI test: ${report.totals.passed}/${report.totals.scenarios} scenarios passed, " +
@@ -194,9 +224,14 @@ tasks.register('verifyUiTest') {
 // the previous run's "1/1 scenarios passed, 72/72 checks passed" as this run's result. ModDev's
 // RunGameTask declares its class path as @Classpath @InputFiles, so it snapshots the same way
 // NeoGradle's did.
+// 录屏只删旧的 report.json：别的录屏留下的视频还要用，改名或删掉的那段由 UITestRunner 自己清（按场景名删它的目录）。
+def ldCleanWholeOutDir = !ldRecordRequested
 tasks.register('ldlib2CleanUiTestReport') {
-    onlyIf { ldTestRequested }
-    doLast { ldTestOutFile.deleteDir() }
+    onlyIf { ldRunRequested }
+    doLast {
+        if (ldCleanWholeOutDir) ldTestOutFile.deleteDir()
+        else new File(ldTestOutFile, 'report.json').delete()
+    }
 }
 
 // The run tasks are created after this script is evaluated, so runClient cannot be looked up by
@@ -208,7 +243,7 @@ tasks.configureEach { task ->
 
     // On the task for the reason the flags below are, see there: ModDev sets the task's directory from the run
     // definition, and the run definition is what the IDE launches with.
-    if (ldTestRequested) {
+    if (ldRunRequested) {
         task.gameDirectory.set(ldTestGameDir)
     }
 
@@ -227,6 +262,8 @@ tasks.configureEach { task ->
     if (!ldTestJvmArgs.isEmpty()) {
         task.jvmArgs ldTestJvmArgs
     }
+    // 同样只加在任务上；没有录屏的启动里这个属性什么也不做
+    task.jvmArgs ldRecordingsOutArg
 }
 
 // Headless, applied to every ModDev run task rather than just the client's: headless is a property
@@ -247,7 +284,7 @@ tasks.configureEach { task ->
         task.jvmArgs '-Dldlib2.uitest.headless=true'
     }
     // Decided here, while `project` may still be asked - see ldTestGameDir at the top.
-    def ldTestOwnsGameDir = (task.name == 'runClient' && ldTestRequested) || task.name ==~ /runUiTestShard\d+/
+    def ldTestOwnsGameDir = (task.name == 'runClient' && ldRunRequested) || task.name ==~ /runUiTestShard\d+/
     // FML's early loading window calls glfwGetPrimaryMonitor and treats NULL as fatal, so on a
     // machine with no monitor it dies long before Minecraft is reached - and it dies behind a modal
     // dialog nobody is there to dismiss, so the run hangs rather than fails. Minecraft's own Window
@@ -257,6 +294,8 @@ tasks.configureEach { task ->
     // has no property override - still true on 26.1, where ImmediateWindowHandler#load reads
     // FMLConfig.ConfigValue.EARLY_WINDOW_CONTROL and nothing else. (Its `headless` parameter is not
     // a way in either: Client hard-codes it to false.)
+    // 1.21.1 用的 FML 4.0.x 也一样（核对过 loader-4.0.45 的字节码）：ImmediateWindowHandler#load 只读
+    // FMLConfig.ConfigValue.EARLY_WINDOW_CONTROL，config/fml.toml 里的键名同样是 earlyWindowControl。
     //
     // ⚠️ And only when this machine has no display to open it on - see ldHasDisplay above. Headless
     // on a machine that HAS a screen keeps the early window, because the early window is what

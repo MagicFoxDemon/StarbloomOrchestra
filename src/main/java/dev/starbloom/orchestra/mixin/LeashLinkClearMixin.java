@@ -13,9 +13,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * 服务端解开拴绳时发来「拴绳没人拿着」（对方实体 id 为 0，实体 id 从 1 开始），原版客户端照样
  * {@code setDelayedLeashHolderId(0)}，留下一条既没有拴的人、也没有待找的位置的拴绳记录，之后再也不清。
- * 平时没事，但这条记录存不了盘（{@code LeashData.CODEC}：「Invalid LeashData had no attachment」）：
+ * 新版本里这条记录存不了盘（{@code LeashData.CODEC}：「Invalid LeashData had no attachment」）：
  * 车万女仆的魂符在客户端也把女仆存一遍，拴绳牵上琴凳、工位（上座时先解开拴绳）的女仆一收就崩。
- * 这里在客户端照服务端的样子把它清成 null。只动原版，不碰女仆模组。
+ * 1.21.1 的 {@code Leashable#writeLeashData} 遇到这种记录只是不写，不会崩，但客户端和服务端的状态还是不一样
+ * （服务端是 null）；这里照旧在客户端照服务端的样子把它清成 null。只动原版，不碰女仆模组。
  */
 @Mixin(ClientPacketListener.class)
 public abstract class LeashLinkClearMixin {

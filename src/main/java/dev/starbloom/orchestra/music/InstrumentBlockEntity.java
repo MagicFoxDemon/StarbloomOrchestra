@@ -1,11 +1,10 @@
 package dev.starbloom.orchestra.music;
 
-import com.mojang.serialization.Codec;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
-import net.minecraft.core.UUIDUtil;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
@@ -18,11 +17,9 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.network.PacketDistributor;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * 乐器主块的方块实体：纸带槽、声部选择、红石模式，以及服务端的播放状态和当前演奏者。
@@ -287,7 +284,7 @@ public class InstrumentBlockEntity extends BlockEntity {
         if (to != null) {
             PacketDistributor.sendToPlayer(to, p);
         } else {
-            PacketDistributor.sendToPlayersTrackingChunk(server, ChunkPos.containing(worldPosition), p);
+            PacketDistributor.sendToPlayersTrackingChunk(server, new ChunkPos(worldPosition), p);
         }
     }
 
@@ -321,7 +318,10 @@ public class InstrumentBlockEntity extends BlockEntity {
         setChanged();
     }
 
-    @Override
+    /**
+     * 方块被换成别的方块之前（掉出纸带与乐器、停下临时播放、退出乐团）。只在服务端、由 {@link InstrumentBlock#onRemove} 调用
+     * （新版的 {@code BlockEntity#preRemoveSideEffects} 在 1.21.1 还没有，名字照旧保留）。
+     */
     public void preRemoveSideEffects(BlockPos pos, BlockState state) {
         if (level != null && !roll.isEmpty()) {
             Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, roll);
@@ -336,42 +336,43 @@ public class InstrumentBlockEntity extends BlockEntity {
         if (level instanceof ServerLevel) broadcast();
         // 乐团里的乐器被拆了：退出乐团
         if (level != null) dev.starbloom.orchestra.music.orchestra.PodiumBlockEntity.memberChanged(level, orchestra, worldPosition, true);
-        super.preRemoveSideEffects(pos, state);
     }
 
     // —— 存盘与同步 ——
 
     @Override
-    protected void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
-        roll = input.read("roll", ItemStack.OPTIONAL_CODEC).orElse(ItemStack.EMPTY);
-        instrument = input.read("instrument", ItemStack.OPTIONAL_CODEC).orElse(ItemStack.EMPTY);
-        partMask = input.read("part_mask", Codec.INT).orElse(0xFFFF);
-        stopWithSignal = input.read("stop_with_signal", Codec.BOOL).orElse(false);
-        powered = input.read("powered", Codec.BOOL).orElse(false);
-        performer = input.read("performer", UUIDUtil.CODEC).orElse(null);
-        stops = input.read("stops", Codec.INT).orElse(dev.starbloom.orchestra.music.organ.OrganStop.ALWAYS);
-        reverbMode = input.read("reverb", Codec.INT).orElse(0);
-        BlockPos shift = dev.starbloom.orchestra.music.orchestra.PodiumBlockEntity.shift(input, worldPosition);
-        orchestra = input.read("orchestra", Codec.LONG).map(p -> BlockPos.of(p).offset(shift)).orElse(null);
+    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
+        roll = ItemStack.parseOptional(registries, tag.getCompound("roll"));
+        instrument = ItemStack.parseOptional(registries, tag.getCompound("instrument"));
+        partMask = tag.contains("part_mask", Tag.TAG_ANY_NUMERIC) ? tag.getInt("part_mask") : 0xFFFF;
+        stopWithSignal = tag.getBoolean("stop_with_signal");
+        powered = tag.getBoolean("powered");
+        performer = tag.hasUUID("performer") ? tag.getUUID("performer") : null;
+        stops = tag.contains("stops", Tag.TAG_ANY_NUMERIC) ? tag.getInt("stops") : dev.starbloom.orchestra.music.organ.OrganStop.ALWAYS;
+        reverbMode = tag.getInt("reverb");
+        // 结构方块、蓝图搬过来的乐器：乐团位置跟着平移（同 PodiumBlockEntity.shift，按存盘时记下的 origin 算）
+        BlockPos shift = tag.contains("origin", Tag.TAG_ANY_NUMERIC)
+            ? worldPosition.subtract(BlockPos.of(tag.getLong("origin"))) : BlockPos.ZERO;
+        orchestra = tag.contains("orchestra", Tag.TAG_ANY_NUMERIC) ? BlockPos.of(tag.getLong("orchestra")).offset(shift) : null;
         organ = null;
     }
 
     @Override
-    protected void saveAdditional(ValueOutput output) {
-        super.saveAdditional(output);
-        if (!roll.isEmpty()) output.store("roll", ItemStack.OPTIONAL_CODEC, roll);
-        if (!instrument.isEmpty()) output.store("instrument", ItemStack.OPTIONAL_CODEC, instrument);
-        output.store("part_mask", Codec.INT, partMask);
-        output.store("stop_with_signal", Codec.BOOL, stopWithSignal);
-        output.store("powered", Codec.BOOL, powered);
+    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
+        if (!roll.isEmpty()) tag.put("roll", roll.save(registries));
+        if (!instrument.isEmpty()) tag.put("instrument", instrument.save(registries));
+        tag.putInt("part_mask", partMask);
+        tag.putBoolean("stop_with_signal", stopWithSignal);
+        tag.putBoolean("powered", powered);
         if (orchestra != null) {
-            output.store("orchestra", Codec.LONG, orchestra.asLong());
-            output.store("origin", Codec.LONG, worldPosition.asLong());
+            tag.putLong("orchestra", orchestra.asLong());
+            tag.putLong("origin", worldPosition.asLong());
         }
         if (kind() == InstrumentKind.PIPE_ORGAN) {
-            output.store("stops", Codec.INT, stops);
-            output.store("reverb", Codec.INT, reverbMode);
+            tag.putInt("stops", stops);
+            tag.putInt("reverb", reverbMode);
         }
     }
 
@@ -384,7 +385,7 @@ public class InstrumentBlockEntity extends BlockEntity {
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         CompoundTag tag = saveCustomOnly(registries);
         // 演奏者只同步、不存盘
-        if (performer != null) tag.store("performer", UUIDUtil.CODEC, performer);
+        if (performer != null) tag.putUUID("performer", performer);
         return tag;
     }
 }

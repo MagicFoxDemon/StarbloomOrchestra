@@ -5,7 +5,7 @@
 - 钟琴：演奏者站在北面朝南（InstrumentPosts.feet (8, 0, −6)）。前排自然音条 x 2–14、从 z 4 往后、顶面 y 12.3；
   槌落在模型的 (2.5 + 10.5·h, 12.3, 6)（StationPoses 里转 180° 之前的坐标），左长右短。
 - 管钟：两格高；管中心 x = 3.5 + 1.37·i、z = 8，管顶 27.2，敲在管顶帽靠演奏者一侧 (x, 26.9, 7.3)。
-- 琴槌（items/held/，不是物品）：握点 (8, 1.5, 8)，槌杆沿 +Y，槌头中心 y：钟琴 10.7、管钟 9.8、定音鼓 10.8。
+- 琴槌（models/item/*_held，不是物品）：握点 (8, 1.5, 8)，槌杆沿 +Y，槌头中心 y：钟琴 10.7、管钟 9.8、定音鼓 10.8。
 - 指挥台：x 0–32，台面顶 y 8，指挥站在 (16, 8, 8) 面朝 −z；谱架按 PODIUM_TILT 斜着，位置不变。
 """
 import math
@@ -541,7 +541,7 @@ def build(out):
     out.particle_only("hexen_tubular_bells_part", s.texture)
     out.item_parent("hexen_tubular_bells", "hexen_tubular_bells", kit.display(el))
 
-    # 琴槌（items/held/ 指向这些模型；不是物品，没有显示变换）
+    # 琴槌（客户端按模型 id 直接加载这些模型；不是物品，没有显示变换）
     s = out.sheet("hexen_mallets")
     for name, fn in (("hexen_glockenspiel_mallet_held", glockenspiel_mallet), ("hexen_timpani_mallet_held", timpani_mallet),
                      ("hexen_chime_hammer_held", chime_hammer)):

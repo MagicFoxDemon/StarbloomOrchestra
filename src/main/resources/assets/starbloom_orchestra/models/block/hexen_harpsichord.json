@@ -4,7 +4,8 @@
     "hexen_harpsichord": "starbloom_orchestra:block/instrument/hexen_harpsichord",
     "particle": "starbloom_orchestra:block/instrument/particle_marble"
   },
-  "elements": [
+  "loader": "starbloom_orchestra:rotated_cuboids",
+  "cuboids": [
     {
       "from": [
         1.5,

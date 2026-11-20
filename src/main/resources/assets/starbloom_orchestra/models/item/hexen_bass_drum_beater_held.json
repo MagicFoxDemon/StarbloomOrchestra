@@ -4,7 +4,8 @@
     "hexen_drum_tools": "starbloom_orchestra:block/instrument/hexen_drum_tools",
     "particle": "starbloom_orchestra:block/instrument/hexen_drum_tools"
   },
-  "elements": [
+  "loader": "starbloom_orchestra:rotated_cuboids",
+  "cuboids": [
     {
       "from": [
         7.68,

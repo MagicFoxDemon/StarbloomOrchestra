@@ -117,15 +117,15 @@
 
 ```text
 uv run --no-project --with pillow --with numpy python tools/instrument_art.py
-./gradlew test --tests "dev.starbloom.orchestra.music.organ.*" -PlogosJar=...
-./gradlew runGameTestServer -PlogosJar=... "-PdimensionTests=starbloom_orchestra:organ_*"
-./gradlew runClient -PlogosJar=... "-PldTest=organ_views,organ_play_ui,organ_reload_ui" -PldTestHeadless -PldTestWindow=1280x720
+./gradlew test --tests "dev.starbloom.orchestra.music.organ.*"
+./gradlew runGameTestServer "-PorchestraTests=starbloom_orchestra:organ_*"
+./gradlew runClient "-PldTest=organ_views,organ_play_ui,organ_reload_ui" -PldTestHeadless -PldTestWindow=1280x720
 ```
 
 改音色动 `OrganSynth`：每个音栓有哪几排管、各自的响度和失谐在 `ranks()`；泛音表在 `Voice.harmonic()`，起音快慢在 `Voice.rise()`、`speech()`，起伏和气声在 `Voice` 的构造参数；混响参数在 `OrganReverb.Room.of()`；组合之间的响度在 `OrganStop`。不用重新生成任何文件。改完先渲染试听、量一下起音（见第 9 节），再进游戏：
 
 ```text
-./gradlew test --tests "*OrganDemoTest*" -PorganDemo=/absolute/path/organ-demo -PlogosJar=...
+./gradlew test --tests "*OrganDemoTest*" -PorganDemo=/absolute/path/organ-demo
 ```
 
 ### 8.4 还没验证的

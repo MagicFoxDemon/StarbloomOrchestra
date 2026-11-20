@@ -7,9 +7,15 @@
     "P P"
   ],
   "key": {
-    "P": "minecraft:dark_oak_planks",
-    "L": "minecraft:leather",
-    "N": "minecraft:note_block"
+    "P": {
+      "item": "minecraft:dark_oak_planks"
+    },
+    "L": {
+      "item": "minecraft:leather"
+    },
+    "N": {
+      "item": "minecraft:note_block"
+    }
   },
   "result": {
     "id": "starbloom_orchestra:hexen_bass_drum",

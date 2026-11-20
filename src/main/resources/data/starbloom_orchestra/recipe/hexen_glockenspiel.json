@@ -7,9 +7,15 @@
     "S S"
   ],
   "key": {
-    "I": "minecraft:iron_ingot",
-    "N": "minecraft:note_block",
-    "S": "minecraft:stick"
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "N": {
+      "item": "minecraft:note_block"
+    },
+    "S": {
+      "item": "minecraft:stick"
+    }
   },
   "result": {
     "id": "starbloom_orchestra:hexen_glockenspiel",

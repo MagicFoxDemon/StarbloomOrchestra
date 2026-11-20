@@ -7,8 +7,12 @@
     "N"
   ],
   "key": {
-    "B": "minecraft:bamboo",
-    "N": "minecraft:bone"
+    "B": {
+      "item": "minecraft:bamboo"
+    },
+    "N": {
+      "item": "minecraft:bone"
+    }
   },
   "result": {
     "id": "starbloom_orchestra:shakuhachi",

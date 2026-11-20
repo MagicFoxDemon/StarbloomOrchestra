@@ -7,10 +7,18 @@
     "S S"
   ],
   "key": {
-    "L": "minecraft:leather",
-    "I": "minecraft:iron_nugget",
-    "N": "minecraft:note_block",
-    "S": "minecraft:stick"
+    "L": {
+      "item": "minecraft:leather"
+    },
+    "I": {
+      "item": "minecraft:iron_nugget"
+    },
+    "N": {
+      "item": "minecraft:note_block"
+    },
+    "S": {
+      "item": "minecraft:stick"
+    }
   },
   "result": {
     "id": "starbloom_orchestra:hexen_snare_drum",

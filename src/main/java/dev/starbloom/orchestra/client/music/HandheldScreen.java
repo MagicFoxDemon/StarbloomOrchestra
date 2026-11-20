@@ -9,10 +9,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.input.KeyEvent;
-import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 
@@ -26,7 +25,7 @@ import net.minecraft.world.InteractionHand;
  */
 public class HandheldScreen extends Screen implements MidiKeyboard.Target {
     private static final int W = 400, H = 104;
-    private static final int KEY_LEFT = 263, KEY_RIGHT = 262, KEY_UP = 265, KEY_DOWN = 264;
+    private static final int KEY_LEFT = 263, KEY_RIGHT = 262, KEY_UP = 265, KEY_DOWN = 264, KEY_ESCAPE = 256;
 
     private final InstrumentKind kind;
     private final InteractionHand hand;
@@ -86,7 +85,9 @@ public class HandheldScreen extends Screen implements MidiKeyboard.Target {
 
     /** 不画模糊的背景：演奏时看得到世界和别的乐手。 */
     @Override
-    public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float a) {
+    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float a) {
+        // 原版在这里发的背景事件照发（别的模组可能在背景上画东西）
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(new net.neoforged.neoforge.client.event.ScreenEvent.BackgroundRendered(this, g));
     }
 
     @Override
@@ -132,9 +133,8 @@ public class HandheldScreen extends Screen implements MidiKeyboard.Target {
     }
 
     @Override
-    public boolean keyPressed(KeyEvent event) {
-        if (event.isEscape()) return super.keyPressed(event);
-        int key = event.key();
+    public boolean keyPressed(int key, int scanCode, int modifiers) {
+        if (key == KEY_ESCAPE) return super.keyPressed(key, scanCode, modifiers);
         switch (key) {
             case KEY_LEFT -> { if (!pads) shiftOctave(-1); }
             case KEY_RIGHT -> { if (!pads) shiftOctave(1); }
@@ -154,8 +154,8 @@ public class HandheldScreen extends Screen implements MidiKeyboard.Target {
     }
 
     @Override
-    public boolean keyReleased(KeyEvent event) {
-        Integer p = held.remove(event.key());
+    public boolean keyReleased(int key, int scanCode, int modifiers) {
+        Integer p = held.remove(key);
         if (p != null) note(p, 0, System.nanoTime());
         return true;
     }
@@ -236,12 +236,12 @@ public class HandheldScreen extends Screen implements MidiKeyboard.Target {
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent e, boolean doubleClick) {
-        if (e.button() == 0) {
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button == 0) {
             List<KeyRect> keys = keyboard();
             for (int i = keys.size() - 1; i >= 0; i--) {
                 KeyRect k = keys.get(i);
-                if (e.x() >= k.x && e.x() < k.x + k.w && e.y() >= k.y && e.y() < k.y + k.h) {
+                if (mouseX >= k.x && mouseX < k.x + k.w && mouseY >= k.y && mouseY < k.y + k.h) {
                     if (!playable(k.pitch)) return true;
                     mousePitch = k.pitch;
                     note(k.pitch, velocity, System.nanoTime());
@@ -249,53 +249,54 @@ public class HandheldScreen extends Screen implements MidiKeyboard.Target {
                 }
             }
         }
-        return super.mouseClicked(e, doubleClick);
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
-    public boolean mouseReleased(MouseButtonEvent e) {
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
         if (mousePitch >= 0) {
             note(mousePitch, 0, System.nanoTime());
             mousePitch = -1;
         }
-        return super.mouseReleased(e);
+        return super.mouseReleased(mouseX, mouseY, button);
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        renderBackground(g, mouseX, mouseY, partialTick);
         Parchment.draw(g, x0, y0, W, H, 20);
-        g.text(font, title, x0 + 20, y0 + 16, Parchment.INK_TITLE, false);
+        g.drawString(font, title, x0 + 20, y0 + 16, Parchment.INK_TITLE, false);
         Component status = pads ? tr("held_status_pads", velocity) : tr("held_status", KeyLayout.noteName(base), velocity,
             Component.translatable(KeyLayout.noteName(kind.low()) + "–" + KeyLayout.noteName(kind.high())));
         int statusX = x0 + 20 + font.width(title) + 12;
-        g.text(font, status, statusX, y0 + 16, Parchment.INK, false);
+        g.drawString(font, status, statusX, y0 + 16, Parchment.INK, false);
         // 音源写在右上角；名字、状态太长挤不下时挪到底下提示行的右边，那里也挤不下就不写
         Component source = SampleMaps.sourceLabel(kind);
         Component hint = tr(pads ? "held_hint_pads" : "held_hint");
         if (source != null) {
             int sx = x0 + W - 20 - font.width(source);
-            if (sx >= statusX + font.width(status) + 8) g.text(font, source, sx, y0 + 16, Parchment.INK_HINT, false);
-            else if (sx >= x0 + 20 + font.width(hint) + 8) g.text(font, source, sx, y0 + H - 23, Parchment.INK_HINT, false);
+            if (sx >= statusX + font.width(status) + 8) g.drawString(font, source, sx, y0 + 16, Parchment.INK_HINT, false);
+            else if (sx >= x0 + 20 + font.width(hint) + 8) g.drawString(font, source, sx, y0 + H - 23, Parchment.INK_HINT, false);
         }
         for (KeyRect k : keyboard()) {
             boolean on = sounding(k.pitch);
             if (pads) {
                 g.fill(k.x, k.y, k.x + k.w, k.y + k.h, on ? 0xFFF4D27A : 0xFFF6F0E2);
-                g.outline(k.x, k.y, k.w, k.h, 0xFF8C7A60);
+                g.renderOutline(k.x, k.y, k.w, k.h, 0xFF8C7A60);
                 Component name = Component.translatable("screen.starbloom_orchestra.instrument.pad." + kind.id() + "." + k.pitch);
-                g.text(font, name, k.x + (k.w - font.width(name)) / 2, k.y + 12, Parchment.INK_TITLE, false);
-                g.text(font, Component.literal(k.label), k.x + (k.w - font.width(k.label)) / 2, k.y + k.h - 12, Parchment.INK_HINT, false);
+                g.drawString(font, name, k.x + (k.w - font.width(name)) / 2, k.y + 12, Parchment.INK_TITLE, false);
+                g.drawString(font, Component.literal(k.label), k.x + (k.w - font.width(k.label)) / 2, k.y + k.h - 12, Parchment.INK_HINT, false);
                 continue;
             }
             boolean out = k.pitch < kind.low() || k.pitch > kind.high();
             int fill = k.black ? (on ? Parchment.GOLD : out ? 0xFF5A4A40 : 0xFF241812)
                 : (on ? 0xFFF4D27A : out ? 0xFFD8CCB4 : 0xFFF6F0E2);
             g.fill(k.x, k.y, k.x + k.w, k.y + k.h, fill);
-            g.outline(k.x, k.y, k.w, k.h, k.black ? 0xFF120A06 : 0xFF8C7A60);
+            g.renderOutline(k.x, k.y, k.w, k.h, k.black ? 0xFF120A06 : 0xFF8C7A60);
             int lx = k.x + (k.w - font.width(k.label)) / 2;
-            g.text(font, Component.literal(k.label), lx, k.y + k.h - 10, k.black ? 0xFFE8DCC0 : Parchment.INK_HINT, false);
+            g.drawString(font, Component.literal(k.label), lx, k.y + k.h - 10, k.black ? 0xFFE8DCC0 : Parchment.INK_HINT, false);
         }
-        g.text(font, hint, x0 + 20, y0 + H - 23, Parchment.INK_HINT, false);
-        super.extractRenderState(g, mouseX, mouseY, partialTick);
+        g.drawString(font, hint, x0 + 20, y0 + H - 23, Parchment.INK_HINT, false);
+        for (Renderable r : renderables) r.render(g, mouseX, mouseY, partialTick);
     }
 }

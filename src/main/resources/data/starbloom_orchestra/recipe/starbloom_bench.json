@@ -7,9 +7,15 @@
     "P P"
   ],
   "key": {
-    "R": "minecraft:red_wool",
-    "P": "minecraft:dark_oak_planks",
-    "G": "minecraft:gold_nugget"
+    "R": {
+      "item": "minecraft:red_wool"
+    },
+    "P": {
+      "item": "minecraft:dark_oak_planks"
+    },
+    "G": {
+      "item": "minecraft:gold_nugget"
+    }
   },
   "result": {
     "id": "starbloom_orchestra:starbloom_bench",

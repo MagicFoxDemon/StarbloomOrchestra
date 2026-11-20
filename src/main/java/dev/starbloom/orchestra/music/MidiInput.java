@@ -1,6 +1,6 @@
 package dev.starbloom.orchestra.music;
 
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * 把电子琴（MIDI 键盘）发来的一条短消息翻译成乐器能用的事件：按下、松开、延音踏板、全部松开、换音色。

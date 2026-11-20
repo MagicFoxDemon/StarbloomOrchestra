@@ -7,11 +7,21 @@
     "S S"
   ],
   "key": {
-    "Q": "minecraft:quartz_block",
-    "G": "minecraft:gold_ingot",
-    "P": "minecraft:dark_oak_planks",
-    "N": "minecraft:note_block",
-    "S": "minecraft:stick"
+    "Q": {
+      "item": "minecraft:quartz_block"
+    },
+    "G": {
+      "item": "minecraft:gold_ingot"
+    },
+    "P": {
+      "item": "minecraft:dark_oak_planks"
+    },
+    "N": {
+      "item": "minecraft:note_block"
+    },
+    "S": {
+      "item": "minecraft:stick"
+    }
   },
   "result": {
     "id": "starbloom_orchestra:starbloom_grand_piano",

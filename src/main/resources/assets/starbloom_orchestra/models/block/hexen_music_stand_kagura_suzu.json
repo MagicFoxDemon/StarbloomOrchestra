@@ -5,7 +5,8 @@
     "kagura_suzu": "starbloom_orchestra:block/instrument/kagura_suzu",
     "particle": "starbloom_orchestra:block/instrument/particle_brass"
   },
-  "elements": [
+  "loader": "starbloom_orchestra:rotated_cuboids",
+  "cuboids": [
     {
       "from": [
         8.5,

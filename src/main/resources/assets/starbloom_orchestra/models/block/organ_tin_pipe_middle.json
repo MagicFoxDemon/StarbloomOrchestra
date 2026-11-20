@@ -4,7 +4,8 @@
     "organ_pipes": "starbloom_orchestra:block/instrument/organ_pipes",
     "particle": "starbloom_orchestra:block/instrument/particle_tin"
   },
-  "elements": [
+  "loader": "starbloom_orchestra:rotated_cuboids",
+  "cuboids": [
     {
       "from": [
         4.5,

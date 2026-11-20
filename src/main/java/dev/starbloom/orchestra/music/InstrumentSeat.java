@@ -1,20 +1,19 @@
 package dev.starbloom.orchestra.music;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * 大提琴、低音提琴后面的位置：看不见的座位，演奏者骑在上面（大提琴坐在琴后的凳子上，低音提琴站在琴后）。
@@ -32,7 +31,7 @@ public final class InstrumentSeat extends Entity {
     /** 坐到 main 处的乐器后面：位置与朝向由乐器的方块状态决定。 */
     public void bind(BlockPos main, Vec3 at, float yaw) {
         entityData.set(INSTRUMENT, main.immutable());
-        snapTo(at.x, at.y, at.z, yaw, 0);
+        moveTo(at.x, at.y, at.z, yaw, 0);
     }
 
     public BlockPos instrument() {
@@ -53,13 +52,13 @@ public final class InstrumentSeat extends Entity {
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput input) {
-        input.read("instrument", com.mojang.serialization.Codec.LONG).ifPresent(p -> entityData.set(INSTRUMENT, BlockPos.of(p)));
+    protected void readAdditionalSaveData(CompoundTag tag) {
+        if (tag.contains("instrument", Tag.TAG_ANY_NUMERIC)) entityData.set(INSTRUMENT, BlockPos.of(tag.getLong("instrument")));
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput output) {
-        output.store("instrument", com.mojang.serialization.Codec.LONG, instrument().asLong());
+    protected void addAdditionalSaveData(CompoundTag tag) {
+        tag.putLong("instrument", instrument().asLong());
     }
 
     /** 工位上是生物时连同生物存盘（重进存档还在那里）；空着、坐着玩家时不存。 */
@@ -70,7 +69,7 @@ public final class InstrumentSeat extends Entity {
     }
 
     @Override
-    public boolean hurtServer(ServerLevel level, DamageSource source, float damage) {
+    public boolean hurt(DamageSource source, float damage) {
         return false;
     }
 

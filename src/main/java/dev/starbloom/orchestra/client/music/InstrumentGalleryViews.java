@@ -217,26 +217,26 @@ public class InstrumentGalleryViews implements UIScenario {
             .step("close", ctx -> Minecraft.getInstance().setScreen(null));
         for (int k = 0; k < HELD.length; k++) {
             final int slot = k;
-            s.step("hold slot " + k, ctx -> Minecraft.getInstance().player.getInventory().setSelectedSlot(slot))
+            s.step("hold slot " + k, ctx -> Minecraft.getInstance().player.getInventory().selected = slot)
                 .ticks(12)
                 .screenshot("gallery_held_" + k);
         }
         // 快捷栏第 2 格是锡管、第 5 格是小提琴（见 HELD）
         s.step("third person front, tin pipe", ctx -> {
                 var mc = Minecraft.getInstance();
-                mc.player.getInventory().setSelectedSlot(2);
+                mc.player.getInventory().selected = 2;
                 mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT);
             })
             .ticks(15)
             .screenshot("gallery_third_person_pipe")
-            .step("third person front, violin", ctx -> Minecraft.getInstance().player.getInventory().setSelectedSlot(5))
+            .step("third person front, violin", ctx -> Minecraft.getInstance().player.getInventory().selected = 5)
             .ticks(15)
             .screenshot("gallery_third_person_violin")
             .step("first person", ctx -> Minecraft.getInstance().options.setCameraType(CameraType.FIRST_PERSON));
         for (int k : WAGAKKI) {
             final Item item = items().get(k).get();
             s.server("hold " + item, ctx -> ctx.player().getInventory().setItem(8, new ItemStack(item)))
-                .step("select slot 8 for " + item, ctx -> Minecraft.getInstance().player.getInventory().setSelectedSlot(8))
+                .step("select slot 8 for " + item, ctx -> Minecraft.getInstance().player.getInventory().selected = 8)
                 .ticks(12)
                 .screenshot("gallery_held_" + net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item).getPath());
         }

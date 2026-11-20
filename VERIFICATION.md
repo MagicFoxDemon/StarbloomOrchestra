@@ -3,6 +3,37 @@
 本仓库从 Logos 附属「炼金釜」拆出来之前的验证记录在附属仓库的
 [VERIFICATION.md](https://github.com/wushuowei1145/Logos-Spellwrought-Expanse/blob/main/VERIFICATION.md)（乐器、乐团各节）。
 
+本分支 `mc/1.21.1` 是 1.21.1 那条线；下面「移植到 1.21.1」以外的各节是 26.1（main）上的记录，不代表 1.21.1 验证过。
+
+## 移植到 Minecraft 1.21.1 / NeoForge 21.1
+
+2026-11-20：分支 `mc/1.21.1`，基于 main `dd65828`（含 #3）。NeoForge 21.1.267、Java 21、Parchment 2024.11.17；Ponder 用官方 1.0.92+mc1.21.1
+（catnip 在它的 jar 里），它要求的 Flywheel 1.0.7 一起打包；LDLib2 2.2.46.a。改动按子系统做：渲染与姿势（没有渲染状态，改成
+`LivingEntityRenderer.render` 里摆姿势、`RenderLayer` 画乐器，手持的模型由 `HeldModel` 单独加载）、声部描边（核心着色器 + `RenderLevelStageEvent`）、
+声音的 mixin、界面与输入、方块与方块实体（NBT 键不变）、发往客户端的包（`ClientPayloadHandlers`）、思索、世界测试框架、资源格式
+（没有 `items/`，九件手持乐器的演奏模型用 `starbloom_orchestra:playing` 物品属性切换，多轴转动的元素用 `rotated_cuboids` 模型加载器）。
+
+| 层级 | 结果 |
+|---|---|
+| 编译 | 带车万女仆 1.5.3 的 jar（`libs/touhoulittlemaid.jar` = `touhoulittlemaid-1.5.3-neoforge+mc1.21.1.jar`）编译通过，`MaidMusicians` 在 jar 里；不带时 `MaidMusicians` 不参与、也编译通过；发布用的 jar 里打包了 Ponder 和 Flywheel |
+| 单元 | 84 个，0 失败，1 个跳过（管风琴试听，要 `-PorganDemo`）。`ItemModelDisplayTest` 改成从 `models/item` 查（`items/` 没了），新加核对演奏模型切换、元素转动能被 1.21.1 读出来的两项；测试类路径上的资源在 1.21.1 是 `union:` 协议，列目录的地方跟着改了 |
+| 世界测试 | 26.1 的 36 个都在、名字不变，全部通过（`run/gametestserver/gametestworld`，每次清空）。`-PorchestraTests` 选不到任何测试时以 −1 退出（`starbloom_orchestra:nonexistent_*` 试过，退出码 1）。思索的蓝图用 `-PponderExport` 按 1.21.1 的格式重新导出，两次逐字节一致 |
+| 实际客户端 | 和 26.1（同一台机器、同样的四批：`instrument_*`/`roll_editor`/`midi_*`/`concert_hall_pack`；木槌、谱架、手持、管风琴；乐团八个；`ponder_scenes_ui`）逐个对照：两边结果完全一样，6/7、7/7、8/8、1/1，检查 12/13、29/29、57/57、43/43。唯一失败的 `concert_hall_pack_ui`「装上资源包后采样乐器都换成录音」在 26.1 上也一样失败：资源包里本来就没有尺八的录音（ikoa 的采样不能再分发），检查却要求每件采样乐器都有录音——是 main 上的问题，不是移植带来的 |
+| 截图对照 | 232 对截图（同场景同名）全部配上。看过差得最多的那些：乐手的姿势、拿着的乐器和弓、琴凳与工位、竖琴的弦、指挥选中声部的描边、演奏条，两边落在同样的像素上；差异只有天空和云（26.1 在这个高度画云）、音符粒子的随机位置，以及思索界面本身（新版 Ponder 的标签旁不再写名字、背景天空不同） |
+| 评审 | 每个子系统一名评审（另有 mixin 目标、专用服务端加载客户端类两个横向检查），每条发现再由另一名去反驳。确认并修好：发往客户端的五种包在移植后没有登记处理器、全被丢掉（客户端听不到纸带、别人的演奏、乐团状态）；描边在建、改尺寸后提前返回时留着帧缓冲 0；世界测试改用独立并清空的世界；选不到测试时退出码 |
+| 车万女仆 | 对着 1.5.3 的 jar 和源码（release 提交 `591ad55a`）重写了女仆模组那一侧，接口对照见 docs/ORCHESTRA.md 第 16.3 节。世界测试带上女仆模组（`runGameTestServer -Ptlm`，专用服务端，女仆模组会在服务端也建 `MaidMusicians.Extension` 的实例）36/36、日志里没有加载失败；不带女仆模组 36/36。实际客户端（`-Ptlm`，临时场景、没有提交）：基岩版灵梦、GeckoLib 酒狐各四只，坐大钢琴的琴凳、大提琴工位、钟琴工位、拿着小提琴坐空琴凳（前三只手里拿着铁剑），检查 4/4：都坐上了；基岩版摆过姿势；两种渲染器的手持物品层都换成了外壳、画乐器的层在。看过截图：手在琴键上、大提琴的弓横过琴弦、琴槌从手里落到钟琴的音条上、小提琴夹在下巴下；六只手里的铁剑都没画，拿小提琴的两只手里也不再另画一把。头一遍跑出两处错，都改了：基岩版的乐器、琴槌画到头顶后面（女仆模组的背包层挪了 PoseStack 不还原，画乐器的层改成紧跟在手持物品层后面）；GeckoLib 女仆坐到凳子底下（`DefaultGeckoAnimationEvent` 第一次加载时游戏事件总线还没开、收不到，改成画之前补上）。再带上用户给的 `touhou_little_maid_spell-1.21.1-1.9.1-neoforge.jar`（女仆模组的附属，要 1.5.3）跑一遍，同样 4/4、截图一样；它装的模型包里有 1.5.3 不认的 `ysm.particle`，日志里的 98 条解析错误是它的，不是本模组的 |
+| 未验证 | 车万女仆：真的玩家手动试玩（拴绳牵上琴凳、在乐团里跟着音演奏）、YSM 模型的女仆、多人。附属 NPC 当乐手（附属还在 26.1）；多人、专用服务器（专用服务端只跑过世界测试）；真的按键试玩；光影包、Sodium |
+
+```text
+./gradlew build
+./gradlew runGameTestServer
+./gradlew runGameTestServer -PorchestraTests=starbloom_orchestra:ponder_layouts -PponderExport
+./gradlew runClient "-PldTest=instrument_gallery_ui,instrument_views,instrument_play_ui,roll_editor_ui,midi_import_ui,midi_keyboard_ui,concert_hall_pack_ui" -PldTestHeadless -PldTestWindow=1280x720
+./gradlew runClient "-PldTest=mallet_instrument_views,mallet_instrument_play,music_stand_views,handheld_play_ui,organ_views,organ_reload_ui,organ_play_ui" -PldTestHeadless -PldTestWindow=1280x720
+./gradlew runClient "-PldTest=orchestra_conduct_ui,orchestra_baton_ui,orchestra_metronome_ui,orchestra_seated_member_ui,orchestra_views,orchestra_handheld_ui,orchestra_seated_ui,ensemble_resync_ui" -PldTestHeadless -PldTestWindow=1280x720
+./gradlew runClient -PldTest=ponder_scenes_ui -PldTestHeadless -PldTestWindow=1600x900
+```
+
 ## 和乐器：篠笛、神乐铃、尺八
 
 2026-11-18：分支 `feat/japanese-bells-flute`，基于本仓库 main `6fabbac`。两件手持和乐器，做法见 [docs/JAPANESE_INSTRUMENTS.md](docs/JAPANESE_INSTRUMENTS.md)。

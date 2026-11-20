@@ -6,7 +6,7 @@ import dev.starbloom.orchestra.client.music.OrganMixer;
 import dev.starbloom.orchestra.client.music.SampleMaps;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.client.sounds.SoundBufferLibrary;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -24,12 +24,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(SoundBufferLibrary.class)
 public abstract class OrganBufferMixin {
     @Inject(method = "getCompleteBuffer", at = @At("HEAD"), cancellable = true)
-    private void starbloom_orchestra$organBuffer(Identifier location, CallbackInfoReturnable<CompletableFuture<SoundBuffer>> cir) {
+    private void starbloom_orchestra$organBuffer(ResourceLocation location, CallbackInfoReturnable<CompletableFuture<SoundBuffer>> cir) {
         if (OrganMixer.owns(location)) cir.setReturnValue(OrganMixer.buffer(location));
     }
 
     @Inject(method = "getCompleteBuffer", at = @At("RETURN"), cancellable = true)
-    private void starbloom_orchestra$sampleLoop(Identifier location, CallbackInfoReturnable<CompletableFuture<SoundBuffer>> cir) {
+    private void starbloom_orchestra$sampleLoop(ResourceLocation location, CallbackInfoReturnable<CompletableFuture<SoundBuffer>> cir) {
         int[] loop = SampleMaps.loop(location);
         if (loop == null) return;
         cir.setReturnValue(cir.getReturnValue().thenApply(buffer -> {

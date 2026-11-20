@@ -3,7 +3,7 @@
     {
       "enum": "net/minecraft/client/model/HumanoidModel$ArmPose",
       "name": "STARBLOOM_ORCHESTRA_VIOLIN",
-      "constructor": "(ZZLnet/neoforged/neoforge/client/IArmPoseTransformer;)V",
+      "constructor": "(ZLnet/neoforged/neoforge/client/IArmPoseTransformer;)V",
       "parameters": {
         "class": "dev/starbloom/orchestra/client/music/HandheldPoses",
         "field": "VIOLIN"
@@ -12,7 +12,7 @@
     {
       "enum": "net/minecraft/client/model/HumanoidModel$ArmPose",
       "name": "STARBLOOM_ORCHESTRA_FLUTE",
-      "constructor": "(ZZLnet/neoforged/neoforge/client/IArmPoseTransformer;)V",
+      "constructor": "(ZLnet/neoforged/neoforge/client/IArmPoseTransformer;)V",
       "parameters": {
         "class": "dev/starbloom/orchestra/client/music/HandheldPoses",
         "field": "FLUTE"
@@ -21,7 +21,7 @@
     {
       "enum": "net/minecraft/client/model/HumanoidModel$ArmPose",
       "name": "STARBLOOM_ORCHESTRA_TRUMPET",
-      "constructor": "(ZZLnet/neoforged/neoforge/client/IArmPoseTransformer;)V",
+      "constructor": "(ZLnet/neoforged/neoforge/client/IArmPoseTransformer;)V",
       "parameters": {
         "class": "dev/starbloom/orchestra/client/music/HandheldPoses",
         "field": "TRUMPET"
@@ -30,7 +30,7 @@
     {
       "enum": "net/minecraft/client/model/HumanoidModel$ArmPose",
       "name": "STARBLOOM_ORCHESTRA_VIOLA",
-      "constructor": "(ZZLnet/neoforged/neoforge/client/IArmPoseTransformer;)V",
+      "constructor": "(ZLnet/neoforged/neoforge/client/IArmPoseTransformer;)V",
       "parameters": {
         "class": "dev/starbloom/orchestra/client/music/HandheldPoses",
         "field": "VIOLA"
@@ -39,7 +39,7 @@
     {
       "enum": "net/minecraft/client/model/HumanoidModel$ArmPose",
       "name": "STARBLOOM_ORCHESTRA_OBOE",
-      "constructor": "(ZZLnet/neoforged/neoforge/client/IArmPoseTransformer;)V",
+      "constructor": "(ZLnet/neoforged/neoforge/client/IArmPoseTransformer;)V",
       "parameters": {
         "class": "dev/starbloom/orchestra/client/music/HandheldPoses",
         "field": "OBOE"
@@ -48,7 +48,7 @@
     {
       "enum": "net/minecraft/client/model/HumanoidModel$ArmPose",
       "name": "STARBLOOM_ORCHESTRA_BASSOON",
-      "constructor": "(ZZLnet/neoforged/neoforge/client/IArmPoseTransformer;)V",
+      "constructor": "(ZLnet/neoforged/neoforge/client/IArmPoseTransformer;)V",
       "parameters": {
         "class": "dev/starbloom/orchestra/client/music/HandheldPoses",
         "field": "BASSOON"
@@ -57,7 +57,7 @@
     {
       "enum": "net/minecraft/client/model/HumanoidModel$ArmPose",
       "name": "STARBLOOM_ORCHESTRA_SHINOBUE",
-      "constructor": "(ZZLnet/neoforged/neoforge/client/IArmPoseTransformer;)V",
+      "constructor": "(ZLnet/neoforged/neoforge/client/IArmPoseTransformer;)V",
       "parameters": {
         "class": "dev/starbloom/orchestra/client/music/HandheldPoses",
         "field": "SHINOBUE"
@@ -66,7 +66,7 @@
     {
       "enum": "net/minecraft/client/model/HumanoidModel$ArmPose",
       "name": "STARBLOOM_ORCHESTRA_KAGURA_SUZU",
-      "constructor": "(ZZLnet/neoforged/neoforge/client/IArmPoseTransformer;)V",
+      "constructor": "(ZLnet/neoforged/neoforge/client/IArmPoseTransformer;)V",
       "parameters": {
         "class": "dev/starbloom/orchestra/client/music/HandheldPoses",
         "field": "KAGURA_SUZU"
@@ -75,7 +75,7 @@
     {
       "enum": "net/minecraft/client/model/HumanoidModel$ArmPose",
       "name": "STARBLOOM_ORCHESTRA_SHAKUHACHI",
-      "constructor": "(ZZLnet/neoforged/neoforge/client/IArmPoseTransformer;)V",
+      "constructor": "(ZLnet/neoforged/neoforge/client/IArmPoseTransformer;)V",
       "parameters": {
         "class": "dev/starbloom/orchestra/client/music/HandheldPoses",
         "field": "SHAKUHACHI"
@@ -84,7 +84,7 @@
     {
       "enum": "net/minecraft/client/model/HumanoidModel$ArmPose",
       "name": "STARBLOOM_ORCHESTRA_CELLO",
-      "constructor": "(ZZLnet/neoforged/neoforge/client/IArmPoseTransformer;)V",
+      "constructor": "(ZLnet/neoforged/neoforge/client/IArmPoseTransformer;)V",
       "parameters": {
         "class": "dev/starbloom/orchestra/client/music/HandheldPoses",
         "field": "CELLO"
@@ -93,7 +93,7 @@
     {
       "enum": "net/minecraft/client/model/HumanoidModel$ArmPose",
       "name": "STARBLOOM_ORCHESTRA_DOUBLE_BASS",
-      "constructor": "(ZZLnet/neoforged/neoforge/client/IArmPoseTransformer;)V",
+      "constructor": "(ZLnet/neoforged/neoforge/client/IArmPoseTransformer;)V",
       "parameters": {
         "class": "dev/starbloom/orchestra/client/music/HandheldPoses",
         "field": "DOUBLE_BASS"
@@ -102,7 +102,7 @@
     {
       "enum": "net/minecraft/client/model/HumanoidModel$ArmPose",
       "name": "STARBLOOM_ORCHESTRA_CONDUCT",
-      "constructor": "(ZZLnet/neoforged/neoforge/client/IArmPoseTransformer;)V",
+      "constructor": "(ZLnet/neoforged/neoforge/client/IArmPoseTransformer;)V",
       "parameters": {
         "class": "dev/starbloom/orchestra/client/music/ConductingPoses",
         "field": "CONDUCT"

@@ -16,9 +16,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import javax.sound.sampled.AudioFormat;
-import net.minecraft.resources.Identifier;
-import net.minecraft.util.Util;
-import org.jspecify.annotations.Nullable;
+import net.minecraft.Util;
+import net.minecraft.resources.ResourceLocation;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 /**
@@ -73,21 +73,21 @@ public final class OrganMixer {
         }
 
         /** 整个采样：起音 + 循环。 */
-        Identifier note(int pitch) {
+        ResourceLocation note(int pitch) {
             return id("l", pitch);
         }
 
         /** 只有循环段：交叉淡入用。 */
-        Identifier steady(int pitch) {
+        ResourceLocation steady(int pitch) {
             return id("c", pitch);
         }
 
         /** 松键尾音；这套没有房间时为 null。 */
-        @Nullable Identifier tail(int pitch) {
+        @Nullable ResourceLocation tail(int pitch) {
             return sample(pitch).hasTail() ? id("t", pitch) : null;
         }
 
-        private Identifier id(String kind, int pitch) {
+        private ResourceLocation id(String kind, int pitch) {
             return StarbloomOrchestra.id("organ_runtime/g" + gen + "/" + kind + OrganSynth.index(pitch));
         }
     }
@@ -185,11 +185,11 @@ public final class OrganMixer {
 
     // —— 交给声音引擎 ——
 
-    public static boolean owns(Identifier location) {
+    public static boolean owns(ResourceLocation location) {
         return location.getNamespace().equals(StarbloomOrchestra.ID) && location.getPath().startsWith(PREFIX);
     }
 
-    public static CompletableFuture<SoundBuffer> buffer(Identifier location) {
+    public static CompletableFuture<SoundBuffer> buffer(ResourceLocation location) {
         String rest = location.getPath().substring(PREFIX.length()).replace(".ogg", "");
         // rest = g<代>/l<序号>、g<代>/c<序号> 或 g<代>/t<序号>
         try {

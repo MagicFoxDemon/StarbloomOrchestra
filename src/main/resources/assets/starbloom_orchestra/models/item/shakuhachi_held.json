@@ -4,7 +4,8 @@
     "shakuhachi": "starbloom_orchestra:block/instrument/shakuhachi",
     "particle": "starbloom_orchestra:block/instrument/shakuhachi"
   },
-  "elements": [
+  "loader": "starbloom_orchestra:rotated_cuboids",
+  "cuboids": [
     {
       "from": [
         7.28,

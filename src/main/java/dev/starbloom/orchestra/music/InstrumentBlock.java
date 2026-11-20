@@ -4,6 +4,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -16,10 +17,9 @@ import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
-import net.minecraft.world.level.redstone.Orientation;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * 乐器方块的共同部分：由主块和若干附属块组成，只有主块有模型和方块实体；右键任意一块都交给主块。
@@ -83,7 +83,7 @@ public abstract class InstrumentBlock extends Block implements EntityBlock {
         // 潜行空手右键：工位上的生物离开（不开界面）
         if (player.isSecondaryUseActive() && InstrumentPosts.occupant(level, main) instanceof net.minecraft.world.entity.Mob) {
             if (!level.isClientSide()) InstrumentPosts.leave(level, main);
-            return InteractionResult.SUCCESS;
+            return InteractionResult.sidedSuccess(level.isClientSide());
         }
         // 空手右键有工位的乐器（大提琴、低音提琴、钟琴、管钟）：到工位上去（已经有人时只开界面），潜行右键只开界面
         if (!level.isClientSide() && !player.isSecondaryUseActive() && InstrumentPosts.has(kind(level.getBlockState(main)))
@@ -94,37 +94,43 @@ public abstract class InstrumentBlock extends Block implements EntityBlock {
             // 界面类只在客户端存在：经静态入口打开，本类不出现任何客户端类型
             dev.starbloom.orchestra.client.music.MusicClient.openInstrument(main);
         }
-        return InteractionResult.SUCCESS;
+        return InteractionResult.sidedSuccess(level.isClientSide());
     }
 
+    /**
+     * 拿着东西右键。1.21.1 用 {@link ItemInteractionResult}：{@code PASS_TO_DEFAULT_BLOCK_INTERACTION} 转去
+     * {@link #useWithoutItem}（同空手右键），{@code SKIP_DEFAULT_BLOCK_INTERACTION} 让物品自己处理右键。
+     */
     @Override
-    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
-                                          InteractionHand hand, BlockHitResult hit) {
+    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
+                                              InteractionHand hand, BlockHitResult hit) {
         if (stack.is(dev.starbloom.orchestra.music.orchestra.Orchestra.BATON.get())) {
             // 指挥棒：把这件乐器加进（或移出）指挥棒绑定的那个乐团
             if (!level.isClientSide()) {
                 dev.starbloom.orchestra.music.orchestra.Orchestra.batonOnInstrument(stack, (net.minecraft.server.level.ServerLevel) level,
                     mainPos(state, pos), player);
             }
-            return InteractionResult.SUCCESS;
+            return ItemInteractionResult.sidedSuccess(level.isClientSide());
         }
         if (stack.is(net.minecraft.world.item.Items.LEAD) && InstrumentPosts.has(kind(level.getBlockState(mainPos(state, pos))))
                 && InstrumentPosts.leadTo(level, mainPos(state, pos), player)) {
             // 拴绳牵着生物：带到这件乐器的工位上
-            return InteractionResult.SUCCESS;
+            return ItemInteractionResult.sidedSuccess(level.isClientSide());
         }
-        if (!Instruments.isRoll(stack)) return InteractionResult.TRY_WITH_EMPTY_HAND;
-        if (level.isClientSide()) return InteractionResult.SUCCESS;
-        if (!(level.getBlockEntity(mainPos(state, pos)) instanceof InstrumentBlockEntity be)) return InteractionResult.PASS;
+        if (!Instruments.isRoll(stack)) return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        if (level.isClientSide()) return ItemInteractionResult.SUCCESS;
+        if (!(level.getBlockEntity(mainPos(state, pos)) instanceof InstrumentBlockEntity be)) {
+            return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
+        }
         ItemStack old = be.roll();
         be.setRoll(stack.copyWithCount(1));
         if (!player.getAbilities().instabuild) stack.shrink(1);
         if (!old.isEmpty() && !player.getInventory().add(old)) player.drop(old, false);
-        return InteractionResult.SUCCESS;
+        return ItemInteractionResult.CONSUME;
     }
 
     @Override
-    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, @Nullable Orientation orientation,
+    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos neighborPos,
                                    boolean movedByPiston) {
         if (level.isClientSide()) return;
         BlockPos main = mainPos(state, pos);
@@ -133,5 +139,17 @@ public abstract class InstrumentBlock extends Block implements EntityBlock {
         boolean signal = false;
         for (BlockPos cell : cells(mainState, main)) signal |= level.hasNeighborSignal(cell);
         be.onSignal(signal);
+    }
+
+    /**
+     * 换成别的方块（拆掉、被活塞推走、被命令替换）时，先让方块实体掉出纸带与乐器、退出乐团，再照常移除方块实体
+     * （新版由区块直接调方块实体的 {@code preRemoveSideEffects}；1.21.1 只在服务端调这里）。同一种方块只换状态（如乐谱架换乐器）不算。
+     */
+    @Override
+    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof InstrumentBlockEntity be) {
+            be.preRemoveSideEffects(pos, state);
+        }
+        super.onRemove(state, level, pos, newState, movedByPiston);
     }
 }

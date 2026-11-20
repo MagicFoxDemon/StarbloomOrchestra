@@ -7,9 +7,15 @@
     "PPP"
   ],
   "key": {
-    "L": "minecraft:lectern",
-    "G": "minecraft:gold_ingot",
-    "P": "minecraft:dark_oak_planks"
+    "L": {
+      "item": "minecraft:lectern"
+    },
+    "G": {
+      "item": "minecraft:gold_ingot"
+    },
+    "P": {
+      "item": "minecraft:dark_oak_planks"
+    }
   },
   "result": {
     "id": "starbloom_orchestra:hexen_podium",

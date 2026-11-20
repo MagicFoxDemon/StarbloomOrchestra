@@ -1,0 +1,11 @@
+{
+    "vertex": "starbloom_orchestra:part_outline_mask",
+    "fragment": "starbloom_orchestra:part_outline_mask",
+    "samplers": [
+        { "name": "Sampler0" },
+        { "name": "DepthSampler" }
+    ],
+    "uniforms": [
+        { "name": "ViewProj", "type": "matrix4x4", "count": 16, "values": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] }
+    ]
+}

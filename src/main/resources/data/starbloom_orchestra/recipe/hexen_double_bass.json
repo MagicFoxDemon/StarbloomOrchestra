@@ -7,9 +7,15 @@
     "PPS"
   ],
   "key": {
-    "P": "minecraft:dark_oak_planks",
-    "S": "minecraft:string",
-    "N": "minecraft:note_block"
+    "P": {
+      "item": "minecraft:dark_oak_planks"
+    },
+    "S": {
+      "item": "minecraft:string"
+    },
+    "N": {
+      "item": "minecraft:note_block"
+    }
   },
   "result": {
     "id": "starbloom_orchestra:hexen_double_bass",

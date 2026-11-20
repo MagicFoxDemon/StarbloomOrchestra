@@ -34,9 +34,9 @@
 ## 思索（Ponder）
 
 「按住 W 思索」的图文讲解（`client/ponder/`，[docs/PONDER.md](docs/PONDER.md)）用的是 [Ponder](https://github.com/Creators-of-Create/Ponder)
-和它要的 catnip，作者 simibubi、Pepper、zelophed（Creators of Create），**MIT**。官方发布的 1.0.52 在 26.1 上用不了，
-本模组带的是从上游 mc26.1/dev 分支的提交 `ef65d6ed` 原样编译的（`tools/ponder_build.py`，版本号记作 1.0.52.1+mc26.1.2，源码没改），
-打包在本模组的 jar 里（jar-in-jar，各自的 `LICENSE` 随 jar 一起）；场景、蓝图和文字是本模组自己做的。
+和它要的 catnip，作者 simibubi、Pepper、zelophed（Creators of Create），**MIT**。1.21.1 版带的是官方发布的 1.0.92+mc1.21.1
+（这条线上 catnip 在 Ponder 的 jar 里）；它要求 [Flywheel](https://github.com/Engine-Room/Flywheel)（Jozufozu、PepperCode1，**MIT**），
+所以 Flywheel 1.0.7 也一起打包。两者都在本模组的 jar 里（jar-in-jar，各自的许可证随 jar 一起）；场景、蓝图和文字是本模组自己做的。
 
 ## 车万女仆（Touhou Little Maid）
 

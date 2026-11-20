@@ -18,12 +18,12 @@ import java.util.Map;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -43,8 +43,8 @@ import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.event.RenderFrameEvent;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
-import net.neoforged.neoforge.client.network.ClientPacketDistributor;
-import org.jspecify.annotations.Nullable;
+import net.neoforged.neoforge.network.PacketDistributor;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * 站在指挥台上拿着指挥棒时的操作（docs/ORCHESTRA.md 第 17 节）：
@@ -59,7 +59,7 @@ import org.jspecify.annotations.Nullable;
  */
 @EventBusSubscriber(modid = StarbloomOrchestra.ID, value = Dist.CLIENT)
 public final class BatonInput {
-    private static final Identifier HUD = StarbloomOrchestra.id("conducting_hud");
+    private static final ResourceLocation HUD = StarbloomOrchestra.id("conducting_hud");
     /** 右键选声部看多远（格）。 */
     static final double REACH = 48;
     /** 画拍子：棒尖往下落的速度（像素 / 秒）超过这么多、再往回弹才算一拍；两拍至少隔这么久。 */
@@ -175,7 +175,7 @@ public final class BatonInput {
             if (countIn != 0 && gap >= 200_000_000L && gap <= 2_000_000_000L) {
                 countIn = 0;
                 follower = null;
-                ClientPacketDistributor.sendToServer(new EnsemblePayloads.PodiumControl(at, EnsemblePayloads.PodiumControl.START, 0, (int) (gap / 1_000_000)));
+                PacketDistributor.sendToServer(new EnsemblePayloads.PodiumControl(at, EnsemblePayloads.PodiumControl.START, 0, (int) (gap / 1_000_000)));
                 flash(Component.translatable("hud.starbloom_orchestra.conducting.go"), 0xFFE8C15A);
                 started = now;
                 startGapMs = gap / 1_000_000.0;
@@ -228,7 +228,7 @@ public final class BatonInput {
     private static double startGapMs;
 
     private static void send(BlockPos at, int pos, double clockRate, boolean held) {
-        ClientPacketDistributor.sendToServer(new EnsemblePayloads.ConductBeat(at, pos, (int) Math.round(clockRate * 1000),
+        PacketDistributor.sendToServer(new EnsemblePayloads.ConductBeat(at, pos, (int) Math.round(clockRate * 1000),
             Math.round(expression * 1000), held));
     }
 
@@ -317,7 +317,7 @@ public final class BatonInput {
         if (now - lastTrail < 25_000_000L) return;
         lastTrail = now;
         Vec3 tip = tipInWorld(player);
-        if (tip != null) player.level().addParticle(new DustParticleOptions(0xE8C15A, 0.35f), tip.x, tip.y, tip.z, 0, 0, 0);
+        if (tip != null) player.level().addParticle(new DustParticleOptions(Vec3.fromRGB24(0xE8C15A).toVector3f(), 0.35f), tip.x, tip.y, tip.z, 0, 0, 0);
     }
 
     /** 棒尖在世界里的大致位置：胸前一步远的竖直平面上，按 {@link Conducting#poseOf} 的图形。 */
@@ -420,9 +420,9 @@ public final class BatonInput {
         int db = Math.max(PodiumBlockEntity.MIN_GAIN, Math.min(PodiumBlockEntity.MAX_GAIN, current + step));
         PENDING.put(part, new long[]{db, now});
         if (part >= 0) {
-            ClientPacketDistributor.sendToServer(new EnsemblePayloads.PodiumControl(at, EnsemblePayloads.PodiumControl.GAIN, part, db));
+            PacketDistributor.sendToServer(new EnsemblePayloads.PodiumControl(at, EnsemblePayloads.PodiumControl.GAIN, part, db));
         } else {
-            ClientPacketDistributor.sendToServer(new EnsemblePayloads.PodiumControl(at, EnsemblePayloads.PodiumControl.MASTER, db, 0));
+            PacketDistributor.sendToServer(new EnsemblePayloads.PodiumControl(at, EnsemblePayloads.PodiumControl.MASTER, db, 0));
         }
         Component who = part >= 0 ? PodiumScreen.partName(be, part) : Component.translatable("hud.starbloom_orchestra.conducting.everyone");
         Minecraft.getInstance().gui.setOverlayMessage(Component.translatable("hud.starbloom_orchestra.conducting.volume", who, signed(db)), false);
@@ -446,12 +446,18 @@ public final class BatonInput {
 
     // —— 左上角的提示 ——
 
-    @SubscribeEvent
-    static void layers(RegisterGuiLayersEvent event) {
-        event.registerAbove(VanillaGuiLayers.CHAT, HUD, BatonInput::hud);
+    /** 模组总线上的事件（FML 4 也会按事件类型自动分到模组总线，这里写明 {@code bus = MOD} 只是一目了然）。 */
+    @EventBusSubscriber(modid = StarbloomOrchestra.ID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
+    static final class ModEvents {
+        private ModEvents() {}
+
+        @SubscribeEvent
+        static void layers(RegisterGuiLayersEvent event) {
+            event.registerAbove(VanillaGuiLayers.CHAT, HUD, BatonInput::hud);
+        }
     }
 
-    private static void hud(GuiGraphicsExtractor g, DeltaTracker delta) {
+    private static void hud(GuiGraphics g, DeltaTracker delta) {
         var mc = Minecraft.getInstance();
         BlockPos at = conductingPodium();
         if (at == null || mc.options.hideGui || mc.screen != null) return;
@@ -488,12 +494,12 @@ public final class BatonInput {
         int h = 35 + (fresh ? 10 : 0);
         int x = 2, y = 2;
         g.fill(x, y, x + w, y + h, 0x90101014);
-        g.text(font, line1, x + 4, y + 3, 0xFFE8E0D0);
-        g.text(font, line2.withStyle(ChatFormatting.GRAY), x + 4, y + 13, 0xFFB8B0A0);
-        g.text(font, line3, x + 4, y + 23, 0xFFE8E0D0);
+        g.drawString(font, line1, x + 4, y + 3, 0xFFE8E0D0);
+        g.drawString(font, line2.withStyle(ChatFormatting.GRAY), x + 4, y + 13, 0xFFB8B0A0);
+        g.drawString(font, line3, x + 4, y + 23, 0xFFE8E0D0);
         if (fresh) {
             int alpha = (int) (255 * (1 - (now - feedbackAt) / 700_000_000.0));
-            g.text(font, feedback, x + 4, y + 33, (Math.max(16, alpha) << 24) | (feedbackColor & 0xFFFFFF));
+            g.drawString(font, feedback, x + 4, y + 33, (Math.max(16, alpha) << 24) | (feedbackColor & 0xFFFFFF));
         }
         stars(g, now);
     }
@@ -510,7 +516,7 @@ public final class BatonInput {
     /**
      * 按到拍子上时准星上的点击效果：中间一闪，六颗小金星往外飞（0.45 秒，先快后慢），边飞边变小、淡出。像素画的十字星。
      */
-    private static void stars(GuiGraphicsExtractor g, long now) {
+    private static void stars(GuiGraphics g, long now) {
         if (clickedAt == 0) return;
         double age = Math.max(0, (now - clickedAt) / 1_000_000.0);
         if (age > 450) return;
@@ -531,7 +537,7 @@ public final class BatonInput {
     }
 
     /** 一颗十字星：中心一点亮色，四条臂（长 arm）金色。 */
-    private static void star(GuiGraphicsExtractor g, float x, float y, int arm, int core, int edge) {
+    private static void star(GuiGraphics g, float x, float y, int arm, int core, int edge) {
         if ((core >>> 24) < 4) return;
         int ix = Math.round(x), iy = Math.round(y);
         g.fill(ix - arm, iy, ix + arm + 1, iy + 1, edge);

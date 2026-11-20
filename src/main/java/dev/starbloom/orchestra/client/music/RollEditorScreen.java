@@ -10,16 +10,17 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.input.KeyEvent;
-import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
+import org.lwjgl.glfw.GLFW;
 
 /**
  * 打孔编辑器：钢琴卷帘式网格。横向是时间（按 BPM 画拍线，新音符和拖动吸附到十六分音符），纵向是音高。
@@ -33,7 +34,7 @@ import org.jspecify.annotations.Nullable;
  */
 public class RollEditorScreen extends Screen {
     private static final int W = 400, H = 226, PAD = 26, KEYS = 26, ROW = 6;
-    private static final int KEY_DELETE = 261, KEY_BACKSPACE = 259, KEY_SPACE = 32, KEY_D = 68, KEY_A = 65;
+    private static final int KEY_DELETE = 261, KEY_BACKSPACE = 259, KEY_SPACE = 32, KEY_D = 68, KEY_A = 65, KEY_ESCAPE = 256;
     private static final int[] PART_COLORS = {0xFFB8432E, 0xFF3D6FB5, 0xFF4E8F3A, 0xFFB5872A, 0xFF8A4BA8, 0xFF2E9A9A,
         0xFFB54E7E, 0xFF6A6A6A};
 
@@ -112,6 +113,18 @@ public class RollEditorScreen extends Screen {
         return Component.translatable("screen.starbloom_orchestra.instrument." + key, args);
     }
 
+    /** 此刻按着 Shift（左右都算；鼠标、滚轮事件不带修饰键，直接问窗口）。 */
+    private static boolean shiftDown() {
+        long window = Minecraft.getInstance().getWindow().getWindow();
+        return InputConstants.isKeyDown(window, GLFW.GLFW_KEY_LEFT_SHIFT) || InputConstants.isKeyDown(window, GLFW.GLFW_KEY_RIGHT_SHIFT);
+    }
+
+    /** 此刻按着 Ctrl（左右都算；macOS 上也只认 Ctrl，不认 Cmd）。 */
+    private static boolean controlDown() {
+        long window = Minecraft.getInstance().getWindow().getWindow();
+        return InputConstants.isKeyDown(window, GLFW.GLFW_KEY_LEFT_CONTROL) || InputConstants.isKeyDown(window, GLFW.GLFW_KEY_RIGHT_CONTROL);
+    }
+
     private void load(MusicRoll roll) {
         notes.clear();
         pedals.clear();
@@ -188,7 +201,7 @@ public class RollEditorScreen extends Screen {
         setFocused(null);
         if (part + 1 < parts.size()) {
             part++;
-        } else if (parts.size() < MusicRoll.MAX_PARTS && Minecraft.getInstance().hasShiftDown()) {
+        } else if (parts.size() < MusicRoll.MAX_PARTS && shiftDown()) {
             parts.add(new MusicRoll.Part(tr("new_part", parts.size() + 1).getString(), 0));
             part = parts.size() - 1;
         } else {
@@ -313,10 +326,9 @@ public class RollEditorScreen extends Screen {
     // —— 鼠标 ——
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent e, boolean doubleClick) {
-        if (super.mouseClicked(e, doubleClick)) return true;
+    public boolean mouseClicked(double x, double y, int button) {
+        if (super.mouseClicked(x, y, button)) return true;
         setFocused(null);
-        double x = e.x(), y = e.y();
         // 左侧键盘：试听
         if (x >= x0 + PAD && x < gridLeft && y >= gridTop && y < gridTop + gridH) {
             MusicClient.audition(pos, pitchAt(y));
@@ -324,18 +336,18 @@ public class RollEditorScreen extends Screen {
         }
         if (!inGrid(x, y) || !loaded) return false;
         Note hit = noteAt(x, y);
-        if (e.button() == 1) {
+        if (button == 1) {
             if (hit != null) {
                 if (selected.contains(hit)) deleteSelected();
                 else notes.remove(hit);
             }
             return true;
         }
-        if (e.button() != 0) return false;
+        if (button != 0) return false;
         dragX = x;
         dragY = y;
         if (hit == null) {
-            if (e.hasShiftDown()) {
+            if (shiftDown()) {
                 drag = Drag.BOX;
                 return true;
             }
@@ -350,7 +362,7 @@ public class RollEditorScreen extends Screen {
             MusicClient.audition(pos, pitch);
             return true;
         }
-        if (e.hasShiftDown()) {
+        if (shiftDown()) {
             if (!selected.remove(hit)) selected.add(hit);
             return true;
         }
@@ -369,9 +381,8 @@ public class RollEditorScreen extends Screen {
     }
 
     @Override
-    public boolean mouseDragged(MouseButtonEvent e, double dx, double dy) {
-        if (drag == Drag.NONE) return super.mouseDragged(e, dx, dy);
-        double x = e.x(), y = e.y();
+    public boolean mouseDragged(double x, double y, int button, double dx, double dy) {
+        if (drag == Drag.NONE) return super.mouseDragged(x, y, button, dx, dy);
         switch (drag) {
             case CREATE -> {
                 if (dragNote != null) {
@@ -403,10 +414,10 @@ public class RollEditorScreen extends Screen {
     }
 
     @Override
-    public boolean mouseReleased(MouseButtonEvent e) {
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
         if (drag == Drag.BOX) {
-            int a = msAt(Math.min(dragX, e.x())), b = msAt(Math.max(dragX, e.x()));
-            int hi = pitchAt(Math.min(dragY, e.y())), lo = pitchAt(Math.max(dragY, e.y()));
+            int a = msAt(Math.min(dragX, mouseX)), b = msAt(Math.max(dragX, mouseX));
+            int hi = pitchAt(Math.min(dragY, mouseY)), lo = pitchAt(Math.max(dragY, mouseY));
             for (Note n : notes) {
                 if (n.pitch >= lo && n.pitch <= hi && n.start + n.dur >= a && n.start <= b) selected.add(n);
             }
@@ -414,15 +425,14 @@ public class RollEditorScreen extends Screen {
         if ((drag == Drag.CREATE || drag == Drag.RESIZE) && dragNote != null) lastDur = dragNote.dur;
         drag = Drag.NONE;
         dragNote = null;
-        return super.mouseReleased(e);
+        return super.mouseReleased(mouseX, mouseY, button);
     }
 
     @Override
     public boolean mouseScrolled(double x, double y, double scrollX, double scrollY) {
-        var mc = Minecraft.getInstance();
-        if (mc.hasControlDown()) {
+        if (controlDown()) {
             msPerPx = Math.max(1f, Math.min(80f, msPerPx * (scrollY > 0 ? 0.8f : 1.25f)));
-        } else if (mc.hasShiftDown() || scrollX != 0) {
+        } else if (shiftDown() || scrollX != 0) {
             double d = scrollX != 0 ? scrollX : scrollY;
             viewStart = Math.max(0, viewStart - (int) (d * 40 * msPerPx));
         } else {
@@ -433,9 +443,9 @@ public class RollEditorScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(KeyEvent e) {
-        if (getFocused() instanceof EditBox box && box.isFocused() && !e.isEscape()) return super.keyPressed(e);
-        int key = e.key();
+    public boolean keyPressed(int key, int scanCode, int modifiers) {
+        if (getFocused() instanceof EditBox box && box.isFocused() && key != KEY_ESCAPE) return super.keyPressed(key, scanCode, modifiers);
+        boolean ctrl = (modifiers & GLFW.GLFW_MOD_CONTROL) != 0;
         if (key == KEY_DELETE || key == KEY_BACKSPACE) {
             deleteSelected();
             return true;
@@ -444,11 +454,11 @@ public class RollEditorScreen extends Screen {
             togglePreview();
             return true;
         }
-        if (e.hasControlDown() && key == KEY_A) {
+        if (ctrl && key == KEY_A) {
             selected.addAll(notes);
             return true;
         }
-        if (e.hasControlDown() && key == KEY_D && !selected.isEmpty()) {
+        if (ctrl && key == KEY_D && !selected.isEmpty()) {
             int first = selected.stream().mapToInt(n -> n.start).min().orElse(0);
             int last = selected.stream().mapToInt(n -> n.start + n.dur).max().orElse(0);
             int shift = snap(last - first);
@@ -463,15 +473,17 @@ public class RollEditorScreen extends Screen {
             selected.addAll(copies);
             return true;
         }
-        return super.keyPressed(e);
+        return super.keyPressed(key, scanCode, modifiers);
     }
 
     // —— 绘制 ——
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        // Screen.render 先画原版背景（模糊、压暗）再画控件；羊皮纸和网格要夹在两者之间，所以拆开来调用
+        renderBackground(g, mouseX, mouseY, partialTick);
         Parchment.draw(g, x0, y0, W, H);
-        g.text(font, tr("bpm"), x0 + PAD + 146, y0 + 24, Parchment.INK, false);
+        g.drawString(font, tr("bpm"), x0 + PAD + 146, y0 + 24, Parchment.INK, false);
         int keysLeft = x0 + PAD;
         int rows = gridH / ROW;
         // 网格底色：黑键行深一点
@@ -484,7 +496,7 @@ public class RollEditorScreen extends Screen {
             g.fill(keysLeft, y, gridLeft - 1, y + ROW, KeyLayout.isBlack(pitch) ? 0xFF2A1C14 : 0xFFF8F2E4);
             if (Math.floorMod(pitch, 12) == 0) {
                 g.fill(gridLeft, y + ROW - 1, gridLeft + gridW, y + ROW, 0xFFC8B898);
-                g.text(font, Component.literal(KeyLayout.noteName(pitch)), keysLeft + 1, y - 2, Parchment.INK_HINT, false);
+                g.drawString(font, Component.literal(KeyLayout.noteName(pitch)), keysLeft + 1, y - 2, Parchment.INK_HINT, false);
             }
         }
         // 拍线与小节线
@@ -510,7 +522,7 @@ public class RollEditorScreen extends Screen {
             int color = PART_COLORS[n.part % PART_COLORS.length];
             if (n.part != part) color = (color & 0x00FFFFFF) | 0x88000000;
             g.fill(xa, y, xb, y + ROW - 1, color);
-            if (selected.contains(n)) g.outline(xa, y, xb - xa, ROW - 1, Parchment.GOLD);
+            if (selected.contains(n)) g.renderOutline(xa, y, xb - xa, ROW - 1, Parchment.GOLD);
         }
         int play = MusicClient.previewPosition();
         if (play >= 0) {
@@ -520,20 +532,20 @@ public class RollEditorScreen extends Screen {
         }
         if (drag == Drag.BOX) {
             int ax = (int) Math.min(dragX, mouseX), ay = (int) Math.min(dragY, mouseY);
-            g.outline(ax, ay, (int) Math.abs(mouseX - dragX), (int) Math.abs(mouseY - dragY), Parchment.BRASS);
+            g.renderOutline(ax, ay, (int) Math.abs(mouseX - dragX), (int) Math.abs(mouseY - dragY), Parchment.BRASS);
         }
         g.disableScissor();
-        g.outline(gridLeft - 1, gridTop - 1, gridW + 2, gridH + 2, Parchment.INK);
+        g.renderOutline(gridLeft - 1, gridTop - 1, gridW + 2, gridH + 2, Parchment.INK);
         // 底部：位置、音符数、提示
         String where = RollInfo.clock(viewStart) + " · " + tr("notes_count", notes.size()).getString();
         if (!loaded) where = tr("loading").getString();
-        g.text(font, Component.literal(where), x0 + PAD, y0 + H - PAD - 8, Parchment.INK, false);
+        g.drawString(font, Component.literal(where), x0 + PAD, y0 + H - PAD - 8, Parchment.INK, false);
         if (notice != null && System.currentTimeMillis() < noticeUntil) {
-            g.text(font, Component.literal(font.plainSubstrByWidth(notice, W - PAD * 2 - 110)), x0 + PAD + 110, y0 + H - PAD - 8, 0xFF8A2A1A, false);
+            g.drawString(font, Component.literal(font.plainSubstrByWidth(notice, W - PAD * 2 - 110)), x0 + PAD + 110, y0 + H - PAD - 8, 0xFF8A2A1A, false);
         } else {
             String hint = font.plainSubstrByWidth(tr("editor_hint").getString(), W - PAD * 2 - 110);
-            g.text(font, Component.literal(hint), x0 + PAD + 110, y0 + H - PAD - 8, Parchment.INK_HINT, false);
+            g.drawString(font, Component.literal(hint), x0 + PAD + 110, y0 + H - PAD - 8, Parchment.INK_HINT, false);
         }
-        super.extractRenderState(g, mouseX, mouseY, partialTick);
+        for (Renderable r : renderables) r.render(g, mouseX, mouseY, partialTick);
     }
 }

@@ -12,15 +12,15 @@ import java.util.EnumMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.client.Minecraft;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
+import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 import net.neoforged.neoforge.client.event.sound.SoundEngineLoadEvent;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 /**
@@ -29,20 +29,21 @@ import org.slf4j.Logger;
  * 按表里的文件名直接播放（{@link VoiceBank}），第一次用到时才解码，所以不会在启动时把几百个采样全读进内存。
  * 有循环点的文件登记在这里，声音引擎读出它的缓冲时设上循环点（见 SoundBufferLoopMixin）。
  */
-@EventBusSubscriber(modid = StarbloomOrchestra.ID, value = Dist.CLIENT)
+@EventBusSubscriber(modid = StarbloomOrchestra.ID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
 public final class SampleMaps {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Map<InstrumentKind, SampleMap> MAPS = new EnumMap<>(InstrumentKind.class);
     /** 声音文件的完整资源名（starbloom_orchestra:sounds/….ogg）→ [循环起点, 循环终点)。 */
-    private static final Map<Identifier, int[]> LOOPS = new ConcurrentHashMap<>();
+    private static final Map<ResourceLocation, int[]> LOOPS = new ConcurrentHashMap<>();
     /** 已经预读过的（乐器, 力度层的上限；-1 表示整件）。 */
     private static final java.util.Set<String> WARM = new java.util.HashSet<>();
 
     private SampleMaps() {}
 
+    /** 采样表的重载监听器：模组总线上的 RegisterClientReloadListenersEvent，排在原版的监听器之后。 */
     @SubscribeEvent
-    static void reload(AddClientReloadListenersEvent event) {
-        event.addListener(StarbloomOrchestra.id("instrument_samples"), (ResourceManagerReloadListener) SampleMaps::load);
+    static void reload(RegisterClientReloadListenersEvent event) {
+        event.registerReloadListener((ResourceManagerReloadListener) SampleMaps::load);
     }
 
     /**
@@ -65,7 +66,7 @@ public final class SampleMaps {
         WARM.clear();
         for (InstrumentKind kind : InstrumentKind.values()) {
             if (kind.synthesized()) continue;
-            Identifier id = StarbloomOrchestra.id("instruments/" + kind.id() + ".json");
+            ResourceLocation id = StarbloomOrchestra.id("instruments/" + kind.id() + ".json");
             SampleMap map = topReadable(resources, id);
             if (map == null) {
                 LOGGER.warn("No sample map for instrument {} ({})", kind.id(), id);
@@ -79,7 +80,7 @@ public final class SampleMaps {
     }
 
     /** 从最上层的资源包往下找第一张读得懂的表（getResourceStack 从低到高排）。 */
-    private static @Nullable SampleMap topReadable(ResourceManager resources, Identifier id) {
+    private static @Nullable SampleMap topReadable(ResourceManager resources, ResourceLocation id) {
         var stack = resources.getResourceStack(id);
         for (int i = stack.size() - 1; i >= 0; i--) {
             var resource = stack.get(i);
@@ -111,16 +112,16 @@ public final class SampleMaps {
     }
 
     /** 声音实例用的名字（声音引擎去读 sounds/&lt;名字&gt;.ogg）。 */
-    static Identifier sound(String file) {
+    static ResourceLocation sound(String file) {
         return StarbloomOrchestra.id(file);
     }
 
-    private static Identifier path(String file) {
+    private static ResourceLocation path(String file) {
         return StarbloomOrchestra.id("sounds/" + file + ".ogg");
     }
 
     /** 这个声音文件的循环点（没有就是 null）。声音引擎读缓冲时问。 */
-    public static int @Nullable [] loop(Identifier location) {
+    public static int @Nullable [] loop(ResourceLocation location) {
         return LOOPS.get(location);
     }
 

@@ -7,9 +7,15 @@
     "PPP"
   ],
   "key": {
-    "P": "minecraft:dark_oak_planks",
-    "L": "minecraft:leather",
-    "G": "minecraft:gold_nugget"
+    "P": {
+      "item": "minecraft:dark_oak_planks"
+    },
+    "L": {
+      "item": "minecraft:leather"
+    },
+    "G": {
+      "item": "minecraft:gold_nugget"
+    }
   },
   "result": {
     "id": "starbloom_orchestra:organ_wind_chest",

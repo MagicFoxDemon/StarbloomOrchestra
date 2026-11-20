@@ -150,7 +150,7 @@ public abstract class OrganViews implements UIScenario {
                     inv.setItem(2, new ItemStack(Instruments.ORGAN_TIN_PIPE_ITEM.get()));
                     inv.setItem(3, new ItemStack(Instruments.ORGAN_WOOD_PIPE_ITEM.get()));
                     inv.setItem(4, new ItemStack(Instruments.ORGAN_TRUMPET_PIPE_ITEM.get()));
-                    inv.setSelectedSlot(2);
+                    inv.selected = 2;
                 })
                 .ticks(20)
                 .screenshot("organ_views_items")

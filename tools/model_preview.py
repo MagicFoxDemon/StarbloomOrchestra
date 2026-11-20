@@ -90,8 +90,9 @@ def load_model(ref):
         p = load_model(parent)
         textures, elements, disp = dict(p["textures"]), p["elements"], dict(p["display"])
     textures.update(m.get("textures", {}))
-    if "elements" in m:
-        elements = m["elements"]
+    if kit.model_elements(m):
+        # 原版格式的 "elements"，或者本模组几何加载器的 "cuboids"（1.21.1 原版读不了的转动，见 instrument_kit.for_1_21_1）
+        elements = kit.model_elements(m)
     disp.update(m.get("display", {}))
     if not elements and "layer0" in textures:
         # 平面物品（item/generated）：画成一张两面的薄片（原版会按像素挤出厚度，这里不做）

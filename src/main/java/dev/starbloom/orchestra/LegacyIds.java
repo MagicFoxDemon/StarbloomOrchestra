@@ -1,7 +1,7 @@
 package dev.starbloom.orchestra;
 
 import net.minecraft.core.Registry;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.RegisterEvent;
 
@@ -24,9 +24,9 @@ final class LegacyIds {
     }
 
     private static <T> void alias(Registry<T> registry) {
-        for (Identifier id : registry.keySet()) {
+        for (ResourceLocation id : registry.keySet()) {
             if (!id.getNamespace().equals(StarbloomOrchestra.ID)) continue;
-            registry.addAlias(Identifier.fromNamespaceAndPath(OLD_NAMESPACE, id.getPath()), id);
+            registry.addAlias(ResourceLocation.fromNamespaceAndPath(OLD_NAMESPACE, id.getPath()), id);
         }
     }
 }

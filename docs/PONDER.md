@@ -3,8 +3,9 @@
 鼠标停在物品上按住 **W**，打开「思索」（[Ponder](https://github.com/Creators-of-Create/Ponder)，机械动力的作者拆出来的图文讲解库）：
 一块小场景里的方块一件件落下来，配着文字讲琴凳归哪件乐器、乐手站在哪、管风琴怎么搭、指挥台怎么用。也可以在思索界面里点标签，看一类物品。
 
-Ponder 和它要的 catnip（都是 MIT）打包在本模组的 jar 里（jar-in-jar，同机械动力的做法），玩家不用另装；整合包里别的模组也带着时，
-NeoForge 只加载版本最高的那一份。官方发布的版本在 26.1 上用不了，带的是从上游源码编译的（第 4 节）。Ponder 的 POM 里写了 Flywheel，但它的 `mods.toml` 不要求、本模组也不用，所以不传递依赖。
+Ponder（MIT）打包在本模组的 jar 里（jar-in-jar，同机械动力的做法），玩家不用另装；整合包里别的模组也带着时，
+NeoForge 只加载版本最高的那一份。这条分支（Minecraft 1.21.1）带的是官方发布的版本，它要的 catnip 就在 Ponder 的 jar 里（第 4 节）。
+1.21.1 的 Ponder 在 `mods.toml` 里要求 Flywheel（客户端，`[1.0.0,2.0)`），所以 Flywheel（MIT）也一起打包；本模组的代码不用它，只在运行时带上。
 
 ## 1. 场景
 
@@ -30,7 +31,6 @@ NeoForge 只加载版本最高的那一份。官方发布的版本在 26.1 上�
 | `client/ponder/OrchestraPonderPlugin`、`OrchestraPonder` | 注册场景和标签；主类在客户端、装着 Ponder 时调 `OrchestraPonder.init()` |
 | `client/ponder/PonderViews` | 客户端检查 `ponder_scenes_ui`（DEV_ONLY）：Ponder 自己生成的文本键（`provideLang`）在 en_us、zh_cn 里都有、英文和场景代码一字不差、没有多出来的旧键；再按英文、中文各把七个场景打开一遍，在每个关键帧截图 |
 | `gametest/CommandTreeGameTests` | 世界测试 `command_tree_syncs`：服务端的命令树能发给玩家（第 4 节） |
-| `tools/ponder_build.py` | 从上游固定的提交编译 Ponder 和 catnip，发布到 `libs/ponder-maven`（第 4 节） |
 
 ## 3. 改场景、加场景
 
@@ -40,6 +40,8 @@ NeoForge 只加载版本最高的那一份。官方发布的版本在 26.1 上�
    ```text
    ./gradlew runGameTestServer -PorchestraTests=starbloom_orchestra:ponder_layouts -PponderExport
    ```
+
+   蓝图是 1.21.1 的格式（`DataVersion` 3955）。从 `main`（26.1）移植场景时不拷那边的 `.nbt`，在这条分支上用这条命令重新导出。
 
 3. 文字：英文写在脚本里（`.text("…")`，`scene.title` 是标题），键是 `starbloom_orchestra.ponder.<场景>.header`、`.text_<序号>`，
    **序号按 showText 的先后从 1 数**——中间插一句，后面的序号都要往后挪，zh_cn.json 里也一样。英文由客户端检查写进 en_us.json，中文手写：
@@ -58,31 +60,23 @@ NeoForge 只加载版本最高的那一份。官方发布的版本在 26.1 上�
 - 思索界面一开始的镜头从 x、z 都最小的那个角往里看（看得见北面和西面），所以乐器尽量让演奏的那一面朝北或朝西。
 - 要讲「把方块换成另一种」时用 `scene.world().setBlock` / `modifyBlock`，世界测试里做同样的替换再核对（双人琴凳、单人琴凳、乐谱架上放乐器都是这样）。
 
-## 4. 自己从上游编译的 Ponder
+## 4. 用的 Ponder 版本
 
-官方发布的 Ponder / catnip 1.0.52+mc26.1.2（2026-10-15，26.1 唯一的版本）在 26.1 上用不了：
+这条分支带的是官方发布的 **Ponder 1.0.92+mc1.21.1**（`maven.createmod.net`，`gradle.properties` 的 `ponder_version`），
+本模组的依赖写成 `[1.0.92+mc1.21.1,)`。1.21.1 这条线上 catnip 在 Ponder 的 jar 里，不另带；Ponder 要求的 Flywheel 带的是 1.0.7
+（`flywheel_version`）。所以这里没有 `tools/ponder_build.py`、`libs/ponder-maven`，CI 也不编译 Ponder。
 
-- catnip 的 `/catnip config` 用了三种命令参数（`ModIdArgument`、`ConfigIdArgument`、`ConfigPathArgument`），注册它们的那段被注释掉了。
-  没注册的参数发不出命令树，**玩家进任何世界都会以「Invalid player data」断开**；
-- Ponder 在 `FMLClientSetupEvent` 才注册自己的客户端配置和画中画渲染器，这时 NeoForge 已经加载过客户端配置、渲染器也注册过了，
-  按住 W 打开思索界面就抛「Config value 'editingMode' accessed too early」；
-- 还有世界高度不对、虚拟世界的类没拷全等问题。
-
-上游 mc26.1/dev 分支 2026-11-13、14 把这些都修了，但还没发布。所以本模组带的是用 `tools/ponder_build.py` 从上游固定的提交
-（`ef65d6ed`，「Fix heights again」）编译的 **1.0.52.1+mc26.1.2**：源码没改，版本号比官方 1.0.52 高（整合包里别的模组带着 1.0.52 时
-NeoForge 用这一份）、比以后的 1.0.53 低（官方新版一出就用官方的）；本模组的依赖写成 `[1.0.52.1+mc26.1.2,)`，坏的 1.0.52 不会被选上。
-
-- 编译：`uv run --no-project python tools/ponder_build.py`（要 git、JDK 25、网络）→ `libs/ponder-maven/`（`libs/` 不进 git）。
-  脚本核对 jar 里的版本号和清单里记的上游提交（`Git-Hash`），打出 SHA-256。CI 先跑它（脚本不变就用缓存）。
-- 官方发了修好 26.1 的版本以后：`gradle.properties` 的 `ponder_version` 换成官方版本，`neoforge.mods.toml` 的版本下限跟着改，
-  删掉 `build.gradle` 里的 `libs/ponder-maven`、`tools/ponder_build.py` 和 CI 里那一步。
-- 世界测试 `command_tree_syncs` 核对服务端命令树里每个参数的类型都注册过（用官方 1.0.52 时它列出上面三个参数）。
-
-还有一个坑上游没修：26.1 的物品数据组件进了世界才绑定，Ponder 却在模组加载完时就注册标签，那时 `TagBuilder.item(...)` 建 ItemStack 会崩。
-所以启动时先注册不带图标的标签，进世界时（`ClientPlayerNetworkEvent.LoggingIn`）重新载入一次 Ponder，补上图标（`OrchestraPonder`）。
-场景本身没有这个问题：只在打开思索界面时才编译，那时已经在世界里。
+- `main`（26.1）上官方的 1.0.52 用不了（catnip 的命令参数没注册，玩家进世界就断开；Ponder 的客户端配置注册得太晚，按住 W 就报错），
+  那边用 `tools/ponder_build.py` 从上游固定的提交编译，见 `main` 的这份文档。
+- 世界测试 `command_tree_syncs` 照样核对服务端命令树里每个参数的类型都注册过（26.1 的官方 catnip 就坏在这里）。
+- 标签的图标：1.21.1 的物品默认数据组件在物品构造时就建好了，Ponder 在模组加载完时注册标签，`TagBuilder.item(...)` 这时就能建
+  ItemStack，标签直接带图标（`OrchestraPonderPlugin`）。26.1 的组件要进了世界才绑定，那边先注册不带图标的标签、进世界时
+  （`ClientPlayerNetworkEvent.LoggingIn`）重新载入一次；这条分支没有这一步。
+- 换 Ponder 版本：`gradle.properties` 的 `ponder_version`（它要的 Flywheel 版本变了时连 `flywheel_version`）和 `neoforge.mods.toml`
+  的版本下限一起改。
 
 ## 5. 没验证的
 
 - 和机械动力一起装（两边都带 Ponder，按版本取高的那一份；机械动力自己的场景照常）；光影包下的思索界面。
+- 一起打包的 Flywheel 和 Sodium（Embeddium）、光影包同装。
 - 场景里不画乐手：坐着、站着的人只用文字和位置指出来。

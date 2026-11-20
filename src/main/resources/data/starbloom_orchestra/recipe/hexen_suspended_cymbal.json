@@ -7,10 +7,18 @@
     " S "
   ],
   "key": {
-    "G": "minecraft:gold_nugget",
-    "C": "minecraft:copper_ingot",
-    "N": "minecraft:note_block",
-    "S": "minecraft:stick"
+    "G": {
+      "item": "minecraft:gold_nugget"
+    },
+    "C": {
+      "item": "minecraft:copper_ingot"
+    },
+    "N": {
+      "item": "minecraft:note_block"
+    },
+    "S": {
+      "item": "minecraft:stick"
+    }
   },
   "result": {
     "id": "starbloom_orchestra:hexen_suspended_cymbal",

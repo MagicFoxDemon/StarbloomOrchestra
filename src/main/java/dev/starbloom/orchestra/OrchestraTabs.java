@@ -11,7 +11,7 @@ import net.minecraft.world.level.ItemLike;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 /**
@@ -58,6 +58,6 @@ public final class OrchestraTabs {
             LOG.error("Creative tab lists an unknown item {}", key);
             return null;
         }
-        return BuiltInRegistries.ITEM.getValue(key);
+        return BuiltInRegistries.ITEM.get(key);
     }
 }

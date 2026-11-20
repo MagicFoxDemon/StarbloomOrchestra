@@ -29,7 +29,6 @@ import net.minecraft.core.GlobalPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
@@ -41,7 +40,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * 乐团的客户端场景（docs/ORCHESTRA.md）：十二件乐器围成半圆，前面一座指挥台（指挥面朝北）。一份十二个声部的总谱
@@ -218,7 +217,7 @@ public abstract class ConductingViews implements UIScenario {
                     }
                 }
                 place(level, PODIUM, Orchestra.PODIUM.get().defaultBlockState().setValue(PodiumBlock.FACING, Direction.NORTH));
-                var cam = EntityType.ARMOR_STAND.create(level, EntitySpawnReason.COMMAND);
+                var cam = EntityType.ARMOR_STAND.create(level);
                 cam.setInvisible(true);
                 cam.setNoGravity(true);
                 cam.setPos(ORIGIN.getX() + 0.5, GROUND + 1, ORIGIN.getZ() - 6);
@@ -231,7 +230,7 @@ public abstract class ConductingViews implements UIScenario {
                     stick.set(Orchestra.BATON_PODIUM.get(), GlobalPos.of(level.dimension(), PODIUM));
                     inv.setItem(0, stick);
                 }
-                inv.setSelectedSlot(0);
+                inv.selected = 0;
                 Vec3 at = standAt();
                 TestTravel.teleport(ctx.player(), level, at, 180f, 12f);
             })
@@ -252,7 +251,7 @@ public abstract class ConductingViews implements UIScenario {
                 Vec3 look = me.add(0, lookY, 0).subtract(eye);
                 float yaw = (float) (Mth.atan2(look.z, look.x) * Mth.RAD_TO_DEG) - 90;
                 float pitch = (float) -(Mth.atan2(look.y, look.horizontalDistance()) * Mth.RAD_TO_DEG);
-                cam.snapTo(eye.x, eye.y - cam.getEyeHeight(), eye.z, yaw, pitch);
+                cam.moveTo(eye.x, eye.y - cam.getEyeHeight(), eye.z, yaw, pitch);
                 cam.setYHeadRot(yaw);
             })
             .ticks(4)
@@ -404,7 +403,7 @@ public abstract class ConductingViews implements UIScenario {
                 // 指挥状态下左键：对着乐谱架的方块、对着站在台前的生物都不起作用
                 .server("a villager in front of the podium", ctx -> {
                     ServerLevel level = ctx.server().overworld();
-                    var v = EntityType.VILLAGER.create(level, EntitySpawnReason.COMMAND);
+                    var v = EntityType.VILLAGER.create(level);
                     v.setNoAi(true);
                     v.setPos(PODIUM.getX() + 1.0, GROUND + 1, PODIUM.getZ() - 1.5);
                     level.addFreshEntity(v);
@@ -436,7 +435,7 @@ public abstract class ConductingViews implements UIScenario {
                     BlockPos stand = ORIGIN.offset(-1, 1, 3);
                     ctx.player().gameMode.handleBlockBreakAction(stand,
                         net.minecraft.network.protocol.game.ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, Direction.SOUTH,
-                        level.getMaxY(), 0);
+                        level.getMaxBuildHeight(), 0);
                 })
                 .ticks(3)
                 .checkServer("the server refuses the attack too", ctx -> attackedHealthy)

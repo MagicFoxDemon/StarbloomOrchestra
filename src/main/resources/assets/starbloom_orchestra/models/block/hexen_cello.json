@@ -4,7 +4,8 @@
     "hexen_cello": "starbloom_orchestra:block/instrument/hexen_cello",
     "particle": "starbloom_orchestra:block/instrument/particle_flamed_varnish"
   },
-  "elements": [
+  "loader": "starbloom_orchestra:rotated_cuboids",
+  "cuboids": [
     {
       "from": [
         9.6946,

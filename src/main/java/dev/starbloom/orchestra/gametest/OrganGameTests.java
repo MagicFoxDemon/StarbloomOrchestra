@@ -1,6 +1,5 @@
 package dev.starbloom.orchestra.gametest;
 
-import dev.starbloom.orchestra.StarbloomOrchestra;
 import dev.starbloom.orchestra.music.InstrumentBlock;
 import dev.starbloom.orchestra.music.InstrumentBlockEntity;
 import dev.starbloom.orchestra.music.Instruments;
@@ -9,54 +8,42 @@ import dev.starbloom.orchestra.music.organ.OrganPipeBlock;
 import dev.starbloom.orchestra.music.organ.OrganStop;
 import dev.starbloom.orchestra.music.organ.OrganStructure;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.gametest.framework.FunctionGameTestInstance;
+import net.minecraft.gametest.framework.GameTestGenerator;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.gametest.framework.TestData;
-import net.minecraft.gametest.framework.TestEnvironmentDefinition;
-import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
+import net.minecraft.gametest.framework.TestFunction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.event.RegisterGameTestsEvent;
-import net.neoforged.neoforge.registries.DeferredRegister;
 
 /**
  * 管风琴：演奏台 2×2 整体拆除；音管叠起来的形状；结构识别（风箱链、音管计数、不相连的不算）；
  * 没有音管时服务端只接受长笛 8′，搭上锡管后主音栓类才能开。
  */
 public final class OrganGameTests {
-    private static final DeferredRegister<Consumer<GameTestHelper>> FUNCTIONS = DeferredRegister.create(Registries.TEST_FUNCTION, StarbloomOrchestra.ID);
-
     public static void register(IEventBus bus) {
+        GameTestFunctions.register(bus, OrganGameTests.class);
+    }
+
+    @GameTestGenerator
+    public static Collection<TestFunction> tests() {
         Map<String, Consumer<GameTestHelper>> tests = new LinkedHashMap<>();
         tests.put("organ_console_breaks_whole", OrganGameTests::consoleBreaksWhole);
         tests.put("organ_legacy_console", OrganGameTests::legacyConsole);
         tests.put("organ_pipe_shapes", OrganGameTests::pipeShapes);
         tests.put("organ_structure_scan", OrganGameTests::structureScan);
         tests.put("organ_stops_need_pipes", OrganGameTests::stopsNeedPipes);
-        tests.forEach((name, test) -> FUNCTIONS.register(name, () -> test));
-        FUNCTIONS.register(bus);
-        bus.addListener((RegisterGameTestsEvent event) -> {
-            var env = event.registerEnvironment(StarbloomOrchestra.id("organ_default"), new TestEnvironmentDefinition.AllOf());
-            for (var name : tests.keySet()) {
-                event.registerTest(StarbloomOrchestra.id(name), new FunctionGameTestInstance(
-                    ResourceKey.create(Registries.TEST_FUNCTION, StarbloomOrchestra.id(name)), new TestData<>(env,
-                        Identifier.withDefaultNamespace("empty"), 100, 0, true, Rotation.NONE, false, 1, 1, false, 12)));
-            }
-        });
+        return GameTestFunctions.batch("organ_default", 12, 100, 0, tests);
     }
 
     private static BlockState console(ServerLevel level, BlockPos main, Direction facing) {

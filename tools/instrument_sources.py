@@ -1355,7 +1355,7 @@ def build_private(samples: Path, out: Path, cache: Cache, demo_dir: Path | None)
     build(spec, cache, True, lambda m: print(m, flush=True))
     (out / "pack.mcmeta").write_text(json.dumps({"pack": {
         "description": "星辰花乐团 · 尺八录音（个人使用，勿分发）\nStarbloom Orchestra · shakuhachi, personal use only",
-        "min_format": 84, "max_format": 84}}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
+        "pack_format": 34}}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
     (out / "README.txt").write_text(PRIVATE_README, encoding="utf-8", newline="\n")
     if demo_dir:
         demo(spec, demo_dir)

@@ -1,4 +1,4 @@
-"""魔女之森乐器的数据：方块状态、掉落、配方、物品定义，纸带图标、魔女之森旗、音乐厅音源包图标。
+"""魔女之森乐器的数据：方块状态、掉落、配方，纸带图标、魔女之森旗、音乐厅音源包图标。
 
     uv run --no-project --with pillow --with numpy python tools/instrument_art.py [<旗子预览目录>]
 
@@ -6,6 +6,10 @@
 共用工具 tools/instrument_kit.py，规范见 docs/INSTRUMENT_ART.md。本脚本最后调用 instrument_models.build_all()。
 
 坐标约定（模型那边沿用）：按 FACING=north 画，键盘 / 正面朝北（z 小的一侧）；多格乐器的附属块只有破坏粒子。
+
+Minecraft 1.21.1 的格式：没有物品模型定义（assets/<ns>/items/，1.21.4 起才有），物品 <id> 直接用 models/item/<id>.json；
+手持乐器演奏时换模型写成那份模型的 overrides（instrument_kit.Out.flush）；拿在手上演奏的乐器、弓、工位上的琴槌这些只供渲染的模型
+（models/item/*_held、hexen_violin_bow）由客户端按模型 id 单独加载。配方的材料写成 {"item": ...} / {"tag": ...}（1.21.2 起才能直接写字符串）。
 """
 import json
 import math
@@ -28,9 +32,14 @@ def write(path, obj):
     path.write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
 
 
-def item_def(name, model=None):
-    """items/<name>.json：物品用的模型（默认 item/<name>）。"""
-    write(ASSETS / f"items/{name}.json", {"model": {"type": "minecraft:model", "model": f"starbloom_orchestra:{model or 'item/' + name}"}})
+def ingredient(name):
+    """配方材料：1.21.1 写成 {"item": id}，"#" 开头的写成 {"tag": id}。"""
+    return {"tag": name[1:]} if name.startswith("#") else {"item": name}
+
+
+def ingredients(key):
+    """有序配方的 key：每个符号换成 ingredient()。"""
+    return {k: ingredient(v) for k, v in key.items()}
 
 
 def single(name, turn=0):
@@ -80,17 +89,17 @@ def loot_and_recipes():
     write(DATA / "recipe/starbloom_grand_piano.json", {
         "type": "minecraft:crafting_shaped", "category": "misc",
         "pattern": ["QGQ", "PNP", "S S"],
-        "key": {"Q": "minecraft:quartz_block", "G": "minecraft:gold_ingot", "P": "minecraft:dark_oak_planks",
-                "N": "minecraft:note_block", "S": "minecraft:stick"},
+        "key": ingredients({"Q": "minecraft:quartz_block", "G": "minecraft:gold_ingot", "P": "minecraft:dark_oak_planks",
+                            "N": "minecraft:note_block", "S": "minecraft:stick"}),
         "result": {"id": "starbloom_orchestra:starbloom_grand_piano", "count": 1}})
     write(DATA / "recipe/hexen_concert_harp.json", {
         "type": "minecraft:crafting_shaped", "category": "misc",
         "pattern": [" GS", "GNS", "PPP"],
-        "key": {"G": "minecraft:gold_ingot", "S": "minecraft:string", "N": "minecraft:note_block", "P": "minecraft:birch_planks"},
+        "key": ingredients({"G": "minecraft:gold_ingot", "S": "minecraft:string", "N": "minecraft:note_block", "P": "minecraft:birch_planks"}),
         "result": {"id": "starbloom_orchestra:hexen_concert_harp", "count": 1}})
     write(DATA / "recipe/blank_music_roll.json", {
         "type": "minecraft:crafting_shapeless", "category": "misc",
-        "ingredients": ["minecraft:paper", "minecraft:paper", "minecraft:paper", "minecraft:string"],
+        "ingredients": [ingredient(i) for i in ("minecraft:paper", "minecraft:paper", "minecraft:paper", "minecraft:string")],
         "result": {"id": "starbloom_orchestra:blank_music_roll", "count": 1}})
     write(DATA / "recipe/music_roll_copy.json", {"type": "starbloom_orchestra:music_roll_copy"})
 
@@ -148,8 +157,6 @@ def art():
     tex = ASSETS / "textures"
     png(tex / "item/blank_music_roll.png", roll_icon(False))
     png(tex / "item/music_roll.png", roll_icon(True))
-    for name in ("starbloom_grand_piano", "hexen_concert_harp", "blank_music_roll", "music_roll"):
-        item_def(name)
     for name in ("blank_music_roll", "music_roll"):
         write(ASSETS / f"models/item/{name}.json", {"parent": "minecraft:item/generated", "textures": {"layer0": f"starbloom_orchestra:item/{name}"}})
 
@@ -157,8 +164,6 @@ def art():
 # —— 管风琴（docs/PIPE_ORGAN.md）——
 
 def organ():
-    for name in ("hexen_organ_console", "organ_wind_chest", "organ_tin_pipe", "organ_wood_pipe", "organ_trumpet_pipe"):
-        item_def(name)
     variants = {}
     for facing, y in YROT.items():
         for part in range(7):
@@ -191,7 +196,7 @@ def organ():
 
     def shaped_n(name, pattern, key, count):
         write(DATA / f"recipe/{name}.json", {"type": "minecraft:crafting_shaped", "category": "misc", "pattern": pattern,
-            "key": key, "result": {"id": f"starbloom_orchestra:{name}", "count": count}})
+            "key": ingredients(key), "result": {"id": f"starbloom_orchestra:{name}", "count": count}})
     shaped_n("hexen_organ_console", ["QQQ", "GNG", "PPP"],
              {"Q": "minecraft:quartz_block", "G": "minecraft:gold_ingot", "N": "minecraft:note_block", "P": "minecraft:dark_oak_planks"}, 1)
     shaped_n("organ_wind_chest", ["PPP", "LGL", "PPP"],
@@ -204,8 +209,6 @@ def organ():
 # —— 钟琴、钢片琴、管钟、大键琴 ——
 
 def mallet():
-    for name in ("hexen_glockenspiel", "hexen_celesta", "hexen_tubular_bells", "hexen_harpsichord"):
-        item_def(name)
     write(ASSETS / "blockstates/hexen_glockenspiel.json", single("hexen_glockenspiel"))
     write(ASSETS / "blockstates/hexen_celesta.json", single("hexen_celesta"))
     write(ASSETS / "blockstates/hexen_tubular_bells.json", two_part("hexen_tubular_bells", "half", "lower", ("lower", "upper")))
@@ -223,28 +226,18 @@ def mallet():
 
 # —— 手持乐器与乐谱架 ——
 
+# 手持乐器：物品模型 models/item/<名字>.json，使用中（演奏）换成 <名字>_playing（第一人称把乐器摆到下巴、嘴边；
+# overrides 由 instrument_kit.Out.flush 写）。只供渲染的模型（models/item/<名字>_held、hexen_violin_bow，不是物品）：
+# 演奏时画在身上的乐器（弓弦乐器不带弓）、弓、工位上手里的琴槌，模型在 instrument_models/ 里。
 HANDHELD = ("hexen_violin", "hexen_flute", "hexen_trumpet", "hexen_viola", "hexen_oboe", "hexen_bassoon", "shinobue", "kagura_suzu", "shakuhachi")
-# 只供渲染的模型（items/held/，不是物品）：演奏时画在身上的乐器（弓弦乐器不带弓）、弓、工位上手里的琴槌
-HELD = ("hexen_violin", "hexen_flute", "hexen_trumpet", "hexen_viola", "hexen_oboe", "hexen_bassoon", "shinobue", "kagura_suzu", "shakuhachi",
-        "hexen_violin_bow", "hexen_glockenspiel_mallet", "hexen_chime_hammer", "hexen_timpani_mallet")
 
 
 def handheld():
-    for name in HANDHELD:
-        # 使用中（演奏）换成 _playing 模型：第一人称把乐器摆到下巴、嘴边
-        write(ASSETS / f"items/{name}.json", {"model": {"type": "minecraft:condition", "property": "minecraft:using_item",
-            "on_true": {"type": "minecraft:model", "model": f"starbloom_orchestra:item/{name}_playing"},
-            "on_false": {"type": "minecraft:model", "model": f"starbloom_orchestra:item/{name}"}}})
-    for name in HELD:
-        model_name = name if name.endswith("_bow") else f"{name}_held"
-        short = model_name.removeprefix("hexen_").removesuffix("_held")
-        item_def(f"held/{short}", f"item/{model_name}")
     bs = {}
     for f, y in YROT.items():
         for holds in PLAYS:
             bs[f"facing={f},holds={holds}"] = {"model": f"starbloom_orchestra:block/hexen_music_stand_{holds}"} | ({"y": y} if y else {})
     write(ASSETS / "blockstates/hexen_music_stand.json", {"variants": bs})
-    item_def("hexen_music_stand")
     write(DATA / "loot_table/blocks/hexen_music_stand.json", loot("hexen_music_stand"))
     shaped("hexen_violin", [" PS", "PSP", "SP "], {"P": "minecraft:jungle_planks", "S": "minecraft:string"})
     shaped("hexen_flute", ["  I", " I ", "I  "], {"I": "minecraft:iron_ingot"})
@@ -264,7 +257,7 @@ def handheld():
 
 def shaped(name, pattern, key):
     write(DATA / f"recipe/{name}.json", {"type": "minecraft:crafting_shaped", "category": "misc", "pattern": pattern,
-                                         "key": key, "result": {"id": f"starbloom_orchestra:{name}", "count": 1}})
+                                         "key": ingredients(key), "result": {"id": f"starbloom_orchestra:{name}", "count": 1}})
 
 def loot(name, cond=None):
     conditions = [{"condition": "minecraft:survives_explosion"}]
@@ -277,8 +270,6 @@ def loot(name, cond=None):
 
 def orchestra():
     """大提琴、低音提琴（两格高：下半格画整件琴和凳子，上半格只有粒子）与定音鼓。"""
-    for name in ("hexen_cello", "hexen_double_bass", "hexen_timpani"):
-        item_def(name)
     write(ASSETS / "blockstates/hexen_timpani.json", single("hexen_timpani"))
     write(DATA / "loot_table/blocks/hexen_timpani.json", loot("hexen_timpani"))
     for name in ("hexen_cello", "hexen_double_bass"):
@@ -432,7 +423,6 @@ def banner_previews(out_dir):
 # —— 指挥台、指挥棒、琴凳 ——
 
 def podium():
-    item_def("hexen_podium")
     variants = {}
     for f, y in YROT.items():
         for side in ("false", "true"):
@@ -443,14 +433,12 @@ def podium():
     write(DATA / "loot_table/blocks/hexen_podium.json", loot("hexen_podium", {"side": "false"}))
     shaped("hexen_podium", [" L ", "PGP", "PPP"], {"L": "minecraft:lectern", "G": "minecraft:gold_ingot", "P": "minecraft:dark_oak_planks"})
     # 指挥棒的贴图和模型在打击乐组（instrument_models/percussion.py）
-    item_def("hexen_baton")
     write(DATA / "recipe/hexen_baton.json", {"type": "minecraft:crafting_shapeless", "category": "misc",
-                                             "ingredients": ["minecraft:stick", "minecraft:gold_nugget"],
+                                             "ingredients": [ingredient("minecraft:stick"), ingredient("minecraft:gold_nugget")],
                                              "result": {"id": "starbloom_orchestra:hexen_baton", "count": 1}})
 
 
 def bench():
-    item_def("starbloom_bench")
     variants = {}
     for f, y in YROT.items():
         for plays in PLAYS:
@@ -461,7 +449,6 @@ def bench():
 
 
 def duet_bench():
-    item_def("starbloom_duet_bench")
     variants = {}
     for f, y in YROT.items():
         for plays in PLAYS:
@@ -471,25 +458,21 @@ def duet_bench():
     write(ASSETS / "blockstates/starbloom_duet_bench.json", {"variants": variants})
     write(DATA / "loot_table/blocks/starbloom_duet_bench.json", loot("starbloom_duet_bench", {"side": "false"}))
     write(DATA / "recipe/starbloom_duet_bench.json", {"type": "minecraft:crafting_shapeless", "category": "misc",
-        "ingredients": ["starbloom_orchestra:starbloom_bench", "starbloom_orchestra:starbloom_bench"],
+        "ingredients": [ingredient("starbloom_orchestra:starbloom_bench"), ingredient("starbloom_orchestra:starbloom_bench")],
         "result": {"id": "starbloom_orchestra:starbloom_duet_bench", "count": 1}})
 
 
 # —— 大鼓、小军鼓、吊镲、三角铁（无音高打击乐，docs/ORCHESTRA.md 第 20 节；模型在 instrument_models/drums.py）——
 
 DRUMS = ("hexen_bass_drum", "hexen_snare_drum", "hexen_suspended_cymbal", "hexen_triangle")
-# 只供渲染的鼓槌（items/held/，不是物品）：工位上画在手里
-DRUM_TOOLS = ("bass_drum_beater", "snare_stick", "cymbal_mallet", "triangle_beater")
+# 只供渲染的鼓槌（models/item/hexen_<名字>_held，不是物品）：工位上画在手里，模型在 instrument_models/drums.py
 
 
 def drums():
     for name in DRUMS:
-        item_def(name)
         # 大鼓侧放：模型（物品栏里鼓皮朝前）在方块里再转 90°，鼓皮朝东西，人在东面朝西敲（StationPoses、InstrumentPosts）
         write(ASSETS / f"blockstates/{name}.json", single(name, 90 if name == "hexen_bass_drum" else 0))
         write(DATA / f"loot_table/blocks/{name}.json", loot(name))
-    for tool in DRUM_TOOLS:
-        item_def(f"held/{tool}", f"item/hexen_{tool}_held")
     shaped("hexen_bass_drum", ["PLP", "LNL", "P P"], {"P": "minecraft:dark_oak_planks", "L": "minecraft:leather", "N": "minecraft:note_block"})
     shaped("hexen_snare_drum", [" L ", "INI", "S S"], {"L": "minecraft:leather", "I": "minecraft:iron_nugget", "N": "minecraft:note_block",
                                                        "S": "minecraft:stick"})

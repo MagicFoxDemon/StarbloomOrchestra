@@ -4,7 +4,8 @@
     "hexen_bassoon": "starbloom_orchestra:block/instrument/hexen_bassoon",
     "particle": "starbloom_orchestra:block/instrument/hexen_bassoon"
   },
-  "elements": [
+  "loader": "starbloom_orchestra:rotated_cuboids",
+  "cuboids": [
     {
       "from": [
         6.7,
@@ -2464,5 +2465,13 @@
         0.42
       ]
     }
-  }
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "starbloom_orchestra:playing": 1
+      },
+      "model": "starbloom_orchestra:item/hexen_bassoon_playing"
+    }
+  ]
 }

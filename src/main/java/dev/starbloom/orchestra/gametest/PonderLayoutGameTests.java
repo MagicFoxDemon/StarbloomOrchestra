@@ -2,7 +2,6 @@ package dev.starbloom.orchestra.gametest;
 
 import static dev.starbloom.orchestra.ponder.PonderLayouts.*;
 
-import dev.starbloom.orchestra.StarbloomOrchestra;
 import dev.starbloom.orchestra.music.Benches;
 import dev.starbloom.orchestra.music.InstrumentKind;
 import dev.starbloom.orchestra.music.InstrumentPosts;
@@ -15,55 +14,46 @@ import dev.starbloom.orchestra.ponder.PonderLayouts;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
+import java.util.Map;
 import java.util.Set;
-import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.gametest.framework.FunctionGameTestInstance;
+import net.minecraft.gametest.framework.GameTestGenerator;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.gametest.framework.TestData;
-import net.minecraft.gametest.framework.TestEnvironmentDefinition;
+import net.minecraft.gametest.framework.TestFunction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.Tag;
-import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
-import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.event.RegisterGameTestsEvent;
-import net.neoforged.neoforge.registries.DeferredRegister;
 
 /**
  * 思索场景的布置（{@link PonderLayouts}）在世界里像玩家那样放一遍，核对场景里讲的事是真的；
  * 带系统属性 {@code starbloom_orchestra.ponder_export}（{@code -PponderExport}）时把每一份存成思索用的蓝图。
  */
 public final class PonderLayoutGameTests {
-    private static final DeferredRegister<Consumer<GameTestHelper>> FUNCTIONS = DeferredRegister.create(Registries.TEST_FUNCTION, StarbloomOrchestra.ID);
     private static final String NAME = "ponder_layouts";
 
     private PonderLayoutGameTests() {}
 
     public static void register(IEventBus bus) {
-        FUNCTIONS.register(NAME, () -> PonderLayoutGameTests::layouts);
-        FUNCTIONS.register(bus);
-        bus.addListener((RegisterGameTestsEvent e) -> {
-            var env = e.registerEnvironment(StarbloomOrchestra.id("ponder_layouts_default"), new TestEnvironmentDefinition.AllOf());
-            e.registerTest(StarbloomOrchestra.id(NAME), new FunctionGameTestInstance(ResourceKey.create(Registries.TEST_FUNCTION, StarbloomOrchestra.id(NAME)),
-                new TestData<>(env, Identifier.withDefaultNamespace("empty"), 200, 0, true, Rotation.NONE, false, 1, 1, false, 14)));
-        });
+        GameTestFunctions.register(bus, PonderLayoutGameTests.class);
+    }
+
+    @GameTestGenerator
+    public static Collection<TestFunction> tests() {
+        return GameTestFunctions.batch("ponder_layouts_default", 14, 200, 0, Map.of(NAME, PonderLayoutGameTests::layouts));
     }
 
     /** 往世界里放，坐标是蓝图里的、加上 origin。 */
@@ -121,14 +111,14 @@ public final class PonderLayoutGameTests {
 
     private static void save(ServerLevel level, BlockPos origin, Layout layout, Path dir) {
         StructureTemplate template = new StructureTemplate();
-        template.fillFromWorld(level, origin, layout.size(), false, List.of());
+        template.fillFromWorld(level, origin, layout.size(), false, null);
         CompoundTag saved = template.save(new CompoundTag());
         // 指挥台存着自己的世界坐标（origin，被搬到别处时按它平移成员）：换成蓝图里的坐标，每次导出的结果才一样
-        for (Tag t : saved.getListOrEmpty("blocks")) {
-            if (!(t instanceof CompoundTag block)) continue;
-            ListTag pos = block.getListOrEmpty("pos");
-            block.getCompound("nbt").filter(nbt -> nbt.contains("origin"))
-                .ifPresent(nbt -> nbt.putLong("origin", new BlockPos(pos.getIntOr(0, 0), pos.getIntOr(1, 0), pos.getIntOr(2, 0)).asLong()));
+        for (Tag t : saved.getList("blocks", Tag.TAG_COMPOUND)) {
+            if (!(t instanceof CompoundTag block) || !block.contains("nbt", Tag.TAG_COMPOUND)) continue;
+            ListTag pos = block.getList("pos", Tag.TAG_INT);
+            CompoundTag nbt = block.getCompound("nbt");
+            if (nbt.contains("origin")) nbt.putLong("origin", new BlockPos(pos.getInt(0), pos.getInt(1), pos.getInt(2)).asLong());
         }
         try {
             Files.createDirectories(dir);

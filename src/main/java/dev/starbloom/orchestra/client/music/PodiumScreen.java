@@ -11,14 +11,14 @@ import dev.starbloom.orchestra.music.orchestra.OrchestraScore;
 import dev.starbloom.orchestra.music.orchestra.PodiumBlockEntity;
 import java.util.List;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.neoforged.neoforge.client.network.ClientPacketDistributor;
-import org.jspecify.annotations.Nullable;
+import net.neoforged.neoforge.network.PacketDistributor;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * 指挥台界面（docs/ORCHESTRA.md 第 9 节）：左边是总谱的声部（颜色、谁在演奏、静音 / 独奏 / 响度），右边是乐团成员
@@ -90,7 +90,7 @@ final class PodiumScreen extends Screen {
     }
 
     private void send(int action, int a, int b) {
-        ClientPacketDistributor.sendToServer(new EnsemblePayloads.PodiumControl(pos, action, a, b));
+        PacketDistributor.sendToServer(new EnsemblePayloads.PodiumControl(pos, action, a, b));
     }
 
     /** 按文字宽度放一个按钮，返回它右边（留 2 像素）的位置。 */
@@ -172,9 +172,10 @@ final class PodiumScreen extends Screen {
 
     /** 不模糊、只稍微压暗：选中声部时要看得见画面里乐器的描边。 */
     @Override
-    public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float a) {
+    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float a) {
         g.fillGradient(0, 0, width, height, 0x50101010, 0x70101010);
-        minecraft.gui.extractDeferredSubtitles();
+        // 原版在这里发的背景事件照发（别的模组可能在背景上画东西）；字幕在 1.21.1 是 HUD 的一层，不用在这里画
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(new net.neoforged.neoforge.client.event.ScreenEvent.BackgroundRendered(this, g));
     }
 
     // —— 画 ——
@@ -194,11 +195,13 @@ final class PodiumScreen extends Screen {
     /** 测试用：在声部列表（members 为 false）或成员列表的第 row 行上点一下（button 0 左键、1 右键）。 */
     boolean clickRow(boolean members, int row, int button) {
         double x = members ? splitX() + 20 : x0 + PAD + 12, y = listTop() + row * ROW + ROW / 2.0;
-        return mouseClicked(new net.minecraft.client.input.MouseButtonEvent(x, y, new net.minecraft.client.input.MouseButtonInfo(button, 0)), false);
+        return click(x, y, button, false);
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        // Screen.render 先画背景再画控件；羊皮纸和列表要夹在两者之间，所以拆开来调用
+        renderBackground(g, mouseX, mouseY, partialTick);
         Parchment.draw(g, x0, y0, W, H);
         PodiumBlockEntity be = entity();
         if (be == null) {
@@ -210,19 +213,19 @@ final class PodiumScreen extends Screen {
         int x = x0 + PAD, top = y0 + TOP;
         Component title = info == null ? tr("no_score")
             : Component.literal(font.plainSubstrByWidth(info.title().isBlank() ? "—" : info.title(), 200));
-        g.text(font, title, x, top, Parchment.INK_TITLE, false);
+        g.drawString(font, title, x, top, Parchment.INK_TITLE, false);
         Integer position = Conducting.position(pos);
         if (roll != null) {
             String meter = roll.beatsPerBar() + "/" + roll.beatUnit() + "  ♩=" + Math.round(roll.bpmX100() / 100f);
-            g.text(font, Component.literal(meter), x + 210, top, Parchment.INK_HINT, false);
+            g.drawString(font, Component.literal(meter), x + 210, top, Parchment.INK_HINT, false);
             if (position != null) {
                 BeatMap.Beat b = BeatMap.of(roll).at(Math.max(0, position));
                 Component bar = tr("bar_now", b.bar() + 1);
-                g.text(font, bar, x0 + W - PAD - font.width(bar), top, Parchment.INK, false);
+                g.drawString(font, bar, x0 + W - PAD - font.width(bar), top, Parchment.INK, false);
             }
         }
-        g.text(font, tr("parts"), x, top + 13, Parchment.INK_HINT, false);
-        g.text(font, tr("members", be.members().size(), PodiumBlockEntity.MAX_MEMBERS), splitX() + 8, top + 13, Parchment.INK_HINT, false);
+        g.drawString(font, tr("parts"), x, top + 13, Parchment.INK_HINT, false);
+        g.drawString(font, tr("members", be.members().size(), PodiumBlockEntity.MAX_MEMBERS), splitX() + 8, top + 13, Parchment.INK_HINT, false);
         g.fill(splitX(), listTop() - 2, splitX() + 1, listBottom(), 0x55402810);
         drawParts(g, be, roll, mouseX, mouseY);
         drawMembers(g, be, mouseX, mouseY);
@@ -230,19 +233,19 @@ final class PodiumScreen extends Screen {
         int sel = Conducting.selectedPart(pos);
         int y = bottomRow(), y2 = y - 20;
         Component selected = sel < 0 ? tr("none_selected") : Component.literal(font.plainSubstrByWidth(partName(be, sel).getString(), 98));
-        g.text(font, selected, x, y2 + 4, sel < 0 ? Parchment.INK_HINT : Conducting.PART_COLORS[sel] | 0xFF000000, false);
-        if (sel >= 0) g.text(font, Component.literal(String.format("%+d dB", be.gain(sel))), gainX, y2 + 4, Parchment.INK, false);
+        g.drawString(font, selected, x, y2 + 4, sel < 0 ? Parchment.INK_HINT : Conducting.PART_COLORS[sel] | 0xFF000000, false);
+        if (sel >= 0) g.drawString(font, Component.literal(String.format("%+d dB", be.gain(sel))), gainX, y2 + 4, Parchment.INK, false);
         for (Button b : partButtons) b.active = sel >= 0;
         if (metronomeButton != null) metronomeButton.setMessage(tr("metronome", tr(be.metronome() ? "on" : "off")));
-        g.text(font, tr("tempo", be.tempo()), tempoX, y + 4, Parchment.INK, false);
-        g.text(font, tr("from_bar", fromBar + 1), fromX, y + 4, Parchment.INK, false);
-        super.extractRenderState(g, mouseX, mouseY, partialTick);
+        g.drawString(font, tr("tempo", be.tempo()), tempoX, y + 4, Parchment.INK, false);
+        g.drawString(font, tr("from_bar", fromBar + 1), fromX, y + 4, Parchment.INK, false);
+        for (Renderable r : renderables) r.render(g, mouseX, mouseY, partialTick);
     }
 
-    private void drawParts(GuiGraphicsExtractor g, PodiumBlockEntity be, @Nullable MusicRoll roll, int mouseX, int mouseY) {
+    private void drawParts(GuiGraphics g, PodiumBlockEntity be, @Nullable MusicRoll roll, int mouseX, int mouseY) {
         int x = x0 + PAD, y = listTop();
         if (roll == null) {
-            g.text(font, tr(be.score().isEmpty() ? "insert_score" : "loading"), x, y, Parchment.INK_HINT, false);
+            g.drawString(font, tr(be.score().isEmpty() ? "insert_score" : "loading"), x, y, Parchment.INK_HINT, false);
             return;
         }
         int sel = Conducting.selectedPart(pos);
@@ -255,26 +258,26 @@ final class PodiumScreen extends Screen {
             if (p == sel) g.fill(x - 2, y - 1, splitX() - 4, y + ROW - 1, 0x33E0B84A);
             g.fill(x, y + 1, x + 7, y + 8, Conducting.PART_COLORS[p]);
             Component name = partName(be, p);
-            g.text(font, Component.literal((p + 1) + " ").append(name), x + 10, y, Parchment.INK, false);
+            g.drawString(font, Component.literal((p + 1) + " ").append(name), x + 10, y, Parchment.INK, false);
             Component who = players == 0 ? tr("nobody") : tr("players", players);
             int color = players == 0 ? 0xFFB0283F : Parchment.INK_HINT;
             if ((be.muteMask() & (1 << p)) != 0) who = tr("muted");
             else if (be.soloMask() != 0 && (be.soloMask() & (1 << p)) != 0) who = tr("solo_on");
-            g.text(font, who, splitX() - 6 - font.width(who), y, color, false);
+            g.drawString(font, who, splitX() - 6 - font.width(who), y, color, false);
             y += ROW;
         }
         // 最后一行「休息」：选中它再点乐器，让那件乐器休息（同手动改派，锁定）
         if (y + ROW <= listBottom()) {
             if (restPicked) g.fill(x - 2, y - 1, splitX() - 4, y + ROW - 1, 0x33E0B84A);
-            g.text(font, tr("rest_row"), x + 10, y, restPicked ? Parchment.INK : Parchment.INK_HINT, false);
+            g.drawString(font, tr("rest_row"), x + 10, y, restPicked ? Parchment.INK : Parchment.INK_HINT, false);
         }
     }
 
-    private void drawMembers(GuiGraphicsExtractor g, PodiumBlockEntity be, int mouseX, int mouseY) {
+    private void drawMembers(GuiGraphics g, PodiumBlockEntity be, int mouseX, int mouseY) {
         int x = splitX() + 8, y = listTop();
         List<BlockPos> members = be.members();
         if (members.isEmpty()) {
-            g.text(font, tr("no_members"), x, y, Parchment.INK_HINT, false);
+            g.drawString(font, tr("no_members"), x, y, Parchment.INK_HINT, false);
             return;
         }
         int rows = (listBottom() - listTop()) / ROW;
@@ -287,21 +290,21 @@ final class PodiumScreen extends Screen {
             String name = (kind == null ? tr(bench ? "empty_bench" : "missing") : Component.translatable(kind.nameKey())).getString();
             String shown = font.plainSubstrByWidth(name, NAME_W - 6);
             if (shown.length() < name.length()) shown = font.plainSubstrByWidth(name, NAME_W - 6 - font.width("…")) + "…";
-            g.text(font, Component.literal(shown), x, y, Parchment.INK, false);
+            g.drawString(font, Component.literal(shown), x, y, Parchment.INK, false);
             int mask = be.mask(m);
             int px = x + NAME_W;
             if (mask == 0) {
-                g.text(font, tr("resting"), px, y, Parchment.INK_HINT, false);
+                g.drawString(font, tr("resting"), px, y, Parchment.INK_HINT, false);
             } else {
                 for (int p : OrchestraArranger.parts(mask)) {
                     g.fill(px, y + 1, px + 7, y + 8, Conducting.PART_COLORS[p]);
                     Component pn = partName(be, p);
-                    g.text(font, pn, px + 9, y, Parchment.INK, false);
+                    g.drawString(font, pn, px + 9, y, Parchment.INK, false);
                     px += 12 + font.width(pn);
                     if (px > x0 + W - PAD - 30) break;
                 }
             }
-            if (be.locked(m)) g.text(font, Component.literal("🔒"), x0 + W - PAD - 10, y, Parchment.BRASS, false);
+            if (be.locked(m)) g.drawString(font, Component.literal("🔒"), x0 + W - PAD - 10, y, Parchment.BRASS, false);
             y += ROW;
         }
     }
@@ -309,9 +312,13 @@ final class PodiumScreen extends Screen {
     // —— 点 ——
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+    public boolean mouseClicked(double mx, double my, int button) {
+        return click(mx, my, button, Screen.hasShiftDown());
+    }
+
+    /** shift：潜行键（Shift）按着没有；测试点击时不按。 */
+    private boolean click(double mx, double my, int button, boolean shift) {
         PodiumBlockEntity be = entity();
-        double mx = event.x(), my = event.y();
         if (be != null && my >= listTop() && my < listBottom()) {
             int row = (int) ((my - listTop()) / ROW);
             if (mx < splitX()) {
@@ -329,9 +336,9 @@ final class PodiumScreen extends Screen {
             } else {
                 int index = scroll + row;
                 if (index < be.members().size()) {
-                    if (event.button() == 1) {
+                    if (button == 1) {
                         send(EnsemblePayloads.PodiumControl.UNLOCK, index, 0);
-                    } else if (event.hasShiftDown()) {
+                    } else if (shift) {
                         send(EnsemblePayloads.PodiumControl.REMOVE, index, 0);
                     } else if (restPicked) {
                         send(EnsemblePayloads.PodiumControl.ASSIGN, index, 0);
@@ -343,7 +350,7 @@ final class PodiumScreen extends Screen {
                 }
             }
         }
-        return super.mouseClicked(event, doubleClick);
+        return super.mouseClicked(mx, my, button);
     }
 
     @Override

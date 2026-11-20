@@ -7,8 +7,12 @@
     "SSS"
   ],
   "key": {
-    "P": "minecraft:dark_oak_planks",
-    "S": "minecraft:stick"
+    "P": {
+      "item": "minecraft:dark_oak_planks"
+    },
+    "S": {
+      "item": "minecraft:stick"
+    }
   },
   "result": {
     "id": "starbloom_orchestra:hexen_music_stand",

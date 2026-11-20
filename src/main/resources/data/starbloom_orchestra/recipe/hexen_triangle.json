@@ -7,9 +7,15 @@
     "SNS"
   ],
   "key": {
-    "I": "minecraft:iron_ingot",
-    "S": "minecraft:stick",
-    "N": "minecraft:note_block"
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "S": {
+      "item": "minecraft:stick"
+    },
+    "N": {
+      "item": "minecraft:note_block"
+    }
   },
   "result": {
     "id": "starbloom_orchestra:hexen_triangle",

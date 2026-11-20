@@ -7,8 +7,12 @@
     "WG "
   ],
   "key": {
-    "G": "minecraft:gold_ingot",
-    "W": "minecraft:blue_wool"
+    "G": {
+      "item": "minecraft:gold_ingot"
+    },
+    "W": {
+      "item": "minecraft:blue_wool"
+    }
   },
   "result": {
     "id": "starbloom_orchestra:hexen_trumpet",

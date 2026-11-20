@@ -3,15 +3,13 @@ package dev.starbloom.orchestra.music;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelReader;
-import net.minecraft.world.level.ScheduledTickAccess;
+import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -21,7 +19,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * 星辰花三角钢琴：2×2 占地。FACING 是键盘朝向（朝着放置的玩家）；主块（part 0）在键盘一侧，
@@ -83,8 +81,8 @@ public class GrandPianoBlock extends InstrumentBlock {
     protected Vec3 centerOf(BlockState mainState, BlockPos main) {
         Direction facing = mainState.getValue(FACING);
         Vec3 c = Vec3.atCenterOf(main).add(0, 0.2, 0);
-        Vec3 s = Vec3.atLowerCornerOf(side(facing).getUnitVec3i()).scale(0.5);
-        Vec3 b = Vec3.atLowerCornerOf(back(facing).getUnitVec3i()).scale(0.5);
+        Vec3 s = Vec3.atLowerCornerOf(side(facing).getNormal()).scale(0.5);
+        Vec3 b = Vec3.atLowerCornerOf(back(facing).getNormal()).scale(0.5);
         return c.add(s).add(b);
     }
 
@@ -114,8 +112,8 @@ public class GrandPianoBlock extends InstrumentBlock {
     }
 
     @Override
-    protected BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess ticks, BlockPos pos,
-                                     Direction direction, BlockPos neighborPos, BlockState neighborState, RandomSource random) {
+    protected BlockState updateShape(BlockState state, Direction direction, BlockState neighborState, LevelAccessor level,
+                                     BlockPos pos, BlockPos neighborPos) {
         Direction facing = state.getValue(FACING);
         int part = state.getValue(PART);
         int sibling = -1;
@@ -127,7 +125,7 @@ public class GrandPianoBlock extends InstrumentBlock {
                 && neighborState.getValue(FACING) == facing)) {
             return Blocks.AIR.defaultBlockState();
         }
-        return super.updateShape(state, level, ticks, pos, direction, neighborPos, neighborState, random);
+        return super.updateShape(state, direction, neighborState, level, pos, neighborPos);
     }
 
     @Override

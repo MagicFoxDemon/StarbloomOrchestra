@@ -3,8 +3,6 @@ package dev.starbloom.orchestra.music;
 import dev.starbloom.orchestra.OrchestraRegistries;
 import dev.starbloom.orchestra.StarbloomOrchestra;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.EntityType;
@@ -15,6 +13,7 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.attachment.AttachmentType;
@@ -37,18 +36,18 @@ public final class Benches {
     private static final DeferredRegister<AttachmentType<?>> ATTACHMENTS = DeferredRegister.create(NeoForgeRegistries.Keys.ATTACHMENT_TYPES, StarbloomOrchestra.ID);
 
     public static final DeferredBlock<StarbloomBenchBlock> BENCH = OrchestraRegistries.BLOCKS.registerBlock("starbloom_bench", StarbloomBenchBlock::new,
-        p -> p.mapColor(MapColor.COLOR_RED).strength(1.0f).sound(SoundType.WOOD).noOcclusion());
+        BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_RED).strength(1.0f).sound(SoundType.WOOD).noOcclusion());
     public static final DeferredItem<?> BENCH_ITEM = OrchestraRegistries.ITEMS.registerSimpleBlockItem("starbloom_bench", BENCH);
     /** 双人琴凳：两格宽，坐在正中，两格宽的钢琴前用。 */
     public static final DeferredBlock<StarbloomDuetBenchBlock> DUET = OrchestraRegistries.BLOCKS.registerBlock("starbloom_duet_bench",
-        StarbloomDuetBenchBlock::new, p -> p.mapColor(MapColor.COLOR_RED).strength(1.0f).sound(SoundType.WOOD).noOcclusion());
+        StarbloomDuetBenchBlock::new, BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_RED).strength(1.0f).sound(SoundType.WOOD).noOcclusion());
     public static final DeferredItem<?> DUET_ITEM = OrchestraRegistries.ITEMS.registerSimpleBlockItem("starbloom_duet_bench", DUET);
     public static final DeferredHolder<EntityType<?>, EntityType<BenchSeat>> SEAT = ENTITY_TYPES.register("bench_seat",
         () -> EntityType.Builder.<BenchSeat>of(BenchSeat::new, MobCategory.MISC).sized(0.25f, 0.25f).noSummon().clientTrackingRange(10)
-            .updateInterval(20).build(ResourceKey.create(Registries.ENTITY_TYPE, StarbloomOrchestra.id("bench_seat"))));
+            .updateInterval(20).build(StarbloomOrchestra.id("bench_seat").toString()));
     /** 生物主手原来拿着的东西：交给它乐器时替它收着，拿回乐器时还给它，死了照样掉出来。 */
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<ItemStack>> STOWED = ATTACHMENTS.register("stowed_main_hand",
-        () -> AttachmentType.builder(() -> ItemStack.EMPTY).serialize(ItemStack.OPTIONAL_CODEC.fieldOf("item"), s -> !s.isEmpty()).build());
+        () -> AttachmentType.builder(() -> ItemStack.EMPTY).serialize(ItemStack.OPTIONAL_CODEC.fieldOf("item").codec(), s -> !s.isEmpty()).build());
 
     private Benches() {}
 
@@ -74,7 +73,7 @@ public final class Benches {
             StarbloomBenchBlock.refresh(event.getLevel(), seat.bench());
         }
         event.setCanceled(true);
-        event.setCancellationResult(InteractionResult.SUCCESS);
+        event.setCancellationResult(InteractionResult.sidedSuccess(event.getLevel().isClientSide()));
     }
 
     /**
@@ -87,7 +86,7 @@ public final class Benches {
             if (!from.getInventory().add(old.copy())) from.drop(old.copy(), false);
         } else if (!old.isEmpty()) {
             if (mob.getData(STOWED).isEmpty()) mob.setData(STOWED, old.copy());
-            else if (mob.level() instanceof ServerLevel level) mob.spawnAtLocation(level, old.copy());
+            else if (!mob.level().isClientSide()) mob.spawnAtLocation(old.copy());
         }
         mob.setItemSlot(EquipmentSlot.MAINHAND, instrument.copyWithCount(1));
         mob.setGuaranteedDrop(EquipmentSlot.MAINHAND);

@@ -124,7 +124,7 @@ public abstract class HandheldViews implements UIScenario {
                     Vec3 look = me.add(0, 1.3, 0).subtract(eye);
                     float yaw = (float) (Mth.atan2(look.z, look.x) * Mth.RAD_TO_DEG) - 90;
                     float pitch = (float) -(Mth.atan2(look.y, look.horizontalDistance()) * Mth.RAD_TO_DEG);
-                    cam.snapTo(eye.x, eye.y - cam.getEyeHeight(), eye.z, yaw, pitch);
+                    cam.moveTo(eye.x, eye.y - cam.getEyeHeight(), eye.z, yaw, pitch);
                     cam.setYHeadRot(yaw);
                 })
                 .ticks(5)
@@ -150,7 +150,7 @@ public abstract class HandheldViews implements UIScenario {
         private static ScenarioBuilder hold(ScenarioBuilder s, String name, Item item, char[] keys, int sounding) {
             s = s.server("hold the " + name, ctx -> {
                     ctx.player().getInventory().setItem(0, new ItemStack(item));
-                    ctx.player().getInventory().setSelectedSlot(0);
+                    ctx.player().getInventory().selected = 0;
                 })
                 .ticks(5)
                 .step("raise the " + name, ctx -> {
@@ -180,7 +180,7 @@ public abstract class HandheldViews implements UIScenario {
         public void define(ScenarioBuilder s) {
             ScenarioBuilder b = stage(s, 0.5, 1.0, 4.0, 0f, 5f, false)
                 .server("an invisible camera", ctx -> {
-                    var cam = EntityType.ARMOR_STAND.create(ctx.server().overworld(), net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+                    var cam = EntityType.ARMOR_STAND.create(ctx.server().overworld());
                     cam.setInvisible(true);
                     cam.setNoGravity(true);
                     cam.setPos(ORIGIN.getX() + 2.5, GROUND + 1, ORIGIN.getZ() + 7);
@@ -198,7 +198,7 @@ public abstract class HandheldViews implements UIScenario {
             // 神乐铃按住连摇 7 秒：录音的循环段只有几秒，靠循环点一直摇；松手后 0.3 秒收住
             b = b.server("hold the kagura suzu again", ctx -> {
                     ctx.player().getInventory().setItem(0, new ItemStack(Instruments.KAGURA_SUZU.get()));
-                    ctx.player().getInventory().setSelectedSlot(0);
+                    ctx.player().getInventory().selected = 0;
                 })
                 .ticks(5)
                 .step("raise the kagura suzu again", ctx -> {
@@ -218,7 +218,7 @@ public abstract class HandheldViews implements UIScenario {
             // 按住一个长笛的音 7 秒：采样最长约 5 秒，靠循环点一直响下去
             b = b.server("hold the flute again", ctx -> {
                     ctx.player().getInventory().setItem(0, new ItemStack(Instruments.FLUTE.get()));
-                    ctx.player().getInventory().setSelectedSlot(0);
+                    ctx.player().getInventory().selected = 0;
                 })
                 .ticks(5)
                 .step("raise the flute again", ctx -> {
@@ -236,7 +236,7 @@ public abstract class HandheldViews implements UIScenario {
                 .step("put the flute away again", ctx -> Minecraft.getInstance().setScreen(null))
                 .ticks(4);
             b.server("another player with a violin", ctx -> {
-                    var stand = EntityType.ARMOR_STAND.create(ctx.server().overworld(), net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+                    var stand = EntityType.ARMOR_STAND.create(ctx.server().overworld());
                     stand.setPos(ORIGIN.getX() - 2, GROUND + 1, ORIGIN.getZ() + 3);
                     ctx.server().overworld().addFreshEntity(stand);
                     other = stand.getId();

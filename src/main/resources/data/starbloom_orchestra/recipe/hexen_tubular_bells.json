@@ -7,9 +7,15 @@
     "P P"
   ],
   "key": {
-    "C": "minecraft:copper_ingot",
-    "N": "minecraft:note_block",
-    "P": "minecraft:dark_oak_planks"
+    "C": {
+      "item": "minecraft:copper_ingot"
+    },
+    "N": {
+      "item": "minecraft:note_block"
+    },
+    "P": {
+      "item": "minecraft:dark_oak_planks"
+    }
   },
   "result": {
     "id": "starbloom_orchestra:hexen_tubular_bells",

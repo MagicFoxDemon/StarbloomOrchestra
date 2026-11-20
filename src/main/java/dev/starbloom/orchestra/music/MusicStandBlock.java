@@ -8,6 +8,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -22,7 +23,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * 乐谱架：拿着手持乐器右键，把乐器放到架子上（小提琴靠着架子、长笛横在谱台边、小号搁在谱台上垂着王室旗）；
@@ -63,7 +64,7 @@ public class MusicStandBlock extends InstrumentBlock {
     }
 
     public static final EnumProperty<Holds> HOLDS = EnumProperty.create("holds", Holds.class);
-    private static final Map<Direction, VoxelShape> SHAPES = Shapes.rotateHorizontal(
+    private static final Map<Direction, VoxelShape> SHAPES = InstrumentShapes.rotateHorizontal(
         Shapes.or(Block.box(6.5, 0, 6.5, 9.5, 12, 9.5), Block.box(2, 11, 6, 14, 16, 10), Block.box(3, 0, 3, 13, 1, 13)));
 
     public MusicStandBlock(Properties properties) {
@@ -128,23 +129,23 @@ public class MusicStandBlock extends InstrumentBlock {
     }
 
     @Override
-    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
-                                          InteractionHand hand, BlockHitResult hit) {
+    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
+                                              InteractionHand hand, BlockHitResult hit) {
         InstrumentKind kind = Instruments.heldKind(stack);
         BlockPos bench = seatedPlayer(level, pos, state);
         if (kind == null && bench != null && Instruments.isRoll(stack)) {
             // 谱台前坐着乐手：纸带交给琴凳（乐手照着它演奏）
-            if (level.isClientSide()) return InteractionResult.SUCCESS;
-            if (!(level.getBlockEntity(bench) instanceof InstrumentBlockEntity be)) return InteractionResult.PASS;
+            if (level.isClientSide()) return ItemInteractionResult.SUCCESS;
+            if (!(level.getBlockEntity(bench) instanceof InstrumentBlockEntity be)) return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
             ItemStack old = be.roll();
             be.setRoll(stack.copyWithCount(1));
             if (!player.getAbilities().instabuild) stack.shrink(1);
             if (!old.isEmpty() && !player.getInventory().add(old)) player.drop(old, false);
-            return InteractionResult.SUCCESS;
+            return ItemInteractionResult.CONSUME;
         }
         if (kind == null) return super.useItemOn(stack, state, level, pos, player, hand, hit);
-        if (level.isClientSide()) return InteractionResult.SUCCESS;
-        if (!(level.getBlockEntity(pos) instanceof InstrumentBlockEntity be)) return InteractionResult.PASS;
+        if (level.isClientSide()) return ItemInteractionResult.SUCCESS;
+        if (!(level.getBlockEntity(pos) instanceof InstrumentBlockEntity be)) return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
         // 已经放着一件：换下来还给玩家
         ItemStack old = be.takeInstrument();
         be.setInstrument(stack.copyWithCount(1));
@@ -153,7 +154,7 @@ public class MusicStandBlock extends InstrumentBlock {
         dev.starbloom.orchestra.music.orchestra.PodiumBlockEntity.memberChanged(level, be.orchestra(), pos, false);
         if (!player.getAbilities().instabuild) stack.shrink(1);
         if (!old.isEmpty() && !player.getInventory().add(old)) player.drop(old, false);
-        return InteractionResult.SUCCESS;
+        return ItemInteractionResult.CONSUME;
     }
 
     @Override
@@ -163,13 +164,13 @@ public class MusicStandBlock extends InstrumentBlock {
         if (bench != null) {
             // 谱台前坐着乐手：打开那张琴凳的乐器界面（界面类只在客户端存在，经静态入口打开）
             if (level.isClientSide()) dev.starbloom.orchestra.client.music.MusicClient.openInstrument(bench);
-            return InteractionResult.SUCCESS;
+            return InteractionResult.sidedSuccess(level.isClientSide());
         }
         if (holds == Holds.NONE) {
             if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
                 sp.sendSystemMessage(Component.translatable("message.starbloom_orchestra.instrument.need_instrument"), true);
             }
-            return InteractionResult.SUCCESS;
+            return InteractionResult.sidedSuccess(level.isClientSide());
         }
         if (player.isShiftKeyDown()) {
             if (!level.isClientSide() && level.getBlockEntity(pos) instanceof InstrumentBlockEntity be) {
@@ -179,7 +180,7 @@ public class MusicStandBlock extends InstrumentBlock {
                 dev.starbloom.orchestra.music.orchestra.PodiumBlockEntity.memberChanged(level, be.orchestra(), pos, false);
                 if (!out.isEmpty() && !player.getInventory().add(out)) player.drop(out, false);
             }
-            return InteractionResult.SUCCESS;
+            return InteractionResult.sidedSuccess(level.isClientSide());
         }
         return super.useWithoutItem(state, level, pos, player, hit);
     }

@@ -4,7 +4,8 @@
     "hexen_violin": "starbloom_orchestra:block/instrument/hexen_violin",
     "particle": "starbloom_orchestra:block/instrument/hexen_violin"
   },
-  "elements": [
+  "loader": "starbloom_orchestra:rotated_cuboids",
+  "cuboids": [
     {
       "from": [
         9.86,
@@ -2878,5 +2879,13 @@
         0.5
       ]
     }
-  }
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "starbloom_orchestra:playing": 1
+      },
+      "model": "starbloom_orchestra:item/hexen_violin_playing"
+    }
+  ]
 }

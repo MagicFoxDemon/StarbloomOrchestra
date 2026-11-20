@@ -1,6 +1,5 @@
 package dev.starbloom.orchestra.gametest;
 
-import dev.starbloom.orchestra.StarbloomOrchestra;
 import dev.starbloom.orchestra.music.ConcertHarpBlock;
 import dev.starbloom.orchestra.music.GrandPianoBlock;
 import dev.starbloom.orchestra.music.InstrumentBlock;
@@ -15,6 +14,7 @@ import dev.starbloom.orchestra.music.RollInfo;
 import dev.starbloom.orchestra.music.RollStore;
 import dev.starbloom.orchestra.music.SeatedInstrumentBlock;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,13 +22,9 @@ import java.util.UUID;
 import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.gametest.framework.FunctionGameTestInstance;
+import net.minecraft.gametest.framework.GameTestGenerator;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.gametest.framework.TestData;
-import net.minecraft.gametest.framework.TestEnvironmentDefinition;
-import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
+import net.minecraft.gametest.framework.TestFunction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -38,14 +34,11 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.event.RegisterGameTestsEvent;
-import net.neoforged.neoforge.registries.DeferredRegister;
 
 /**
  * 魔女之森乐器：钢琴 2×2、竖琴两格高，拆任意一块整体拆掉、只掉一件乐器和槽里的纸带；
@@ -53,9 +46,12 @@ import net.neoforged.neoforge.registries.DeferredRegister;
  * 大提琴、低音提琴：空手右键坐（站）到琴后的座位上，座位不重复、随琴消失；乐谱架认得中提琴、双簧管、巴松管。
  */
 public final class InstrumentGameTests {
-    private static final DeferredRegister<Consumer<GameTestHelper>> FUNCTIONS = DeferredRegister.create(Registries.TEST_FUNCTION, StarbloomOrchestra.ID);
-
     public static void register(IEventBus bus) {
+        GameTestFunctions.register(bus, InstrumentGameTests.class);
+    }
+
+    @GameTestGenerator
+    public static Collection<TestFunction> tests() {
         Map<String, Consumer<GameTestHelper>> tests = new LinkedHashMap<>();
         tests.put("instrument_piano_breaks_whole", InstrumentGameTests::pianoBreaksWhole);
         tests.put("instrument_harp_breaks_whole", InstrumentGameTests::harpBreaksWhole);
@@ -65,16 +61,7 @@ public final class InstrumentGameTests {
         tests.put("instrument_new_shapes_break_whole", InstrumentGameTests::newShapesBreakWhole);
         tests.put("instrument_music_stand", InstrumentGameTests::musicStand);
         tests.put("instrument_seated_strings", InstrumentGameTests::seatedStrings);
-        tests.forEach((name, test) -> FUNCTIONS.register(name, () -> test));
-        FUNCTIONS.register(bus);
-        bus.addListener((RegisterGameTestsEvent event) -> {
-            var env = event.registerEnvironment(StarbloomOrchestra.id("instrument_default"), new TestEnvironmentDefinition.AllOf());
-            for (var name : tests.keySet()) {
-                event.registerTest(StarbloomOrchestra.id(name), new FunctionGameTestInstance(
-                    ResourceKey.create(Registries.TEST_FUNCTION, StarbloomOrchestra.id(name)), new TestData<>(env,
-                        Identifier.withDefaultNamespace("empty"), 100, 0, true, Rotation.NONE, false, 1, 1, false, 6)));
-            }
-        });
+        return GameTestFunctions.batch("instrument_default", 6, 100, 0, tests);
     }
 
     private static BlockState place(ServerLevel level, BlockPos main, BlockState state) {
@@ -280,7 +267,7 @@ public final class InstrumentGameTests {
         place(level, cello, Instruments.CELLO.get().defaultBlockState().setValue(InstrumentBlock.FACING, Direction.SOUTH));
         h.assertTrue(level.getBlockState(cello.above()).is(Instruments.CELLO.get()), "the cello is two tall");
         Player first = h.makeMockPlayer(GameType.SURVIVAL);
-        first.snapTo(cello.getX() + 0.5, cello.getY(), cello.getZ() + 2.5);
+        first.moveTo(cello.getX() + 0.5, cello.getY(), cello.getZ() + 2.5);
         BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(cello), Direction.SOUTH, cello, false);
         level.getBlockState(cello.above()).useWithoutItem(level, first, hit.withPosition(cello.above()));
         if (!(first.getVehicle() instanceof InstrumentSeat seat)) throw new AssertionError("right-clicking the cello seats the player");
@@ -309,10 +296,10 @@ public final class InstrumentGameTests {
         h.assertTrue(level.getBlockEntity(timpani) instanceof InstrumentBlockEntity be && be.kind() == InstrumentKind.TIMPANI, "the timpani has its entity");
         // 座位要在自己的 tick 里发现琴没了：大提琴所在的区块先强制加载、等它进入实体走刻再拆
         //（测试框架给的格子有时还没走实体刻，座位一刻都不走，见 docs 里 #199、#237 的记录）
-        var chunk = net.minecraft.world.level.ChunkPos.containing(cello);
-        level.setChunkForced(chunk.x(), chunk.z(), true);
+        var chunk = new net.minecraft.world.level.ChunkPos(cello);
+        level.setChunkForced(chunk.x, chunk.z, true);
         h.startSequence()
-            .thenWaitUntil(RealTimeWait.paced(() -> h.assertTrue(level.areEntitiesActuallyLoadedAndTicking(chunk), "the cello's chunk ticks entities")))
+            .thenWaitUntil(RealTimeWait.paced(() -> h.assertTrue(entitiesTicking(level, chunk), "the cello's chunk ticks entities")))
             .thenExecute(() -> {
                 level.destroyBlock(cello.above(), true);
                 h.assertTrue(level.getBlockState(cello).isAir(), "the cello goes as a whole");
@@ -323,8 +310,16 @@ public final class InstrumentGameTests {
                 h.assertTrue(left.isEmpty(), "the seat goes with the cello: " + left.stream().map(e -> e.getPassengers() + " ticks=" + e.tickCount).toList());
                 h.assertTrue(first.getVehicle() == null, "the player stands up");
             })
-            .thenExecute(() -> level.setChunkForced(chunk.x(), chunk.z(), false))
+            .thenExecute(() -> level.setChunkForced(chunk.x, chunk.z, false))
             .thenSucceed();
+    }
+
+    /**
+     * 区块里的实体已经读进来、而且在走实体刻（26.1 的 {@code ServerLevel.areEntitiesActuallyLoadedAndTicking}）：
+     * 1.21.1 里 {@code isNaturalSpawningAllowed(ChunkPos)} 就是实体管理器的「这个区块在走刻」，{@code areEntitiesLoaded} 是「实体读完了」。
+     */
+    private static boolean entitiesTicking(ServerLevel level, net.minecraft.world.level.ChunkPos chunk) {
+        return level.isNaturalSpawningAllowed(chunk) && level.areEntitiesLoaded(chunk.toLong());
     }
 
     private InstrumentGameTests() {}

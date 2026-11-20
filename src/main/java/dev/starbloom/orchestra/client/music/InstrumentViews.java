@@ -155,7 +155,7 @@ public abstract class InstrumentViews implements UIScenario {
                     inv.setItem(1, new ItemStack(Instruments.CONCERT_HARP_ITEM.get()));
                     inv.setItem(2, new ItemStack(Instruments.BLANK_ROLL.get()));
                     inv.setItem(3, new ItemStack(Instruments.MUSIC_ROLL_ITEM.get()));
-                    inv.setSelectedSlot(0);
+                    inv.selected = 0;
                     TestTravel.teleport(ctx.player(), ctx.server().overworld(),
                         new Vec3(ORIGIN.getX() + 1.0, GROUND + 2.8, ORIGIN.getZ() + 7.5), 180f, 14f);
                 })

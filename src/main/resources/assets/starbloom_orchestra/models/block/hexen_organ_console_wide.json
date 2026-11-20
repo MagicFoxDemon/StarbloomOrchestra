@@ -4,7 +4,8 @@
     "hexen_organ_console": "starbloom_orchestra:block/instrument/hexen_organ_console",
     "particle": "starbloom_orchestra:block/instrument/particle_walnut"
   },
-  "elements": [
+  "loader": "starbloom_orchestra:rotated_cuboids",
+  "cuboids": [
     {
       "from": [
         -10,

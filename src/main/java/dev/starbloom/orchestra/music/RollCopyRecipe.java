@@ -1,10 +1,12 @@
 package dev.starbloom.orchestra.music;
 
 import com.mojang.serialization.MapCodec;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.CraftingBookCategory;
 import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CustomRecipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
@@ -16,8 +18,25 @@ import net.minecraft.world.level.Level;
  */
 public class RollCopyRecipe extends CustomRecipe {
     public static final RollCopyRecipe INSTANCE = new RollCopyRecipe();
-    public static final RecipeSerializer<RollCopyRecipe> SERIALIZER =
-        new RecipeSerializer<>(MapCodec.unit(INSTANCE), StreamCodec.<RegistryFriendlyByteBuf, RollCopyRecipe>unit(INSTANCE));
+    /** 配方文件里只有 {@code type}，别的字段（比如 {@code category}）都不读：始终是同一个实例，分类固定为「杂项」。 */
+    public static final RecipeSerializer<RollCopyRecipe> SERIALIZER = new RecipeSerializer<>() {
+        private final MapCodec<RollCopyRecipe> codec = MapCodec.unit(INSTANCE);
+        private final StreamCodec<RegistryFriendlyByteBuf, RollCopyRecipe> streamCodec = StreamCodec.unit(INSTANCE);
+
+        @Override
+        public MapCodec<RollCopyRecipe> codec() {
+            return codec;
+        }
+
+        @Override
+        public StreamCodec<RegistryFriendlyByteBuf, RollCopyRecipe> streamCodec() {
+            return streamCodec;
+        }
+    };
+
+    public RollCopyRecipe() {
+        super(CraftingBookCategory.MISC);
+    }
 
     @Override
     public boolean matches(CraftingInput input, Level level) {
@@ -25,6 +44,11 @@ public class RollCopyRecipe extends CustomRecipe {
     }
 
     @Override
+    public ItemStack assemble(CraftingInput input, HolderLookup.Provider registries) {
+        return assemble(input);
+    }
+
+    /** 合成结果；不需要注册表（世界测试直接调用）。 */
     public ItemStack assemble(CraftingInput input) {
         ItemStack source = ItemStack.EMPTY;
         int blanks = 0;
@@ -42,6 +66,12 @@ public class RollCopyRecipe extends CustomRecipe {
         }
         if (source.isEmpty() || blanks == 0) return ItemStack.EMPTY;
         return source.copyWithCount(blanks);
+    }
+
+    /** 至少两格（一卷打孔纸带加一卷空白纸带）才放得下。 */
+    @Override
+    public boolean canCraftInDimensions(int width, int height) {
+        return width * height >= 2;
     }
 
     @Override

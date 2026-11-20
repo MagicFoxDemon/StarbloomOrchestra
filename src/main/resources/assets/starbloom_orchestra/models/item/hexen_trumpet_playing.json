@@ -5,7 +5,8 @@
     "banner": "starbloom_orchestra:block/instrument/hexenwald_banner",
     "particle": "starbloom_orchestra:block/instrument/hexen_trumpet"
   },
-  "elements": [
+  "loader": "starbloom_orchestra:rotated_cuboids",
+  "cuboids": [
     {
       "from": [
         0.4,

@@ -1,6 +1,5 @@
 package dev.starbloom.orchestra.gametest;
 
-import dev.starbloom.orchestra.StarbloomOrchestra;
 import dev.starbloom.orchestra.music.BenchSeat;
 import dev.starbloom.orchestra.music.Benches;
 import dev.starbloom.orchestra.music.InstrumentBlock;
@@ -15,6 +14,7 @@ import dev.starbloom.orchestra.music.orchestra.Orchestra;
 import dev.starbloom.orchestra.music.orchestra.PodiumBlock;
 import dev.starbloom.orchestra.music.orchestra.PodiumBlockEntity;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,31 +22,23 @@ import java.util.UUID;
 import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.gametest.framework.FunctionGameTestInstance;
+import net.minecraft.gametest.framework.GameTestGenerator;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.gametest.framework.TestData;
-import net.minecraft.gametest.framework.TestEnvironmentDefinition;
-import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
+import net.minecraft.gametest.framework.TestFunction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
-import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.event.RegisterGameTestsEvent;
-import net.neoforged.neoforge.registries.DeferredRegister;
 
 /**
  * 星辰花琴凳（docs/ORCHESTRA.md 第 14 节）：在键盘的琴键一面、竖琴的背后才和乐器关联，方向不对、位置不对都不关联；
@@ -55,11 +47,14 @@ import net.neoforged.neoforge.registries.DeferredRegister;
  * 坐着生物的座位存盘、坐着玩家的不存；没关联的琴凳空着也留在乐团里休息，坐上拿着小提琴的精灵就分到小提琴声部。
  */
 public final class BenchGameTests {
-    private static final DeferredRegister<Consumer<GameTestHelper>> FUNCTIONS = DeferredRegister.create(Registries.TEST_FUNCTION, StarbloomOrchestra.ID);
-
     private BenchGameTests() {}
 
     public static void register(IEventBus bus) {
+        GameTestFunctions.register(bus, BenchGameTests.class);
+    }
+
+    @GameTestGenerator
+    public static Collection<TestFunction> tests() {
         Map<String, Consumer<GameTestHelper>> tests = new LinkedHashMap<>();
         tests.put("bench_links_to_instruments", BenchGameTests::links);
         tests.put("bench_seats_led_mobs", BenchGameTests::seats);
@@ -72,16 +67,7 @@ public final class BenchGameTests {
         tests.put("station_player_posts", BenchGameTests::playerPosts);
         tests.put("station_percussion_posts", BenchGameTests::percussionPosts);
         tests.put("musicians_look_at_the_conductor", BenchGameTests::gaze);
-        tests.forEach((name, test) -> FUNCTIONS.register(name, () -> test));
-        FUNCTIONS.register(bus);
-        bus.addListener((RegisterGameTestsEvent event) -> {
-            var env = event.registerEnvironment(StarbloomOrchestra.id("bench_default"), new TestEnvironmentDefinition.AllOf());
-            for (var name : tests.keySet()) {
-                event.registerTest(StarbloomOrchestra.id(name), new FunctionGameTestInstance(
-                    ResourceKey.create(Registries.TEST_FUNCTION, StarbloomOrchestra.id(name)), new TestData<>(env,
-                        Identifier.withDefaultNamespace("empty"), 100, 0, true, Rotation.NONE, false, 1, 1, false, 6)));
-            }
-        });
+        return GameTestFunctions.batch("bench_default", 6, 100, 0, tests);
     }
 
     private static BlockState place(ServerLevel level, BlockPos pos, BlockState state) {
@@ -101,10 +87,10 @@ public final class BenchGameTests {
     }
 
     private static Mob musician(GameTestHelper h, BlockPos rel) {
-        Mob elf = EntityType.VILLAGER.create(h.getLevel(), EntitySpawnReason.COMMAND);
+        Mob elf = EntityType.VILLAGER.create(h.getLevel());
         if (elf == null) throw new AssertionError("no villager");
         BlockPos at = h.absolutePos(rel);
-        elf.snapTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        elf.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
         elf.setNoAi(true);
         h.getLevel().addFreshEntity(elf);
         return elf;
@@ -208,7 +194,7 @@ public final class BenchGameTests {
         place(level, cello, Instruments.CELLO.get().defaultBlockState().setValue(InstrumentBlock.FACING, Direction.SOUTH));
         Mob elf = musician(h, new BlockPos(2, 1, 6));
         Player player = h.makeMockPlayer(GameType.SURVIVAL);
-        player.snapTo(cello.getX() + 0.5, cello.getY(), cello.getZ() + 3.5, 0, 0);
+        player.moveTo(cello.getX() + 0.5, cello.getY(), cello.getZ() + 3.5, 0, 0);
         player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.LEAD));
         elf.setLeashedTo(player, true);
         level.getBlockState(cello).useItemOn(player.getMainHandItem(), level, player, InteractionHand.MAIN_HAND, hit(cello));
@@ -223,7 +209,7 @@ public final class BenchGameTests {
         other.setLeashedTo(player, true);
         level.getBlockState(cello).useItemOn(player.getMainHandItem(), level, player, InteractionHand.MAIN_HAND, hit(cello));
         h.assertTrue(other.getVehicle() == null && other.isLeashed(), "a taken post takes no one else");
-        other.dropLeash();
+        other.dropLeash(true, true);
         // 潜行空手右键：离开
         player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
         player.setShiftKeyDown(true);
@@ -253,7 +239,7 @@ public final class BenchGameTests {
         place(level, bells, Instruments.TUBULAR_BELLS.get().defaultBlockState().setValue(InstrumentBlock.FACING, Direction.NORTH));
         place(level, cello, Instruments.CELLO.get().defaultBlockState().setValue(InstrumentBlock.FACING, Direction.NORTH));
         Player player = h.makeMockPlayer(GameType.SURVIVAL);
-        player.snapTo(glock.getX() + 0.5, glock.getY(), glock.getZ() - 1.5, 180, 0);
+        player.moveTo(glock.getX() + 0.5, glock.getY(), glock.getZ() - 1.5, 180, 0);
         player.setShiftKeyDown(true);
         level.getBlockState(glock).useWithoutItem(level, player, hit(glock));
         h.assertTrue(player.getVehicle() == null, "sneaking only opens the screen");
@@ -290,7 +276,7 @@ public final class BenchGameTests {
             BlockPos drum = h.absolutePos(new BlockPos(1 + 2 * i, 1, 3));
             place(level, drum, blocks.get(i).defaultBlockState().setValue(InstrumentBlock.FACING, Direction.NORTH));
             player.stopRiding();
-            player.snapTo(drum.getX() + 0.5, drum.getY(), drum.getZ() - 1.5, 180, 0);
+            player.moveTo(drum.getX() + 0.5, drum.getY(), drum.getZ() - 1.5, 180, 0);
             level.getBlockState(drum).useWithoutItem(level, player, hit(drum));
             if (!(player.getVehicle() instanceof dev.starbloom.orchestra.music.InstrumentSeat post)) {
                 throw new AssertionError("an empty hand takes the " + kinds.get(i) + " post");
@@ -354,7 +340,7 @@ public final class BenchGameTests {
         Mob elf = musician(h, new BlockPos(2, 1, 5));
         elf.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.BOW));
         Player player = h.makeMockPlayer(GameType.SURVIVAL);
-        player.snapTo(seat.getX() + 0.5, seat.getY(), seat.getZ() + 2.5, 0, 0);
+        player.moveTo(seat.getX() + 0.5, seat.getY(), seat.getZ() + 2.5, 0, 0);
         player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.LEAD));
         elf.setLeashedTo(player, true);
         h.assertTrue(elf.isLeashed(), "the elf is on a lead");
@@ -369,13 +355,13 @@ public final class BenchGameTests {
         h.assertTrue(benchSeat.shouldBeSaved(), "a seat with a mob is saved with it");
         // 拿着小提琴右键它：交给它，原来的弓替它收着
         player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Instruments.VIOLIN.get()));
-        player.interactOn(elf, InteractionHand.MAIN_HAND, elf.position().add(0, 1, 0));
+        player.interactOn(elf, InteractionHand.MAIN_HAND);
         h.assertTrue(elf.getMainHandItem().is(Instruments.VIOLIN.get()), "the elf holds the violin");
         h.assertTrue(player.getMainHandItem().isEmpty(), "the player's violin went to the elf");
         h.assertTrue(elf.getData(Benches.STOWED).is(Items.BOW), "the bow is kept for the elf");
         h.assertTrue(level.getBlockState(seat).getValue(StarbloomBenchBlock.PLAYS) == MusicStandBlock.Holds.VIOLIN, "the bench now plays the violin");
         // 空手右键：拿回小提琴，弓还给它
-        player.interactOn(elf, InteractionHand.MAIN_HAND, elf.position().add(0, 1, 0));
+        player.interactOn(elf, InteractionHand.MAIN_HAND);
         h.assertTrue(elf.getMainHandItem().is(Items.BOW), "the bow is back in the elf's hand");
         h.assertTrue(player.getInventory().countItem(Instruments.VIOLIN.get()) == 1, "the violin is back with the player");
         h.assertTrue(level.getBlockState(seat).getValue(StarbloomBenchBlock.PLAYS) == MusicStandBlock.Holds.NONE, "the bench rests again");

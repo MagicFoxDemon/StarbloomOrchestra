@@ -1,23 +1,23 @@
 package dev.starbloom.orchestra.music.orchestra;
 
 import com.mojang.serialization.MapCodec;
+import dev.starbloom.orchestra.music.InstrumentShapes;
 import dev.starbloom.orchestra.music.Instruments;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelReader;
-import net.minecraft.world.level.ScheduledTickAccess;
+import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.EntityBlock;
@@ -30,13 +30,11 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
-import net.minecraft.world.level.redstone.Orientation;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
-import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * 指挥台（docs/ORCHESTRA.md 第 3 节）：两格宽、一格深，台面高半格。FACING 是指挥面朝的方向（朝着乐团，放置时玩家面对的方向）；
@@ -51,7 +49,7 @@ public class PodiumBlock extends Block implements EntityBlock {
     public static final BooleanProperty SIDE = BooleanProperty.create("side");
     /** 谱架上有没有总谱（模型摊开一本谱子）；只看主块的。 */
     public static final BooleanProperty SCORE = BooleanProperty.create("score");
-    private static final Map<Direction, VoxelShape> SHAPES = Shapes.rotateHorizontal(Block.box(0, 0, 0, 16, 8, 16));
+    private static final Map<Direction, VoxelShape> SHAPES = InstrumentShapes.rotateHorizontal(Block.box(0, 0, 0, 16, 8, 16));
 
     public PodiumBlock(Properties properties) {
         super(properties);
@@ -145,8 +143,8 @@ public class PodiumBlock extends Block implements EntityBlock {
     }
 
     @Override
-    protected BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess ticks, BlockPos pos,
-                                     Direction direction, BlockPos neighborPos, BlockState neighborState, RandomSource random) {
+    protected BlockState updateShape(BlockState state, Direction direction, BlockState neighborState, LevelAccessor level,
+                                     BlockPos pos, BlockPos neighborPos) {
         Direction facing = state.getValue(FACING);
         boolean side = state.getValue(SIDE);
         Direction toSibling = side ? right(facing).getOpposite() : right(facing);
@@ -154,7 +152,7 @@ public class PodiumBlock extends Block implements EntityBlock {
                 && neighborState.getValue(FACING) == facing)) {
             return Blocks.AIR.defaultBlockState();
         }
-        return super.updateShape(state, level, ticks, pos, direction, neighborPos, neighborState, random);
+        return super.updateShape(state, direction, neighborState, level, pos, neighborPos);
     }
 
     @Override
@@ -169,37 +167,50 @@ public class PodiumBlock extends Block implements EntityBlock {
         return super.playerWillDestroy(level, pos, state, player);
     }
 
+    /**
+     * 换成别的方块（拆掉、被炸、被替换）时先让方块实体收尾（停奏、放开成员、掉出总谱），再按原版移除方块实体。
+     * 1.21.1 的方块实体还没有 {@code preRemoveSideEffects}，原版的讲台、唱片机也是在这里做的；只在服务端调用。
+     */
+    @Override
+    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+        if (!state.is(newState.getBlock()) && !level.isClientSide() && level.getBlockEntity(pos) instanceof PodiumBlockEntity be) {
+            be.preRemoveSideEffects(pos, state);
+        }
+        super.onRemove(state, level, pos, newState, movedByPiston);
+    }
+
+    /** 成功一律用 sidedSuccess 的写法：客户端 SUCCESS（挥手），服务端 CONSUME（不再广播挥手）。 */
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (level.isClientSide()) dev.starbloom.orchestra.client.music.Conducting.openPodium(mainPos(state, pos));
-        return InteractionResult.SUCCESS;
+        return InteractionResult.sidedSuccess(level.isClientSide());
     }
 
     @Override
-    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
-                                          InteractionHand hand, BlockHitResult hit) {
+    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
+                                              InteractionHand hand, BlockHitResult hit) {
         BlockPos main = mainPos(state, pos);
         if (stack.is(Orchestra.BATON.get())) {
-            if (level.isClientSide()) return InteractionResult.SUCCESS;
+            if (level.isClientSide()) return ItemInteractionResult.SUCCESS;
             Orchestra.batonOnPodium(stack, (ServerLevel) level, main, player);
-            return InteractionResult.SUCCESS;
+            return ItemInteractionResult.CONSUME;
         }
-        if (!Instruments.isRoll(stack)) return InteractionResult.TRY_WITH_EMPTY_HAND;
-        if (level.isClientSide()) return InteractionResult.SUCCESS;
-        if (!(level.getBlockEntity(main) instanceof PodiumBlockEntity be)) return InteractionResult.PASS;
+        if (!Instruments.isRoll(stack)) return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        if (level.isClientSide()) return ItemInteractionResult.SUCCESS;
+        if (!(level.getBlockEntity(main) instanceof PodiumBlockEntity be)) return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
         if (be.isPlaying()) {
             Orchestra.tell(player, "busy");
-            return InteractionResult.SUCCESS;
+            return ItemInteractionResult.CONSUME;
         }
         ItemStack old = be.takeScore();
         be.setScore(stack.copyWithCount(1));
         if (!player.getAbilities().instabuild) stack.shrink(1);
         if (!old.isEmpty() && !player.getInventory().add(old)) player.drop(old, false);
-        return InteractionResult.SUCCESS;
+        return ItemInteractionResult.CONSUME;
     }
 
     @Override
-    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, @Nullable Orientation orientation,
+    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos neighborPos,
                                    boolean movedByPiston) {
         if (level.isClientSide()) return;
         BlockPos main = mainPos(state, pos);

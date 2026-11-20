@@ -31,12 +31,12 @@ public final class Orchestra {
         DeferredRegister.createDataComponents(Registries.DATA_COMPONENT_TYPE, StarbloomOrchestra.ID);
 
     public static final DeferredBlock<PodiumBlock> PODIUM = OrchestraRegistries.BLOCKS.registerBlock("hexen_podium", PodiumBlock::new,
-        p -> p.mapColor(MapColor.COLOR_BROWN).strength(2.0f).sound(SoundType.WOOD).noOcclusion());
+        net.minecraft.world.level.block.state.BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BROWN).strength(2.0f).sound(SoundType.WOOD).noOcclusion());
     public static final DeferredItem<?> PODIUM_ITEM = OrchestraRegistries.ITEMS.registerSimpleBlockItem("hexen_podium", PODIUM);
     public static final DeferredItem<BatonItem> BATON = OrchestraRegistries.ITEMS.registerItem("hexen_baton", p -> new BatonItem(p.stacksTo(1)));
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PodiumBlockEntity>> PODIUM_ENTITY =
-        BLOCK_ENTITIES.register("podium", () -> new BlockEntityType<>(PodiumBlockEntity::new, PODIUM.get()));
+        BLOCK_ENTITIES.register("podium", () -> BlockEntityType.Builder.of(PodiumBlockEntity::new, PODIUM.get()).build(null));
     /** 指挥棒绑定的指挥台。 */
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<GlobalPos>> BATON_PODIUM =
         COMPONENTS.registerComponentType("baton_podium", b -> b.persistent(GlobalPos.CODEC).networkSynchronized(GlobalPos.STREAM_CODEC));
@@ -56,10 +56,14 @@ public final class Orchestra {
         });
     }
 
+    /**
+     * 1.21.1 的 NeoForge 没有单独的客户端收包注册，发往客户端的包要在这里连同处理器一起登记。公共代码不引用客户端的类，
+     * 所以只放 {@link dev.starbloom.orchestra.music.ClientPayloadHandlers#dispatch} 转发，客户端初始化时（{@code MusicClient.ModBus}）登记真正的处理器。
+     */
     private static void payloads(RegisterPayloadHandlersEvent event) {
         var r = event.registrar("1");
         r.playToServer(EnsemblePayloads.PodiumControl.TYPE, EnsemblePayloads.PodiumControl.CODEC, (p, c) -> c.enqueueWork(() -> control(p, c)));
-        r.playToClient(EnsemblePayloads.EnsembleState.TYPE, EnsemblePayloads.EnsembleState.CODEC);
+        r.playToClient(EnsemblePayloads.EnsembleState.TYPE, EnsemblePayloads.EnsembleState.CODEC, dev.starbloom.orchestra.music.ClientPayloadHandlers.dispatch(EnsemblePayloads.EnsembleState.TYPE));
         r.playToServer(EnsemblePayloads.ConductBeat.TYPE, EnsemblePayloads.ConductBeat.CODEC, (p, c) -> c.enqueueWork(() -> beat(p, c)));
     }
 

@@ -175,10 +175,13 @@
 - 演奏这个声部的每件乐器外面一圈这个声部颜色的线（16 种颜色，界面色块同色），720p 时 2 像素、1080p 约 2.7 像素，按屏幕高度缩放，
   最多 5 像素；线外再一道 1 像素的暗边，铜色的定音鼓配浅红的线也分得清。看得见的轮廓不透明度 0.95，被挡住的 0.36。
   这个声部有音进来时线变亮一下（160 毫秒衰减），静音时不亮。线是纯色，没有贴在屏幕上的纹理。
-- 做法：世界画完之后，把选中乐器各格的方块模型（真实的几何，图集里透明的像素不算）按世界的投影画到一张和屏幕一样大的图上：
-  g 是剪影，r 是没被挡住的部分（和半透明之前留下的深度比，玻璃、水挡不住，留 0.12 格余量）。再一个全屏通道在剪影外面一圈找最近的剪影：
-  附近有看得见的就是实线，只有被挡住的就是淡线；手挡在前面的地方不画。时机在泛光之后、画风和黑白闪之前（`ScreenEffectMixin`），
-  所以有没有 Sodium、用什么光影包都是同一条路，后面的全屏效果照样作用在它上面。
+- 做法：实体、方块实体画完之后、半透明之前（渲染阶段 `AFTER_BLOCK_ENTITIES`）记下这一帧的投影、镜头，拷一份深度。
+  世界、手和原版后处理都画完、界面清深度之前（`GameRenderer#render` 里第一次 `RenderSystem.clear` 之前，`PartOutlineMixin`），
+  把选中乐器各格的方块模型（真实的几何，图集里透明的像素不算）按世界的投影画到一张和屏幕一样大的图上：
+  g 是剪影，r 是没被挡住的部分（和拷下的那份深度比，玻璃、水挡不住，留 0.12 格余量）。再一个全屏通道在剪影外面一圈找最近的剪影：
+  附近有看得见的就是实线，只有被挡住的就是淡线；手挡在前面的地方不画（全屏四边形放在远平面上做深度测试，这时主画面的深度里只有手）。
+  两个着色器是 core 着色器（`shaders/core/part_outline*`，`RegisterShadersEvent` 加载）。1.21.1 上旗帜、盾牌这几批和方块破坏的裂纹
+  在拷深度之后才画，它们挡在乐器前面时线仍是实线。这条分支没有在 Sodium、光影包下试过。
 - 指挥台界面不模糊背景（只稍微压暗），选声部时看得见画面里的描边。
 
 ## 9. 界面（`PodiumScreen`）
@@ -211,10 +214,10 @@
 |---|---|
 | 方块、物品、注册、服务端处理 | `music/orchestra/PodiumBlock`、`PodiumBlockEntity`、`BatonItem`、`Orchestra`、`EnsemblePayloads` |
 | 纯逻辑（单元测试） | `music/orchestra/OrchestraArranger`、`BeatMap`、`ConductorPattern`、`BeatFollower`（跟拍子，第 17 节）、`Judgement`（判定，第 18 节）；`MusicRoll` 的速度表、`MidiReader` |
-| 客户端 | `client/music/Conducting`（乐团播放、手势、选中）、`BatonInput`（打拍子、画拍子、右键选声部、滚轮调响度、判定和反馈）、`Metronome`（节拍器）、`ConductingPoses`（手臂、第一人称）、`PartOutline` + `shaders/post/part_outline*`、`PodiumScreen` |
+| 客户端 | `client/music/Conducting`（乐团播放、手势、选中）、`BatonInput`（打拍子、画拍子、右键选声部、滚轮调响度、判定和反馈）、`Metronome`（节拍器）、`ConductingPoses`（手臂、第一人称）、`PartOutline` + `mixin/PartOutlineMixin` + `shaders/core/part_outline*`、`PodiumScreen` |
 | 乐器那边 | `InstrumentBlockEntity`（`orchestra`、`conductedBy`、拆掉时退出）、`MusicStandBlock`（换乐器时通知）、`InstrumentBlock`（指挥棒右键） |
 | 美术 | `tools/instrument_models/percussion.py`（模型）、`tools/instrument_art.py` 的 `podium()`（方块状态、掉落、配方） |
-| 琴凳与生物乐手（第 14–16 节） | `music/StarbloomBenchBlock`、`StarbloomDuetBenchBlock`、`BenchSeat`、`Benches`、`InstrumentPosts`、`InstrumentSeat`；客户端 `StationPoses`（工位、琴槌）；客户端 `client/music/MusicianPoses`（手位、原版人形模型）、`NpcMusician`（车万女仆骨架的两骨 IK）、`mixin/MusicianModelMixin`；车万女仆模组的女仆 `MaidMusicians`（只在有女仆模组的 jar 时编译）、`animation/maid_musician.animation.json` |
+| 琴凳与生物乐手（第 14–16 节） | `music/StarbloomBenchBlock`、`StarbloomDuetBenchBlock`、`BenchSeat`、`Benches`、`InstrumentPosts`、`InstrumentSeat`；客户端 `StationPoses`（工位、琴槌）；客户端 `client/music/MusicianPoses`（手位、原版人形模型）、`HeldModel`（画在身上的乐器、琴弓、琴槌）、`NpcMusician`（车万女仆骨架的两骨 IK）、`mixin/MusicianModelMixin`、`MusicianDrawMixin`、`MusicianHandItemMixin`；车万女仆模组的女仆 `MaidMusicians`（只在有女仆模组的 jar 时编译）、`animation/maid_musician.animation.json` |
 | 测试 | 单元 `BeatFollowerTest`、`JudgementTest`、`BeatMapTest`、`ConductorPatternTest`、`OrchestraArrangerTest`、`MusicRollTest`、`MidiReaderTest`；世界 `orchestra_*`、`bench_*`；客户端 `orchestra_baton_ui`、`orchestra_metronome_ui`、`orchestra_conduct_ui`、`orchestra_seated_member_ui`、`orchestra_hall_ui` |
 
 ## 13. 已定（维护者 2026-11-11）
@@ -279,11 +282,13 @@
 换算：
 
 - **原版人形模型**（玩家、僵尸、尸壳、骷髅、流髑……）：手臂是直的，转过去指着手位（同站着拉琴）。放在模型自己的 setupAnim 全部跑完之后
-  （`MusicianModelMixin`，注入 `LivingEntityRenderer.submit` 里 setupAnim 之后），因为僵尸之类的模型在 setupAnim 末尾还会再抬一次手。
-  26.1 的身体不在那里画：`submit` 只把模型交出去，`ModelFeatureRenderer.renderModel` 真正画之前会按渲染状态再 setupAnim 一次，
-  所以那里也摆一遍（`MusicianDrawMixin`，身体和盔甲都走这里）；`submit` 里那次只给乐器层（弓、琴槌、手持乐器）用。
-  只改前一处时乐器摆对了、身体却是骑乘的姿势（玩家坐在钢琴、管风琴前手垂着，僵尸手平举）。
-  乐器由一层画在手位上（玩家用原来那层，原版人形生物的渲染器加一层），手里原本拿着的不画。
+  （`MusicianModelMixin`，注入 `LivingEntityRenderer.render` 里 setupAnim 之后），因为僵尸之类的模型在 setupAnim 末尾还会再抬一次手。
+  1.21.1 摆完就地画身体，盔甲照着身体抄姿势；只有溺尸的外层、流浪者和沼骸的衣服那几层（`RenderLayer.coloredCutoutModelCopyLayerRender`）
+  会自己再 setupAnim 一次，那里再摆一遍（`MusicianDrawMixin`），否则衣服是骑乘的姿势。玩家模型的袖子、裤腿在摆完后照手臂、腿再抄一遍。
+  1.21.1 没有渲染状态：这一帧怎么演奏在画这个人之前（`RenderLivingEvent.Pre`）按实体算好（`MusicianPoses.Drawing`），画完就去掉。
+  （26.1 的身体在 `ModelFeatureRenderer.renderModel` 里按渲染状态再 setupAnim 一次才画，`MusicianDrawMixin` 挂在那里。）
+  乐器由一层画在手位上（玩家用原来那层，原版人形生物的渲染器加一层；模型是 `models/item/` 下单独加载的 `*_held`，`HeldModel`），
+  手里原本拿着的不画（`MusicianHandItemMixin` 跳过原版的手持物品层）。
   原版的腿没有膝盖：坐在键盘、竖琴前时两腿往前下方斜伸（像骑乘那样平伸会插进琴身）。
 - **车万女仆骨架**（森林精灵、神狐，以后的 NPC 只要用这套骨骼名就能套用，见 [NPC_MODELS.md](https://github.com/wushuowei1145/Logos-Spellwrought-Expanse/blob/main/docs/NPC_MODELS.md) 第 2 节）：
   手持乐器的坐标以肩线为准，按两段手臂总长和玩家一臂（9 像素）之比放大，量到骨架的 `Arm`；琴凳坐标 1 像素 = 2 个模型单位。
@@ -347,7 +352,8 @@
   NPC 两骨 IK 够到弓根和琴颈；大提琴坐着、两膝分开夹着琴，低音提琴站着、腿伸直。那件乐器最近在响时弓来回拉。
   运弓的手位就是画出来的弓根（在肩指向弓根该在的点的那条线上、一臂远），手和弓一起走；弓根该在的点对 NPC 常常比一臂远，
   直接拿它当 IK 目标时手会被收回到肩的正前方、只上下动，弓却在左右拉。
-- **琴槌**（`items/held/` 下的 `glockenspiel_mallet`、`chime_hammer`、`timpani_mallet`，只供渲染）：钟琴两支小白漆槌，右手敲低音、左手敲高音
+- **琴槌**（`models/item/` 下的 `hexen_glockenspiel_mallet_held`、`hexen_chime_hammer_held`、`hexen_timpani_mallet_held`，只供渲染，
+  客户端按模型 id 单独加载，`HeldModel`）：钟琴两支小白漆槌，右手敲低音、左手敲高音
   （从演奏者看低音在右手边，同模型的长短音条）；管钟右手一把皮锤敲管顶靠演奏者的一侧，左手垂着；定音鼓两支毡头槌。
   一个音落下时槌头贴到音条 / 管顶 / 鼓皮上，约 0.14 秒后抬起 3 像素。原版手臂没有手肘，直接指向槌头会越过它，
   所以手臂指向槌头上方往回一点，槌从手里斜着落下去；NPC 的手停在离槌头一支槌远的地方。
@@ -377,41 +383,64 @@
 
 ### 16.3 车万女仆
 
-女仆模组 26.1 版（2.0.0）有两种女仆模型，用的都是它公开的接口（`api` 包）：
+女仆模组有两种女仆模型，用的都是它公开的接口（`api` 包）。下面先照女仆模组 26.1 版（2.0.0）做；这条分支上的 `MaidMusicians`
+对的是 1.21.1 的女仆模组 1.5.3（2026-11-20 对着它的 jar 和源码改过、编译过，在开发环境的客户端里跑过，见 VERIFICATION.md），
+两个版本接口不一样的地方：
+
+| 26.1（2.0.0） | 1.21.1（1.5.3） |
+| --- | --- |
+| 渲染状态修改器（`RegisterRenderStateModifiersEvent`）记下这一帧 | `RenderLivingEvent.Pre`：基岩版由女仆渲染器（原版的 `LivingEntityRenderer`）发，GeckoLib 由它里面的 `GeckoEntityMaidRenderer` 发，`Post` 时去掉 |
+| 动画列表末尾加一段 `IAnimation`，改 `EntityMaidModel` 的部件 | 女仆模型 `BedrockModel` 的 setupAnim 之后（`MusicianModelMixin` → `MusicianPoses.afterModelSetup` → `MaidMusicians` 登记的 `Poser`），改 `getModelMap()` 里的部件 |
+| 根骨骼 `__root__` 的偏移换成琴凳高度 | 没有根骨骼：女仆模组坐下时用 `GlWrapper` 直接把画身体的 PoseStack 往下挪 0.3 格（骑扫帚还会转），所以 setupAnim 之前记下矩阵（`MusicianPoses.beforeModelSetup`），之后换回来再按琴凳、工位的高度挪 |
+| `AddMaidLayerEvent.Legacy`、`.Gecko` 加层 | `ILittleMaid` 扩展（`@LittleMaidExtension`，`MaidMusicians.Extension`）的 `addAdditionMaidLayer`、`addAdditionGeckoMaidLayer`：女仆模组建两种渲染器时各调一次；YSM 借 GeckoLib 的层时按 `copy` 复制 |
+| 清空渲染状态里两只手的物品 | 女仆模组画手持物品的层（`LayerMaidHeldItem`、`GeckoLayerMaidHeld`）换成外壳，`MusicianPoses.hidesHandItems` 时不画；基岩版的层列表是原版 `protected` 的，经 `mixin/LivingEntityRendererAccess`（只读写列表，原版的、必有的类）拿到。不往女仆模组的类里写 mixin |
+| GeckoLib 骨骼在别的线程算好，层里按 `GeckoMaidRenderData` 的挂点 | 骨骼在渲染线程上、画之前才算；层（`GeoLayerRenderer`）直接收到实体，按 `ILocationModel` 的 `leftHandBones`、`rightHandBones`、`headBones` 用女仆模组自己的 `RenderUtils.prepMatrixForLocator`、`prepMatrixForBone` 算 |
+| `DefaultGeckoAnimationEvent` 加默认动作 | 同一个事件，但游戏第一次加载资源时 NeoForge 的游戏事件总线还没开（`ClientModLoader` 等第一次加载完才 `start`，没开时发的事件直接丢掉），谁也收不到，F3+T 之后才收得到。所以 GeckoLib 女仆画之前看一眼她的动画文件（`GeckoLibCache`）里有没有这几段，没有就照女仆模组合并默认动作的做法补上、登记到 `ConditionManager`（这两个不在 `api` 包里） |
 
 - **基岩版模型**（女仆模组自带的模型都是；骨骼 `head`、`body`、`armLeft`、`armRight`、`legLeft`、`legRight`，手臂直、无手肘，同原版）：
-  渲染状态修改器在女仆模组提取完渲染状态后，往这只女仆的动画列表（`IAnimation`，模型包的 JS 动画也是这个接口）末尾加一段：
-  整个人的高度换成琴凳、工位的（女仆模组坐下时往下挪 0.3 格是为它自己的坐垫）、双臂指向手位、腿摆好。手位就是第 14、15 节那一份，
+  排在女仆模组自己的动画之后摆：整个人的高度换成琴凳、工位的（女仆模组坐下时往下挪 0.3 格是为它自己的坐垫）、双臂指向手位、腿摆好。
+  26.1 是渲染状态修改器在女仆模组提取完渲染状态后，往这只女仆的动画列表（`IAnimation`，模型包的 JS 动画也是这个接口）末尾加一段；
+  1.21.1 没有渲染状态，画之前（`RenderLivingEvent.Pre`）按实体算好这一帧，女仆模型的 setupAnim 跑完之后
+  （`MusicianModelMixin` → `MusicianPoses.afterModelSetup` → `MaidMusicians` 登记的那一段）直接改部件的转角。手位就是第 14、15 节那一份，
   换算到女仆模型像素时按模型的 `render_entity_scale`，髋按模型的腿的支点算；手持乐器的下巴、嘴边位置跟着女仆的头和身体。
-  手持乐器、琴弓、琴槌由 `AddMaidLayerEvent.Legacy` 加的一层画（先走一遍根骨骼，同女仆模组的手持物品层），手里原本的东西不画。
-- **GeckoLib 模型**（模型包里 `is_gecko`，如自带的酒狐）：骨骼在女仆模组自己的 GeckoLib 分支里、在别的线程算好，没有公开的办法在那之后改，
-  所以手不跟着音走。用 `DefaultGeckoAnimationEvent` 给所有 GeckoLib 女仆加三段默认动作，按骑着的实体的标签播放（女仆模组先查骑乘的实体，
+  手持乐器、琴弓、琴槌由加的那一层画（26.1 先走一遍根骨骼；1.21.1 各层本来就在模型的坐标里，同女仆模组的手持物品层），手里原本的东西不画。
+  1.21.1 这一层紧跟在手持物品层后面、不加在最后：女仆模组的背包层挪了 PoseStack（往上半格、往后）不还原，后面的背后物品、旗帜两层
+  是照着那里画的，加在最后的话乐器、琴弓会画到头顶后面（2026-11-20 客户端截图里看到的）。
+- **GeckoLib 模型**（模型包里 `is_gecko`，如自带的酒狐）：26.1 的骨骼在女仆模组自己的 GeckoLib 分支里、在别的线程算好，没有公开的办法在那之后改，
+  所以手不跟着音走（1.21.1 的 1.5.3 是在渲染线程上算的，`ICustomAnimation.setGeckoRotationAngles` 能在那之后改，但这里照 26.1 不改）。用 `DefaultGeckoAnimationEvent` 给所有 GeckoLib 女仆加三段默认动作，按骑着的实体的标签播放（女仆模组先查骑乘的实体，
   再查它自己的「坐垫」动作）：`vehicle#starbloom_orchestra:bench_seat` 坐着、两手在前面弹；`vehicle#starbloom_orchestra:instrument_seat` 坐着拉大提琴；
   `vehicle#starbloom_orchestra:standing_post` 站着、两手在前面敲。用标签不用实体 id（`vehicle$...`）：这个快照版按 id 查的那一路
   把 id 放在按引用比较的集合里，永远对不上（连它自带的 `vehicle$minecraft:player` 也是），按标签查的那一路是好的。模型包自己写了同名动作时用模型包的。按酒狐的身材调的高度，别的模型可能高低差一点。
+  这几段没进动画文件时，女仆模组退回它自己的 `chair`（整个人往下挪 16 像素、腿伸平），看上去像坐在凳子底下的地上；1.21.1 第一次加载资源时就是这样（见上表最后一行）。
   **手持乐器**（2026-11-15）：按手里物品的标签再加五段 `hold_mainhand#starbloom_orchestra:maid_pose/<乐器>`（小提琴和中提琴、长笛、
   双簧管、巴松管、小号；物品标签 `data/starbloom_orchestra/tags/item/maid_pose/`），女仆模组的「主手」控制器和「骑乘」那段一起放，
   只管两条手臂：端琴、端笛、举号的姿势，小提琴坐着时（`ysm.is_passenger`）右手来回拉弓。不坐着、只是拿着时也是这个姿势（不拉弓）。
-  乐器、琴弓、琴槌由 `AddMaidLayerEvent.Gecko` 加的一层画：动作算完后取两只手的挂点（`LEFT_HAND`、`RIGHT_HAND`）和头骨（`Head`），
+  乐器、琴弓、琴槌由加的那一层画：动作算完后取两只手的挂点（`LEFT_HAND`、`RIGHT_HAND`；1.5.3 是 `LeftHandLocator`、`RightHandLocator`）和头骨（`Head`），
   乐器两头各对着一个点——小提琴从下巴偏左到托琴颈的左手，长笛、双簧管、小号从嘴边到右手或朝前，巴松管从右手（胯前）到左手，
   琴弓从右手到琴弦上弓毛该压的点（大提琴、低音提琴同 `HeldRig.seatedBlock`），琴槌从手到槌头该落的点（同第 15 节）。
-  换了模型包手位变了，乐器跟着手走（两头之间的距离差得多时乐器放大缩小一点，0.85–1.25 倍）。手里原本的东西不画。
+  换了模型包手位变了，乐器跟着手走（两头之间的距离差得多时乐器放大缩小一点，0.85–1.25 倍）。手里原本的东西不画（同基岩版）。
   层的坐标：模型像素，x 向右、y 向上、脸朝 -z，原点在座位上，同演奏者的方块像素只差双脚的位置和模型的缩放（取自矩阵）。
-  手位按酒狐调的；动作是循环的，不跟着音走，也不管乐团停没停。
+  手位按酒狐调的；动作是循环的，不跟着音走，也不管乐团停没停。女仆手里拿着别的东西（比如剑）时，女仆模组「主手」控制器那段
+  （`hold_mainhand:sword`）照样会动右臂，同 26.1。
+- YSM 模型的女仆（女仆模组交给 YSM 画）在 1.21.1 上不摆演奏姿势、乐器也不画：YSM 的渲染器不经过上面两种渲染器，`MaidMusicians` 不认
+  （复制过去的层看不到这一帧的演奏者，什么也不画；手里的东西照常画）。没装 YSM 试过。
 - 女仆怎么上琴凳、工位：同别的生物，拴绳牵着右键（女仆骑着东西时女仆模组本来就不让它走动）；把乐器交给它也一样。
 - 拿魂符收起牵上来的女仆：上座时先解开拴绳，原版客户端收到「拴绳没人拿着」（对方 id 0）后留下一条空的拴绳记录、不再清，
   女仆模组的魂符在客户端也把女仆存一遍，存这条记录时崩溃（`Invalid LeashData had no attachment`，2026-11-15 维护者报的）。
   `mixin/LeashLinkClearMixin` 在客户端照服务端的样子把它清成 null（只动原版的 `ClientPacketListener`，不碰女仆模组）。
-- 编译：女仆模组 26.1 版不在任何 Maven 上，同 Logos 用本地 jar（`libs/touhoulittlemaid.jar` 或 `-Ptlm_jar=<路径>`），没有 jar 时
-  `MaidMusicians`、`MaidHallViews` 不参与编译；运行时只有装了女仆模组的客户端才注册（`LogosDimension` 按类名找）。`-Ptlm` 把它加进开发环境。
+  1.21.1 的 `Leashable#writeLeashData` 遇到这种记录只是不写、不会崩；这个修正照样留着，让客户端和服务端一致。
+- 编译：女仆模组不在任何 Maven 上，同 Logos 用本地 jar（这条分支要 1.21.1 NeoForge 版；`libs/touhoulittlemaid.jar` 或 `-Ptlm_jar=<路径>`），没有 jar 时
+  `MaidMusicians` 不参与编译（附属的 `MaidHallViews` 同样）；运行时只有装了女仆模组的客户端才注册（`StarbloomOrchestra` 按类名找）。`-Ptlm` 把它加进开发环境。
   **发出去的 jar 一定要带着女仆 jar 编译**：没带时只在 Gradle 输出里有一行 `Touhou Little Maid compat left out`，游戏照常，
   女仆坐上琴凳、站上工位却是女仆模组默认的跪坐姿势。2026-11-15 查到一键编译只给 Logos 传了 `-Ptlm_jar`，附属那份就是这样漏的
   （脚本已改成也传给附属，并核对 jar 里有 `MaidMusicians`）。查的时候先看 jar 里有没有 `dev/starbloom/orchestra/client/music/MaidMusicians.class`。
 
 ### 16.4 没做的
 
-- GeckoLib 女仆的手跟着音走（骨骼在女仆模组的线程里算，公开接口只能加默认动作；Molang 读不到这边的音符）。
+- GeckoLib 女仆的手跟着音走（26.1 的骨骼在女仆模组的线程里算，公开接口只能加默认动作；Molang 读不到这边的音符）。
+  1.21.1 的 1.5.3 可以用 `ICustomAnimation.setGeckoRotationAngles` 在它的动画之后改骨骼，以后可以照基岩版那样让手跟着音走。
 - 女仆自己找空琴凳、空工位（同第 14.6 节的同伴）。
+- 1.21.1：真的玩家手动试玩（拴绳牵上琴凳、乐团里跟着音演奏）、多人；开发环境的检查场景是临时写的、没有提交（同附属的 `MaidHallViews`，免得测试要带女仆模组）。
 
 ## 17. 指挥：打拍子、选声部、调力度（2026-11-13）
 
@@ -534,7 +563,7 @@
 四件都是一格的方块，演奏的人**站**着：小军鼓、吊镲、三角铁站在乐器前面（朝北放置时站在北面、面朝南，同钟琴）；
 大鼓**侧放**（维护者试玩后定：鼓皮朝两边，同乐团里大鼓的摆法），人站在鼓的东侧、面朝西敲东面那面鼓皮（朝北放置时；
 方块状态比别的乐器多转 90°，物品栏里还是鼓皮朝前）。空手右键站上去、拴绳牵着生物带上去、
-潜行空手右键让生物离开（`InstrumentPosts`）。姿势同钟琴、管钟（MALLETS），槌画在手上（`items/held/`）：
+潜行空手右键让生物离开（`InstrumentPosts`）。姿势同钟琴、管钟（MALLETS），槌画在手上（`models/item/hexen_*_held`，`HeldModel`）：
 
 - 大鼓：右手一支羊毛槌，打朝着演奏者那面鼓皮偏右上的地方，抬起时往回收（和鼓皮的相对位置同正放时，只是整个转到侧面）；
 - 小军鼓：两根鼓棒在鼓皮靠演奏者的一侧**轮流**打（每个新落下的音换一只手，同一个键的滚奏也左右交替）；

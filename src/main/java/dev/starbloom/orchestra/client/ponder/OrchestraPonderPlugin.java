@@ -6,12 +6,12 @@ import dev.starbloom.orchestra.music.Instruments;
 import dev.starbloom.orchestra.music.orchestra.Orchestra;
 import java.util.List;
 import java.util.function.Supplier;
-import net.createmod.ponder.api.client.registration.PonderPlugin;
-import net.createmod.ponder.api.client.registration.PonderSceneRegistrationHelper;
-import net.createmod.ponder.api.client.registration.PonderTagRegistrationHelper;
-import net.createmod.ponder.api.client.registration.TagBuilder;
+import net.createmod.ponder.api.registration.PonderPlugin;
+import net.createmod.ponder.api.registration.PonderSceneRegistrationHelper;
+import net.createmod.ponder.api.registration.PonderTagRegistrationHelper;
+import net.createmod.ponder.api.registration.TagBuilder;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.ItemLike;
 
@@ -20,9 +20,9 @@ import net.minecraft.world.level.ItemLike;
  * 一个物品可以有好几个场景，按住 W 时按这里注册的顺序排。
  */
 public final class OrchestraPonderPlugin implements PonderPlugin {
-    public static final Identifier MUSICIANS = StarbloomOrchestra.id("musicians");
-    public static final Identifier PIPE_ORGAN = StarbloomOrchestra.id("pipe_organ");
-    public static final Identifier ORCHESTRA = StarbloomOrchestra.id("orchestra");
+    public static final ResourceLocation MUSICIANS = StarbloomOrchestra.id("musicians");
+    public static final ResourceLocation PIPE_ORGAN = StarbloomOrchestra.id("pipe_organ");
+    public static final ResourceLocation ORCHESTRA = StarbloomOrchestra.id("orchestra");
 
     @Override
     public String getModId() {
@@ -36,7 +36,7 @@ public final class OrchestraPonderPlugin implements PonderPlugin {
 
     @Override
     @SuppressWarnings("unchecked")
-    public void registerScenes(PonderSceneRegistrationHelper<Identifier> registration) {
+    public void registerScenes(PonderSceneRegistrationHelper<ResourceLocation> registration) {
         PonderSceneRegistrationHelper<Item> helper = registration.withKeyFunction(BuiltInRegistries.ITEM::getKey);
         helper.forComponents(items(Benches.BENCH_ITEM, Benches.DUET_ITEM, Instruments.GRAND_PIANO_ITEM, Instruments.HARPSICHORD_ITEM,
                 Instruments.CELESTA_ITEM, Instruments.CONCERT_HARP_ITEM))
@@ -58,18 +58,14 @@ public final class OrchestraPonderPlugin implements PonderPlugin {
             .addStoryBoard("podium", OrchestraScenes::podium, ORCHESTRA);
     }
 
-    /** 上一次注册标签时物品的数据组件绑好了没有（没绑好时标签没有图标，进世界后 {@link OrchestraPonder} 重新注册一次）。 */
-    static boolean iconsRegistered;
-
-    /** 标签的图标：26.1 的物品数据组件进了世界才绑定，Ponder 在模组加载完时就注册标签，那时建 ItemStack 会崩，只能先不放图标。 */
+    /** 标签的图标：1.21.1 的物品默认数据组件在物品构造时就有了，Ponder 在模组加载完时注册标签，这时就能放图标。 */
     private static TagBuilder icon(TagBuilder tag, Supplier<? extends ItemLike> item) {
-        return iconsRegistered ? tag.item(item.get(), true, false) : tag;
+        return tag.item(item.get(), true, false);
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public void registerTags(PonderTagRegistrationHelper<Identifier> registration) {
-        iconsRegistered = Benches.BENCH_ITEM.get().builtInRegistryHolder().areComponentsBound();
+    public void registerTags(PonderTagRegistrationHelper<ResourceLocation> registration) {
         PonderTagRegistrationHelper<Item> helper = registration.withKeyFunction(BuiltInRegistries.ITEM::getKey);
         icon(registration.registerTag(MUSICIANS).addToIndex(), Benches.BENCH_ITEM)
             .title("Where musicians sit and stand")

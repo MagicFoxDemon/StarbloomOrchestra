@@ -15,15 +15,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.input.KeyEvent;
-import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * 乐器界面，两页：
@@ -35,7 +34,7 @@ import org.jspecify.annotations.Nullable;
  */
 public class InstrumentScreen extends Screen implements MidiKeyboard.Target {
     private static final int W = 400, H = 226, PAD = 28;
-    private static final int KEY_LEFT = 263, KEY_RIGHT = 262, KEY_UP = 265, KEY_DOWN = 264, KEY_SPACE = 32;
+    private static final int KEY_LEFT = 263, KEY_RIGHT = 262, KEY_UP = 265, KEY_DOWN = 264, KEY_SPACE = 32, KEY_ESCAPE = 256;
 
     private final BlockPos pos;
     private static final int PLAY = 0, ROLL = 1, STOPS = 2;
@@ -182,21 +181,21 @@ public class InstrumentScreen extends Screen implements MidiKeyboard.Target {
         MusicClient.prewarmOrgan(pos);
     }
 
-    private void drawStopsPage(GuiGraphicsExtractor g) {
+    private void drawStopsPage(GuiGraphics g) {
         InstrumentBlockEntity be = entity();
         if (be == null) return;
         var organ = be.organ();
         int x = x0 + PAD;
         if (organ != null) {
-            g.text(font, tr("pipes", organ.tin(), organ.wood(), organ.reed(), organ.chests(), organ.range()), x, y0 + 44, Parchment.INK, false);
+            g.drawString(font, tr("pipes", organ.tin(), organ.wood(), organ.reed(), organ.chests(), organ.range()), x, y0 + 44, Parchment.INK, false);
         }
-        g.text(font, tr("presets"), x, y0 + 107, Parchment.INK_HINT, false);
+        g.drawString(font, tr("presets"), x, y0 + 107, Parchment.INK_HINT, false);
         RoomAcoustics.Reverb auto = OrganRoom.estimate(pos, be);
         Component room;
         if (OrganRoom.soundPhysics() && be.reverbMode() == RoomAcoustics.AUTO) room = tr("room_sound_physics");
         else if (!auto.on()) room = tr("room_open");
         else room = tr("room_inside", String.format("%.1f", auto.seconds()));
-        g.text(font, room, x + 176, y0 + H - PAD - 12, Parchment.INK_HINT, false);
+        g.drawString(font, room, x + 176, y0 + H - PAD - 12, Parchment.INK_HINT, false);
     }
 
     private void initPlayPage() {
@@ -402,9 +401,8 @@ public class InstrumentScreen extends Screen implements MidiKeyboard.Target {
     }
 
     @Override
-    public boolean keyPressed(KeyEvent event) {
-        if (page != PLAY || event.isEscape()) return super.keyPressed(event);
-        int key = event.key();
+    public boolean keyPressed(int key, int scanCode, int modifiers) {
+        if (page != PLAY || key == KEY_ESCAPE) return super.keyPressed(key, scanCode, modifiers);
         switch (key) {
             case KEY_LEFT -> shiftOctave(-1);
             case KEY_RIGHT -> shiftOctave(1);
@@ -432,16 +430,16 @@ public class InstrumentScreen extends Screen implements MidiKeyboard.Target {
     }
 
     @Override
-    public boolean keyReleased(KeyEvent event) {
-        if (page != PLAY) return super.keyReleased(event);
-        if (event.key() == KEY_SPACE) {
+    public boolean keyReleased(int key, int scanCode, int modifiers) {
+        if (page != PLAY) return super.keyReleased(key, scanCode, modifiers);
+        if (key == KEY_SPACE) {
             if (pedal) {
                 pedal = false;
                 MusicClient.localPedal(pos, false);
             }
             return true;
         }
-        lift(event.key());
+        lift(key);
         return true;
     }
 
@@ -526,12 +524,12 @@ public class InstrumentScreen extends Screen implements MidiKeyboard.Target {
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        if (page == PLAY && event.button() == 0 && !busy()) {
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (page == PLAY && button == 0 && !busy()) {
             List<KeyRect> keys = keyboard();
             for (int i = keys.size() - 1; i >= 0; i--) {
                 KeyRect k = keys.get(i);
-                if (event.x() >= k.x && event.x() < k.x + k.w && event.y() >= k.y && event.y() < k.y + k.h) {
+                if (mouseX >= k.x && mouseX < k.x + k.w && mouseY >= k.y && mouseY < k.y + k.h) {
                     if (!playable(k.pitch)) return true;
                     mousePitch = k.pitch;
                     MusicClient.localNote(pos, k.pitch, velocity);
@@ -539,40 +537,42 @@ public class InstrumentScreen extends Screen implements MidiKeyboard.Target {
                 }
             }
         }
-        return super.mouseClicked(event, doubleClick);
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
-    public boolean mouseReleased(MouseButtonEvent event) {
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
         if (mousePitch >= 0) {
             MusicClient.localNote(pos, mousePitch, 0);
             mousePitch = -1;
         }
-        return super.mouseReleased(event);
+        return super.mouseReleased(mouseX, mouseY, button);
     }
 
     // —— 绘制 ——
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        // Screen.render 先画原版背景（模糊、压暗）再画控件；羊皮纸和文字要夹在两者之间，所以拆开来调用
+        renderBackground(g, mouseX, mouseY, partialTick);
         Parchment.draw(g, x0, y0, W, H);
         Component name = Component.translatable(nameKey());
-        g.text(font, name, x0 + PAD, y0 + 24, Parchment.INK_TITLE, false);
+        g.drawString(font, name, x0 + PAD, y0 + 24, Parchment.INK_TITLE, false);
         // 音源：合成（模组本体）或音乐厅录音（资源包）
         Component source = SampleMaps.sourceLabel(kind());
-        if (source != null) g.text(font, source, x0 + PAD, y0 + 36, Parchment.INK_HINT, false);
+        if (source != null) g.drawString(font, source, x0 + PAD, y0 + 36, Parchment.INK_HINT, false);
         switch (page) {
             case ROLL -> drawRollPage(g);
             case STOPS -> drawStopsPage(g);
             default -> drawPlayPage(g);
         }
         if (notice != null && System.currentTimeMillis() < noticeUntil) {
-            g.text(font, Component.literal(notice), x0 + PAD, y0 + H - PAD - 30, 0xFF8A2A1A, false);
+            g.drawString(font, Component.literal(notice), x0 + PAD, y0 + H - PAD - 30, 0xFF8A2A1A, false);
         }
-        super.extractRenderState(g, mouseX, mouseY, partialTick);
+        for (Renderable r : renderables) r.render(g, mouseX, mouseY, partialTick);
     }
 
-    private void drawPlayPage(GuiGraphicsExtractor g) {
+    private void drawPlayPage(GuiGraphics g) {
         InstrumentBlockEntity be = entity();
         Component status;
         if (busy() && be != null) {
@@ -586,46 +586,46 @@ public class InstrumentScreen extends Screen implements MidiKeyboard.Target {
                 status = tr("status", KeyLayout.noteName(base), velocity, pedal ? "●" : "○");
             }
         }
-        g.text(font, status, x0 + PAD, y0 + 44, Parchment.INK, false);
+        g.drawString(font, status, x0 + PAD, y0 + 44, Parchment.INK, false);
         var r = MusicClient.recorder;
         if (r != null) {
-            g.text(font, tr("recording", RollInfo.clock(r.elapsedMs()), r.count()), x0 + PAD + 200, y0 + 44, 0xFFA02020, false);
+            g.drawString(font, tr("recording", RollInfo.clock(r.elapsedMs()), r.count()), x0 + PAD + 200, y0 + 44, 0xFFA02020, false);
         }
         for (KeyRect k : keyboard()) {
             boolean on = sounding(k.pitch);
             boolean out = !playable(k.pitch);
             int fill = k.black ? (on ? Parchment.GOLD : out ? 0xFF5A4A40 : 0xFF241812) : (on ? 0xFFF4D27A : out ? 0xFFD8CCB4 : 0xFFF6F0E2);
             g.fill(k.x, k.y, k.x + k.w, k.y + k.h, fill);
-            g.outline(k.x, k.y, k.w, k.h, k.black ? 0xFF120A06 : 0xFF8C7A60);
+            g.renderOutline(k.x, k.y, k.w, k.h, k.black ? 0xFF120A06 : 0xFF8C7A60);
             int labelColor = k.black ? 0xFFE8DCC0 : Parchment.INK_HINT;
             int lx = k.x + (k.w - font.width(k.label)) / 2;
-            g.text(font, Component.literal(k.label), lx, k.y + k.h - 11, labelColor, false);
+            g.drawString(font, Component.literal(k.label), lx, k.y + k.h - 11, labelColor, false);
             if (!k.black && Math.floorMod(k.pitch, 12) == 0) {
-                g.text(font, Component.literal(KeyLayout.noteName(k.pitch)), k.x + 1, k.y + 2, 0xFFB09A78, false);
+                g.drawString(font, Component.literal(KeyLayout.noteName(k.pitch)), k.x + 1, k.y + 2, 0xFFB09A78, false);
             }
         }
         if (diatonic) {
             StringBuilder sb = new StringBuilder();
             String[] names = {"C", "D", "E", "F", "G", "A", "B"};
             for (int i = 0; i < 7; i++) sb.append(i + 1).append(':').append(names[i]).append(sharp[i] ? "♯ " : "♮ ");
-            g.text(font, Component.literal(sb.toString()), x0 + PAD, y0 + 158 - 2, Parchment.INK_HINT, false);
+            g.drawString(font, Component.literal(sb.toString()), x0 + PAD, y0 + 158 - 2, Parchment.INK_HINT, false);
         }
         Component hint = kind() == InstrumentKind.PIPE_ORGAN ? tr("hint_organ") : diatonic ? tr("hint_diatonic") : tr("hint");
-        g.text(font, hint, x0 + PAD, y0 + H - PAD - 10, Parchment.INK_HINT, false);
+        g.drawString(font, hint, x0 + PAD, y0 + H - PAD - 10, Parchment.INK_HINT, false);
     }
 
-    private void drawRollPage(GuiGraphicsExtractor g) {
+    private void drawRollPage(GuiGraphics g) {
         InstrumentBlockEntity be = entity();
         int x = x0 + PAD, y = y0 + 44;
         ItemStack slot = be == null ? ItemStack.EMPTY : be.roll();
         RollInfo info = slot.get(Instruments.MUSIC_ROLL.get());
         if (slot.isEmpty()) {
-            g.text(font, tr("slot_empty"), x, y, Parchment.INK, false);
+            g.drawString(font, tr("slot_empty"), x, y, Parchment.INK, false);
         } else if (info == null) {
-            g.text(font, tr("slot_blank"), x, y, Parchment.INK, false);
+            g.drawString(font, tr("slot_blank"), x, y, Parchment.INK, false);
         } else {
-            g.text(font, Component.literal(info.title().isEmpty() ? "—" : info.title()), x, y, Parchment.INK_TITLE, false);
-            g.text(font, tr("slot_info", info.author().isEmpty() ? "—" : info.author(), RollInfo.clock(info.durationMs()), info.noteCount()),
+            g.drawString(font, Component.literal(info.title().isEmpty() ? "—" : info.title()), x, y, Parchment.INK_TITLE, false);
+            g.drawString(font, tr("slot_info", info.author().isEmpty() ? "—" : info.author(), RollInfo.clock(info.durationMs()), info.noteCount()),
                 x, y + 12, Parchment.INK, false);
         }
         MusicClient.Track t = MusicClient.track(pos);
@@ -638,7 +638,7 @@ public class InstrumentScreen extends Screen implements MidiKeyboard.Target {
             state = tr(t.playing ? "state_playing" : "state_paused", RollInfo.clock(now), RollInfo.clock(total));
             if (t.roll == null && t.rollId != null && MusicClient.missing(t.rollId)) state = tr("state_missing");
         }
-        g.text(font, state, x, y + 28, Parchment.INK_HINT, false);
-        if (info != null && info.parts().size() > 1) g.text(font, tr("parts"), x, y0 + 114, Parchment.INK_HINT, false);
+        g.drawString(font, state, x, y + 28, Parchment.INK_HINT, false);
+        if (info != null && info.parts().size() > 1) g.drawString(font, tr("parts"), x, y0 + 114, Parchment.INK_HINT, false);
     }
 }

@@ -4,7 +4,8 @@
     "shinobue": "starbloom_orchestra:block/instrument/shinobue",
     "particle": "starbloom_orchestra:block/instrument/shinobue"
   },
-  "elements": [
+  "loader": "starbloom_orchestra:rotated_cuboids",
+  "cuboids": [
     {
       "from": [
         1.5,

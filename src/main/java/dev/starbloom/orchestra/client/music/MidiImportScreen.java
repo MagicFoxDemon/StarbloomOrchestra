@@ -10,15 +10,15 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.Util;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * 导入 MIDI：列出 &lt;游戏目录&gt;/logos_music/ 里的文件（见 {@link MidiLibrary}），选一个在后台线程解析，
@@ -182,11 +182,11 @@ public class MidiImportScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent e, boolean doubleClick) {
-        if (super.mouseClicked(e, doubleClick)) return true;
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (super.mouseClicked(mouseX, mouseY, button)) return true;
         int lx = x0 + PAD, ly = y0 + 40;
-        if (e.button() == 0 && e.x() >= lx && e.x() < lx + LIST_W && e.y() >= ly && e.y() < ly + VISIBLE * ROW) {
-            int i = scroll + (int) ((e.y() - ly) / ROW);
+        if (button == 0 && mouseX >= lx && mouseX < lx + LIST_W && mouseY >= ly && mouseY < ly + VISIBLE * ROW) {
+            int i = scroll + (int) ((mouseY - ly) / ROW);
             if (i < files.size() && !files.get(i).tooBig()) pick(files.get(i).name());
             return true;
         }
@@ -200,47 +200,49 @@ public class MidiImportScreen extends Screen {
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        // Screen.render 先画原版背景（模糊、压暗）再画控件；羊皮纸和列表要夹在两者之间，所以拆开来调用
+        renderBackground(g, mouseX, mouseY, partialTick);
         Parchment.draw(g, x0, y0, W, H);
         int lx = x0 + PAD, ly = y0 + 40;
-        g.text(font, title, lx, y0 + 24, Parchment.INK_TITLE, false);
-        g.text(font, tr("folder_hint", MidiLibrary.FOLDER), lx + 80, y0 + 24, Parchment.INK_HINT, false);
+        g.drawString(font, title, lx, y0 + 24, Parchment.INK_TITLE, false);
+        g.drawString(font, tr("folder_hint", MidiLibrary.FOLDER), lx + 80, y0 + 24, Parchment.INK_HINT, false);
         g.fill(lx, ly, lx + LIST_W, ly + VISIBLE * ROW, 0x30FFFFFF);
-        g.outline(lx - 1, ly - 1, LIST_W + 2, VISIBLE * ROW + 2, Parchment.INK);
+        g.renderOutline(lx - 1, ly - 1, LIST_W + 2, VISIBLE * ROW + 2, Parchment.INK);
         if (files.isEmpty()) {
-            g.text(font, tr("no_files"), lx + 4, ly + 4, Parchment.INK_HINT, false);
+            g.drawString(font, tr("no_files"), lx + 4, ly + 4, Parchment.INK_HINT, false);
         }
         for (int i = 0; i < VISIBLE && scroll + i < files.size(); i++) {
             MidiLibrary.Entry f = files.get(scroll + i);
             int y = ly + i * ROW;
             if (f.name().equals(selected)) g.fill(lx, y, lx + LIST_W, y + ROW, 0x60E0B84A);
             String name = font.plainSubstrByWidth(f.name(), LIST_W - 6);
-            g.text(font, Component.literal(name), lx + 3, y + 2, f.tooBig() ? 0xFFA08070 : Parchment.INK, false);
+            g.drawString(font, Component.literal(name), lx + 3, y + 2, f.tooBig() ? 0xFFA08070 : Parchment.INK, false);
         }
         int rx = x0 + PAD + LIST_W + 12, ry = y0 + 40;
         if (parsing) {
-            g.text(font, tr("parsing"), rx, ry, Parchment.INK_HINT, false);
+            g.drawString(font, tr("parsing"), rx, ry, Parchment.INK_HINT, false);
         } else if (result != null) {
             MusicRoll roll = result.roll();
-            g.text(font, Component.literal(font.plainSubstrByWidth(roll.title(), W - PAD - (rx - x0))), rx, ry, Parchment.INK_TITLE, false);
-            g.text(font, tr("midi_info", RollInfo.clock(roll.durationMs()), roll.noteCount(), roll.parts().size()), rx, ry + 12, Parchment.INK, false);
+            g.drawString(font, Component.literal(font.plainSubstrByWidth(roll.title(), W - PAD - (rx - x0))), rx, ry, Parchment.INK_TITLE, false);
+            g.drawString(font, tr("midi_info", RollInfo.clock(roll.durationMs()), roll.noteCount(), roll.parts().size()), rx, ry + 12, Parchment.INK, false);
             int y = ry + 24;
             for (String note : result.notes()) {
                 for (var line : font.split(Component.literal(note), W - PAD - (rx - x0))) {
-                    g.text(font, line, rx, y, 0xFF8A4A1A, false);
+                    g.drawString(font, line, rx, y, 0xFF8A4A1A, false);
                     y += 10;
                 }
             }
-            g.text(font, tr("parts"), rx, y0 + 92 - 11, Parchment.INK_HINT, false);
+            g.drawString(font, tr("parts"), rx, y0 + 92 - 11, Parchment.INK_HINT, false);
         } else {
-            g.text(font, tr("pick_file"), rx, ry, Parchment.INK_HINT, false);
+            g.drawString(font, tr("pick_file"), rx, ry, Parchment.INK_HINT, false);
         }
         if (error != null) {
             for (var line : font.split(Component.literal(error), W - PAD * 2)) {
-                g.text(font, line, lx, y0 + H - PAD - 30, 0xFF8A2A1A, false);
+                g.drawString(font, line, lx, y0 + H - PAD - 30, 0xFF8A2A1A, false);
                 break;
             }
         }
-        super.extractRenderState(g, mouseX, mouseY, partialTick);
+        for (Renderable r : renderables) r.render(g, mouseX, mouseY, partialTick);
     }
 }

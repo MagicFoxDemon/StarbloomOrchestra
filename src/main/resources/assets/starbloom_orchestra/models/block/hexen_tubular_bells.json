@@ -4,7 +4,8 @@
     "hexen_tubular_bells": "starbloom_orchestra:block/instrument/hexen_tubular_bells",
     "particle": "starbloom_orchestra:block/instrument/particle_brass"
   },
-  "elements": [
+  "loader": "starbloom_orchestra:rotated_cuboids",
+  "cuboids": [
     {
       "from": [
         0.7,

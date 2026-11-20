@@ -6,7 +6,8 @@
     "banner": "starbloom_orchestra:block/instrument/hexenwald_banner",
     "particle": "starbloom_orchestra:block/instrument/particle_walnut"
   },
-  "elements": [
+  "loader": "starbloom_orchestra:rotated_cuboids",
+  "cuboids": [
     {
       "from": [
         8.5,

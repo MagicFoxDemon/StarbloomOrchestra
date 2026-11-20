@@ -75,7 +75,7 @@ public enum InstrumentKind {
     private final boolean velocitySensitive;
     private final boolean usesPedal;
     /** 无音高打击乐认的 GM 鼓键（从小到大）；有音高的乐器为 null。 */
-    private final int @org.jspecify.annotations.Nullable [] keys;
+    private final int @org.jetbrains.annotations.Nullable [] keys;
 
     InstrumentKind(String id, String blockId, int low, int high, int broadcastRange,
                    boolean dampsOnRelease, boolean velocitySensitive, boolean usesPedal) {
@@ -154,7 +154,7 @@ public enum InstrumentKind {
     }
 
     /** GM 鼓键归哪件打击乐；没有对应的乐器（通通鼓、牛铃……）为 null。 */
-    public static @org.jspecify.annotations.Nullable InstrumentKind ofDrumKey(int key) {
+    public static @org.jetbrains.annotations.Nullable InstrumentKind ofDrumKey(int key) {
         for (InstrumentKind k : values()) if (k.keys != null && k.sounds(key)) return k;
         return null;
     }

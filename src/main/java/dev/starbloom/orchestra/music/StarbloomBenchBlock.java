@@ -9,9 +9,8 @@ import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntitySpawnReason;
-import net.minecraft.world.entity.Leashable;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
@@ -24,14 +23,12 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
-import net.minecraft.world.level.redstone.Orientation;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
-import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * 星辰花琴凳（docs/ORCHESTRA.md 第 14 节）。坐的人面朝 {@link #FACING}（放置时玩家面对的方向）。
@@ -55,7 +52,7 @@ public class StarbloomBenchBlock extends InstrumentBlock {
     public static final float LINKED_FORWARD = 2.5f;
     /** 凳面前沿（像素，琴凳朝北时的 z），与碰撞箱、tools/instrument_models/keyboards.py 的琴凳一致。 */
     public static final float FRONT_EDGE = 3;
-    private static final Map<Direction, VoxelShape> SHAPES = Shapes.rotateHorizontal(Block.box(1, 0, FRONT_EDGE, 15, TOP, 13));
+    private static final Map<Direction, VoxelShape> SHAPES = InstrumentShapes.rotateHorizontal(Block.box(1, 0, FRONT_EDGE, 15, TOP, 13));
 
     public StarbloomBenchBlock(Properties properties) {
         super(properties);
@@ -238,12 +235,12 @@ public class StarbloomBenchBlock extends InstrumentBlock {
         BlockState state = level.getBlockState(bench);
         if (!(state.getBlock() instanceof StarbloomBenchBlock) || occupant(level, bench) != null) return false;
         if (who.isPassenger()) who.stopRiding();
-        BenchSeat seat = Benches.SEAT.get().create(level, EntitySpawnReason.TRIGGERED);
+        BenchSeat seat = Benches.SEAT.get().create(level);
         if (seat == null) return false;
         Direction facing = state.getValue(FACING);
         seat.bind(bench, seatPosition(bench, state, linked(level, bench, state) != null), facing.toYRot());
         level.addFreshEntity(seat);
-        if (!who.startRiding(seat, true, true)) {
+        if (!who.startRiding(seat, true)) {
             seat.discard();
             return false;
         }
@@ -289,37 +286,43 @@ public class StarbloomBenchBlock extends InstrumentBlock {
 
     // —— 交互 ——
 
+    /**
+     * 拿着东西右键。成功一律用 sidedSuccess（客户端 SUCCESS 挥手、服务端 CONSUME 不再广播挥手）；
+     * 让手里的东西自己处理时用 {@link ItemInteractionResult#SKIP_DEFAULT_BLOCK_INTERACTION}（不走空手交互、直接用物品）。
+     */
     @Override
-    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
-                                          InteractionHand hand, BlockHitResult hit) {
+    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
+                                              InteractionHand hand, BlockHitResult hit) {
         if (stack.is(Orchestra.BATON.get())) {
             // 指挥棒：关联了乐器的凳子就是那件乐器
             BlockPos instrument = linked(level, pos, state);
             if (!level.isClientSide()) Orchestra.batonOnInstrument(stack, (ServerLevel) level, instrument != null ? instrument : mainPos(state, pos), player);
-            return InteractionResult.SUCCESS;
+            return ItemInteractionResult.sidedSuccess(level.isClientSide());
         }
         if (stack.is(Items.LEAD)) {
-            if (level.isClientSide()) return InteractionResult.SUCCESS;
+            if (level.isClientSide()) return ItemInteractionResult.SUCCESS;
             Mob led = nearestLed(player);
             if (led != null) {
                 if (occupant(level, pos) == null) {
-                    led.removeLeash();
+                    // 解开拴绳、通知客户端，不掉拴绳物品（拴绳直接还给玩家）
+                    led.dropLeash(true, false);
                     if (!player.getAbilities().instabuild) player.getInventory().add(new ItemStack(Items.LEAD));
                     sit(level, pos, led);
                 }
-                return InteractionResult.SUCCESS;
+                return ItemInteractionResult.CONSUME;
             }
         }
         // 已经坐在这张凳上：把右键交给手里的东西（例如举起小提琴自己拉）
-        if (occupant(level, pos) == player) return InteractionResult.PASS;
-        return seatPlayer(level, pos, player);
+        if (occupant(level, pos) == player) return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
+        return seatPlayer(level, pos, player) == InteractionResult.PASS ? ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION
+            : ItemInteractionResult.sidedSuccess(level.isClientSide());
     }
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (player.isSecondaryUseActive()) {
             if (!level.isClientSide()) standUp(level, pos);
-            return InteractionResult.SUCCESS;
+            return InteractionResult.sidedSuccess(level.isClientSide());
         }
         return seatPlayer(level, pos, player);
     }
@@ -327,15 +330,18 @@ public class StarbloomBenchBlock extends InstrumentBlock {
     private static InteractionResult seatPlayer(Level level, BlockPos pos, Player player) {
         if (player.isPassenger()) return InteractionResult.PASS;
         if (!level.isClientSide()) sit(level, pos, player);
-        return InteractionResult.SUCCESS;
+        return InteractionResult.sidedSuccess(level.isClientSide());
     }
 
-    /** 拴在这个玩家手上、离他最近的生物（拴绳能牵到的距离以内）。 */
+    /**
+     * 拴在这个玩家手上、离他最近的生物（拴绳能牵到的距离以内）。1.21.1 的 {@code Leashable} 还没有 {@code leashableLeashedTo}，
+     * 这里照它的做法：在玩家碰撞箱中心 32 格见方的范围里找拴绳另一头是这个玩家的生物。
+     */
     public static @Nullable Mob nearestLed(Player player) {
         Mob best = null;
         double bestDistance = Double.MAX_VALUE;
-        for (Leashable leashable : Leashable.leashableLeashedTo(player)) {
-            if (!(leashable instanceof Mob mob)) continue;
+        AABB area = AABB.ofSize(player.getBoundingBox().getCenter(), 32.0, 32.0, 32.0);
+        for (Mob mob : player.level().getEntitiesOfClass(Mob.class, area, m -> m.getLeashHolder() == player)) {
             double d = mob.distanceToSqr(player);
             if (d < bestDistance) {
                 best = mob;
@@ -347,8 +353,8 @@ public class StarbloomBenchBlock extends InstrumentBlock {
 
     /** 前面的乐器放上、拆掉、换了：关联变了，重算演奏什么。 */
     @Override
-    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, @Nullable Orientation orientation, boolean movedByPiston) {
-        super.neighborChanged(state, level, pos, block, orientation, movedByPiston);
+    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos neighborPos, boolean movedByPiston) {
+        super.neighborChanged(state, level, pos, block, neighborPos, movedByPiston);
         refresh(level, pos);
     }
 }

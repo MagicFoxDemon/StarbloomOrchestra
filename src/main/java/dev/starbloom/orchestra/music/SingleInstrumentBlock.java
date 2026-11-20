@@ -22,7 +22,7 @@ public class SingleInstrumentBlock extends InstrumentBlock {
     public SingleInstrumentBlock(Properties properties, InstrumentKind kind, VoxelShape north) {
         super(properties);
         this.kind = kind;
-        this.shapes = Shapes.rotateHorizontal(north);
+        this.shapes = InstrumentShapes.rotateHorizontal(north);
         registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH));
     }
 

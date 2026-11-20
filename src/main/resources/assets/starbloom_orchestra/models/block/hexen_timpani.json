@@ -4,7 +4,8 @@
     "hexen_timpani": "starbloom_orchestra:block/instrument/hexen_timpani",
     "particle": "starbloom_orchestra:block/instrument/particle_kettle_copper"
   },
-  "elements": [
+  "loader": "starbloom_orchestra:rotated_cuboids",
+  "cuboids": [
     {
       "from": [
         9.95,

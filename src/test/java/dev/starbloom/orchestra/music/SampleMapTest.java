@@ -138,7 +138,7 @@ class SampleMapTest {
         try (var in = Files.newBufferedReader(PACK.resolve("pack.mcmeta"))) {
             meta = JsonParser.parseReader(in).getAsJsonObject().getAsJsonObject("pack");
         }
-        assertEquals(84, meta.get("min_format").getAsInt(), "resource pack format of Minecraft 26.1");
+        assertEquals(34, meta.get("pack_format").getAsInt(), "resource pack format of Minecraft 1.21.1");
         assertTrue(Files.exists(PACK.resolve("NOTICE.txt")), "the pack carries the Salamander attribution");
     }
 

@@ -7,7 +7,9 @@
     "G  "
   ],
   "key": {
-    "G": "minecraft:gold_ingot"
+    "G": {
+      "item": "minecraft:gold_ingot"
+    }
   },
   "result": {
     "id": "starbloom_orchestra:organ_trumpet_pipe",

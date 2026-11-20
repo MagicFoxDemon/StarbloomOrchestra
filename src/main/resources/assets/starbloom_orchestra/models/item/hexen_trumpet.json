@@ -5,7 +5,8 @@
     "banner": "starbloom_orchestra:block/instrument/hexenwald_banner",
     "particle": "starbloom_orchestra:block/instrument/hexen_trumpet"
   },
-  "elements": [
+  "loader": "starbloom_orchestra:rotated_cuboids",
+  "cuboids": [
     {
       "from": [
         0.4,
@@ -4098,5 +4099,13 @@
       ]
     }
   },
-  "render_type": "minecraft:cutout"
+  "render_type": "minecraft:cutout",
+  "overrides": [
+    {
+      "predicate": {
+        "starbloom_orchestra:playing": 1
+      },
+      "model": "starbloom_orchestra:item/hexen_trumpet_playing"
+    }
+  ]
 }

@@ -8,7 +8,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.core.BlockPos;
 import net.minecraft.sounds.SoundEvents;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * 指挥台的节拍器（docs/ORCHESTRA.md 第 18 节）：只有站在台上指挥的人听得到，每一拍（实际打的拍）一声咔哒，第一拍重一些。

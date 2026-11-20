@@ -100,6 +100,7 @@
 | 打击乐与指挥台 | `percussion.py` | 定音鼓 114、管钟 98、指挥台 39 / 42（220）、钟琴 45（110）、琴槌 6–9（12）、指挥棒（16×16 平面贴图） |
 
 `tools/instrument_art.py` 只剩方块状态、掉落、配方、物品定义和几张平面贴图；删掉旧的几何代码前后，全部 219 个生成文件逐字节一致（只少了不再用的 `piano_keys.png`、`starbloom_inlay.png`）。
+（这是 26.1 上的结果；1.21.1 这条分支没有物品定义，见第 9 节。）
 
 ## 8. 重做前的问题（2026-11-14 普查，已改）
 
@@ -108,3 +109,23 @@
 - 几乎所有模型都有完全重叠的面（定音鼓 50 处，`disc()` 三块同高的长方体叠出圆），远处会闪。
 - 全部用拉伸的原版贴图（金块、深色橡木板、方解石、混凝土），没有木纹方向、没有倒角。
 - 物品模型链的显示变换现在由 `ItemModelDisplayTest.itemModelChainsEndInADisplay` 检查（沿 parent 链找 display）。
+
+## 9. 1.21.1 这条分支上的模型格式
+
+脚本照旧按 26.1 的写法造模型，写文件时换成 1.21.1 读得了的样子（`tools/instrument_kit.py` 的 `write_json`、`Out.flush`），
+所以上面的画法、预算、契约两条线一样：
+
+- **没有物品模型定义**（`assets/<命名空间>/items/`，1.21.4 起才有）：物品 `<id>` 直接用 `models/item/<id>.json`。
+  手持乐器演奏时换成 `<id>_playing`，写成那份模型的 `overrides`：物品属性 `starbloom_orchestra:playing` 为 1 时换
+  （`client/music/ItemModelProperties`，判断同 26.1 的 `minecraft:using_item`）。
+- **只供渲染的模型**（拿在手上演奏的 `*_held`、`hexen_violin_bow`、工位上的琴槌 `hexen_*_held`）不是物品，客户端按模型 id 单独加载
+  （`client/music/HeldModel`，按 `ItemDisplayContext.NONE` 画，所以不带显示变换）。
+- **元素转动**：1.21.1 原版的 `rotation` 只认一根轴、0 / ±22.5° / ±45°，欧拉角 `{"x","y","z"}` 和别的角度整份模型读不出来。
+  所有转动原版都读得了的模型换成 `axis` / `angle`，仍是原版格式；否则整份模型改用本模组的几何加载器
+  `starbloom_orchestra:rotated_cuboids`（`client/music/RotatedCuboidModel`，元素先绕自己的 `origin` 转、再按方块状态转），
+  元素放在 `"cuboids"` 里（放在 `"elements"` 里原版会先解析、报错）。现在有元素的 74 个模型里 63 个走加载器。
+  读写好的模型文件时用 `kit.model_elements()`（两个键都认），`tools/model_preview.py` 也读 `"cuboids"`。
+- 1.21.1 的方块模型不写 `render_type` 就按不透明画：带透明像素的模型要自己写（用魔女之森旗的几个写的是 `minecraft:cutout`）。
+  贴图页本来就全不透明（第 1 节），其余模型不用写。
+- 单元测试 `ItemModelDisplayTest` 核对每个有名字的物品都有 `models/item/<id>.json`、`items/` 不在了、手持乐器的 `overrides`、
+  每个模型的转动原版读得了或者正确地交给了加载器（`elementRotationsParseIn1211`）。

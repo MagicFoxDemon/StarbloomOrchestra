@@ -4,7 +4,8 @@
     "hexen_suspended_cymbal": "starbloom_orchestra:block/instrument/hexen_suspended_cymbal",
     "particle": "starbloom_orchestra:block/instrument/particle_brass"
   },
-  "elements": [
+  "loader": "starbloom_orchestra:rotated_cuboids",
+  "cuboids": [
     {
       "from": [
         9.4,

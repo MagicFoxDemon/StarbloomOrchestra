@@ -6,44 +6,50 @@ plugins {
 group = 'dev.starbloom.orchestra'
 version = mod_version
 base { archivesName = mod_id }
-java.toolchain.languageVersion = JavaLanguageVersion.of(25)
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
-// 车万女仆是可选的（女仆坐上琴凳、乐器工位时的演奏姿势，docs/ORCHESTRA.md 第 16 节）。26.1 版还没上任何 Maven，
+// 车万女仆是可选的（女仆坐上琴凳、乐器工位时的演奏姿势，docs/ORCHESTRA.md 第 16 节）。要 1.21.1 NeoForge 版的 jar，
 // 编译时用本地的 jar：-Ptlm_jar=<路径> 或 libs/touhoulittlemaid.jar；没有 jar 时兼容的代码不参与编译，游戏照常。
-// 发布用的 jar 一定要带着女仆的 jar 编译，否则女仆坐上琴凳不会摆演奏姿势。
+// 发布用的 jar 一定要带着女仆的 jar 编译，否则女仆坐上琴凳不会摆演奏姿势。客户端场景 MaidViews（maid_musicians_ui）同样只在有 jar 时编译。
 def tlmJar = file(project.findProperty('tlm_jar') ?: 'libs/touhoulittlemaid.jar')
 if (!tlmJar.exists()) {
     logger.lifecycle("Touhou Little Maid compat left out: no jar at ${tlmJar} (pass -Ptlm_jar=<path>)")
-    sourceSets.main.java { exclude 'dev/starbloom/orchestra/client/music/MaidMusicians.java' }
+    sourceSets.main.java {
+        exclude 'dev/starbloom/orchestra/client/music/MaidMusicians.java'
+        exclude 'dev/starbloom/orchestra/client/music/MaidViews.java'
+    }
 }
 
 repositories {
     maven { url = 'https://maven.firstdark.dev/snapshots' }
-    // Ponder（按住 W 思索的图文讲解，机械动力的作者拆出来的库）和它要的 catnip。官方发布的 1.0.52 在 26.1 上用不了，
-    // 先用 tools/ponder_build.py 从上游固定的提交编译、发布到 libs/ponder-maven（docs/PONDER.md 第 4 节）；官方仓库留着，换回官方版本时用
-    def ponderLocal = maven { name = 'ponderLocal'; url = file('libs/ponder-maven') }
-    def createmod = maven { name = 'createmod'; url = 'https://maven.createmod.net' }
+    // Ponder（按住 W 思索的图文讲解，机械动力的作者拆出来的库）；1.21.1 用官方发布的版本
     exclusiveContent {
-        forRepositories(ponderLocal, createmod)
-        filter { includeGroup 'net.createmod.ponder'; includeGroup 'net.createmod.catnip' }
+        forRepository { maven { name = 'createmod'; url = 'https://maven.createmod.net' } }
+        filter { includeGroup 'net.createmod.ponder'; includeGroup 'net.createmod.catnip'; includeGroup 'dev.engine-room.flywheel' }
     }
-}
-if (!file("libs/ponder-maven/net/createmod/ponder/ponder-neoforge/${ponder_version}").exists()) {
-    logger.warn("Ponder ${ponder_version} is not in libs/ponder-maven: build it first with `uv run --no-project python tools/ponder_build.py` (docs/PONDER.md)")
 }
 
 neoForge {
     version = neo_version
+    parchment {
+        minecraftVersion = parchment_minecraft_version
+        mappingsVersion = parchment_mappings_version
+    }
     runs {
         client { client() }
         server { server(); programArgument '--nogui' }
         gameTestServer {
             type = 'gameTestServer'
             systemProperty 'neoforge.enabledGameTestNamespaces', mod_id
-            programArguments.addAll '--tests', providers.gradleProperty('orchestraTests').getOrElse("${mod_id}:*"),
-                    '--report', file('build/gametest-results.xml').absolutePath
+            // 同 26.1：世界测试用自己的世界 run/gametestserver/gametestworld（每次 Gradle 启动前清空，见下面的 tasks.configureEach），
+            // 不碰 runServer 的 run/world
+            programArguments.addAll '--universe', 'gametestserver', '--world', 'gametestworld'
+            // 1.21.1 的 GameTestServer 不认 --tests、--report、--repeatCount：选测试、复制、写 JUnit 报告由本模组读这几个系统属性做
+            //（gametest/GameTestFunctions）。-PorchestraTests 照旧是 starbloom_orchestra:instrument_* 这样的通配，逗号分开可以写几个
+            systemProperty 'starbloom_orchestra.tests', providers.gradleProperty('orchestraTests').getOrElse("${mod_id}:*")
+            systemProperty 'starbloom_orchestra.test_report', file('build/gametest-results.xml').absolutePath
             // 查偶发失败用：-PorchestraTestRepeat=50 把选中的每个测试复制 50 份放进同一批
-            if (project.hasProperty('orchestraTestRepeat')) programArguments.addAll '--repeatCount', project.property('orchestraTestRepeat').toString()
+            if (project.hasProperty('orchestraTestRepeat')) systemProperty 'starbloom_orchestra.test_repeat', project.property('orchestraTestRepeat').toString()
         }
         configureEach { logLevel = org.slf4j.event.Level.INFO }
     }
@@ -52,13 +58,14 @@ neoForge {
 }
 
 dependencies {
-    // Ponder 和 catnip（都是 MIT）打包进本模组的 jar（jar-in-jar，同机械动力的做法）：玩家不用另装；别的模组也带着时，
-    // NeoForge 只加载版本最高的那一份。Ponder 的 POM 里还写了 Flywheel，但它的 mods.toml 不要求、代码也不用，所以不传递依赖。
+    // Ponder（1.21.1 这条线上 catnip 在 Ponder 的 jar 里）和 Flywheel（都是 MIT）打包进本模组的 jar（jar-in-jar，同机械动力的做法）：
+    // 玩家不用另装；别的模组也带着时，NeoForge 只加载版本最高的那一份。1.21.1 的 Ponder 在 mods.toml 里要求 Flywheel [1.0.0,2.0)，
+    // 本模组的代码不用 Flywheel，所以只在运行时带上
     jarJar(implementation("net.createmod.ponder:ponder-neoforge:${ponder_version}") { transitive = false })
-    jarJar(implementation("net.createmod.catnip:catnip-neoforge:${ponder_version}") { transitive = false })
+    jarJar(runtimeOnly("dev.engine-room.flywheel:flywheel-neoforge-1.21.1:${flywheel_version}") { transitive = false })
     // LDLib2 只给开发时的客户端测试场景用（client/music/*Views，DEV_ONLY）：游戏本身不需要它，玩家不用装
-    implementation "com.lowdragmc.ldlib2:ldlib2-neoforge-26.1:${ldlib2_version}"
-    runtimeOnly("com.lowdragmc.kilagraph:kilagraph-neoforge-26.1:${kilagraph_version}") { transitive = false }
+    implementation "com.lowdragmc.ldlib2:ldlib2-neoforge-1.21.1:${ldlib2_version}"
+    runtimeOnly("com.lowdragmc.kilagraph:kilagraph-neoforge-1.21.1:${kilagraph_version}") { transitive = false }
     // 车万女仆只在编译时用；-Ptlm 把它加进开发环境的运行
     if (tlmJar.exists()) {
         compileOnly files(tlmJar)
@@ -76,12 +83,19 @@ tasks.named('test', Test) {
     // 管风琴新旧合成的试听：-PorganDemo=<输出目录> 时 OrganDemoTest 渲染 wav，否则跳过
     systemProperty 'starbloom_orchestra.organ_demo', providers.gradleProperty('organDemo').getOrElse('')
 }
-tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.compilerArgs += ['-Xmaxerrs', '5000']
+}
 
 // 思索场景（docs/PONDER.md）：-PponderExport 时世界测试 ponder_layouts 把每份布置存成蓝图，-PponderLangExport 时客户端检查
 // ponder_scenes_ui 先把场景代码里的英文写进 en_us.json。加在任务上、不加在 runs 里：runs 的参数会写进 build/moddev，
 // 以后从 IDE 启动也一直带着（同 gradle/ldlib2-uitest.gradle 的说明）
 tasks.configureEach { task ->
+    if (task.name == 'runGameTestServer') {
+        def testUniverse = file('run/gametestserver')
+        task.doFirst { project.delete(testUniverse) }
+    }
     if (task.name == 'runGameTestServer' && project.hasProperty('ponderExport')) {
         task.jvmArgs "-Dstarbloom_orchestra.ponder_export=${file('src/main/resources/assets/starbloom_orchestra/ponder').absolutePath}"
     }

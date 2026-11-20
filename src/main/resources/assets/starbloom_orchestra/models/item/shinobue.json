@@ -4,7 +4,8 @@
     "shinobue": "starbloom_orchestra:block/instrument/shinobue",
     "particle": "starbloom_orchestra:block/instrument/shinobue"
   },
-  "elements": [
+  "loader": "starbloom_orchestra:rotated_cuboids",
+  "cuboids": [
     {
       "from": [
         1.5,
@@ -1022,5 +1023,13 @@
         0.55
       ]
     }
-  }
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "starbloom_orchestra:playing": 1
+      },
+      "model": "starbloom_orchestra:item/shinobue_playing"
+    }
+  ]
 }

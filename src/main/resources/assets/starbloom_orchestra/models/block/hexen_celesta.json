@@ -4,7 +4,8 @@
     "hexen_celesta": "starbloom_orchestra:block/instrument/hexen_celesta",
     "particle": "starbloom_orchestra:block/instrument/particle_marble"
   },
-  "elements": [
+  "loader": "starbloom_orchestra:rotated_cuboids",
+  "cuboids": [
     {
       "from": [
         0.5,

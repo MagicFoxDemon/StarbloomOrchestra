@@ -7,10 +7,18 @@
     "P P"
   ],
   "key": {
-    "Q": "minecraft:quartz_block",
-    "S": "minecraft:string",
-    "N": "minecraft:note_block",
-    "P": "minecraft:dark_oak_planks"
+    "Q": {
+      "item": "minecraft:quartz_block"
+    },
+    "S": {
+      "item": "minecraft:string"
+    },
+    "N": {
+      "item": "minecraft:note_block"
+    },
+    "P": {
+      "item": "minecraft:dark_oak_planks"
+    }
   },
   "result": {
     "id": "starbloom_orchestra:hexen_harpsichord",

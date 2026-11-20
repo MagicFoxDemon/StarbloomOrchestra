@@ -25,8 +25,8 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.RenderFrameEvent;
-import net.neoforged.neoforge.client.network.event.RegisterClientPayloadHandlersEvent;
-import org.jspecify.annotations.Nullable;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * 客户端的乐团（docs/ORCHESTRA.md 第 6–8 节）：收服务端的乐团状态，让每件成员乐器的纸带播放（{@link MusicClient.Track}）
@@ -89,9 +89,13 @@ public final class Conducting {
 
     // —— 网络 ——
 
-    @SubscribeEvent
-    static void packets(RegisterClientPayloadHandlersEvent event) {
-        event.register(EnsemblePayloads.EnsembleState.TYPE, (p, c) -> c.enqueueWork(() -> state(p)));
+    /**
+     * 收到乐团状态。1.21.1 没有单独的客户端收包注册：这个包在公共端 {@code RegisterPayloadHandlersEvent} 里登记时只放转发
+     * （{@code Orchestra#payloads}），客户端初始化时 {@code MusicClient.ModBus} 把这里登记进 {@code ClientPayloadHandlers}；
+     * 专用服务端上什么都不登记，也就不会加载客户端的类。
+     */
+    public static void onEnsembleState(EnsemblePayloads.EnsembleState p, IPayloadContext c) {
+        c.enqueueWork(() -> state(p));
     }
 
     static void state(EnsemblePayloads.EnsembleState p) {

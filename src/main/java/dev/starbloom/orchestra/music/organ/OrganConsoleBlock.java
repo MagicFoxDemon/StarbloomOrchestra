@@ -2,19 +2,18 @@ package dev.starbloom.orchestra.music.organ;
 
 import dev.starbloom.orchestra.music.InstrumentBlock;
 import dev.starbloom.orchestra.music.InstrumentKind;
+import dev.starbloom.orchestra.music.InstrumentShapes;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelReader;
-import net.minecraft.world.level.ScheduledTickAccess;
+import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -25,7 +24,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * 管风琴演奏台：3 宽 × 2 高（{@link #WIDE}），主块在下排正中，手键盘居中、两侧是放音栓拉钮的侧板，左右对称，
@@ -41,9 +40,9 @@ public class OrganConsoleBlock extends InstrumentBlock {
     /** 3 宽演奏台各格的 part（下排正中、顺时针、逆时针，上排同样）。 */
     private static final int[] WIDE_PARTS = {0, 1, 4, 2, 3, 6};
     private static final int[] NARROW_PARTS = {0, 1, 2, 3};
-    private static final java.util.Map<Direction, VoxelShape> LOWER = Shapes.rotateHorizontal(
+    private static final java.util.Map<Direction, VoxelShape> LOWER = InstrumentShapes.rotateHorizontal(
         Shapes.or(Block.box(0, 0, 4, 16, 16, 16), Block.box(0, 0, 0, 16, 2, 4)));
-    private static final java.util.Map<Direction, VoxelShape> UPPER = Shapes.rotateHorizontal(Block.box(0, 0, 7, 16, 16, 16));
+    private static final java.util.Map<Direction, VoxelShape> UPPER = InstrumentShapes.rotateHorizontal(Block.box(0, 0, 7, 16, 16, 16));
 
     public OrganConsoleBlock(Properties properties) {
         super(properties);
@@ -100,7 +99,7 @@ public class OrganConsoleBlock extends InstrumentBlock {
     protected Vec3 centerOf(BlockState mainState, BlockPos main) {
         if (mainState.getValue(WIDE)) return Vec3.atCenterOf(main).add(0, 0.5, 0);
         Direction facing = mainState.getValue(FACING);
-        return Vec3.atCenterOf(main).add(Vec3.atLowerCornerOf(facing.getClockWise().getUnitVec3i()).scale(0.5)).add(0, 0.5, 0);
+        return Vec3.atCenterOf(main).add(Vec3.atLowerCornerOf(facing.getClockWise().getNormal()).scale(0.5)).add(0, 0.5, 0);
     }
 
     @Override
@@ -113,7 +112,8 @@ public class OrganConsoleBlock extends InstrumentBlock {
         Direction facing = context.getHorizontalDirection().getOpposite();
         Level level = context.getLevel();
         BlockPos main = context.getClickedPos();
-        if (main.getY() >= level.getMaxY()) return null;
+        // getMaxBuildHeight() 是不含的上界：主块在最高一格时上排放不下
+        if (main.getY() >= level.getMaxBuildHeight() - 1) return null;
         for (int part : WIDE_PARTS) {
             if (part == 0) continue;
             BlockPos p = offset(main, facing, part);
@@ -149,14 +149,14 @@ public class OrganConsoleBlock extends InstrumentBlock {
     }
 
     @Override
-    protected BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess ticks, BlockPos pos,
-                                     Direction direction, BlockPos neighborPos, BlockState neighborState, RandomSource random) {
+    protected BlockState updateShape(BlockState state, Direction direction, BlockState neighborState, LevelAccessor level,
+                                     BlockPos pos, BlockPos neighborPos) {
         int sibling = sibling(state, direction);
         if (sibling >= 0 && !(neighborState.is(this) && neighborState.getValue(PART) == sibling
                 && neighborState.getValue(FACING) == state.getValue(FACING) && neighborState.getValue(WIDE) == state.getValue(WIDE))) {
             return Blocks.AIR.defaultBlockState();
         }
-        return super.updateShape(state, level, ticks, pos, direction, neighborPos, neighborState, random);
+        return super.updateShape(state, direction, neighborState, level, pos, neighborPos);
     }
 
     @Override

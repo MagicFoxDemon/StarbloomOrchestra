@@ -2,11 +2,10 @@ package dev.starbloom.orchestra.client.music;
 
 import dev.starbloom.orchestra.ClientConfig;
 import java.util.List;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
 /**
@@ -52,7 +51,7 @@ public class MidiDeviceScreen extends Screen {
         }).bounds(x, y2, 112, 16).build());
         int ch = ClientConfig.MIDI_CHANNEL.get();
         addRenderableWidget(Button.builder(ch == 0 ? tr("midi_channel_all") : tr("midi_channel", ch), b -> {
-            int step = Minecraft.getInstance().hasShiftDown() ? 16 : 1;
+            int step = Screen.hasShiftDown() ? 16 : 1;
             set(ClientConfig.MIDI_CHANNEL, (ClientConfig.MIDI_CHANNEL.get() + step) % 17);
         }).bounds(x + 116, y2, 100, 16).build());
         int tp = ClientConfig.MIDI_TRANSPOSE.get();
@@ -64,7 +63,7 @@ public class MidiDeviceScreen extends Screen {
     }
 
     private void transpose(int d) {
-        int step = Minecraft.getInstance().hasShiftDown() ? 12 : 1;
+        int step = Screen.hasShiftDown() ? 12 : 1;
         set(ClientConfig.MIDI_TRANSPOSE, Math.max(-36, Math.min(36, ClientConfig.MIDI_TRANSPOSE.get() + d * step)));
     }
 
@@ -75,11 +74,11 @@ public class MidiDeviceScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent e, boolean doubleClick) {
-        if (super.mouseClicked(e, doubleClick)) return true;
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (super.mouseClicked(mouseX, mouseY, button)) return true;
         int lx = x0 + PAD, ly = y0 + 40;
-        if (e.button() == 0 && e.x() >= lx && e.x() < x0 + W - PAD && e.y() >= ly && e.y() < ly + VISIBLE * ROW) {
-            int i = (int) ((e.y() - ly) / ROW);
+        if (button == 0 && mouseX >= lx && mouseX < x0 + W - PAD && mouseY >= ly && mouseY < ly + VISIBLE * ROW) {
+            int i = (int) ((mouseY - ly) / ROW);
             if (i < devices.size()) {
                 MidiKeyboard.connect(devices.get(i));
                 rebuildWidgets();
@@ -100,20 +99,22 @@ public class MidiDeviceScreen extends Screen {
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        // Screen.render 先画原版背景（模糊、压暗）再画控件；羊皮纸和列表要夹在两者之间，所以拆开来调用
+        renderBackground(g, mouseX, mouseY, partialTick);
         Parchment.draw(g, x0, y0, W, H);
         int x = x0 + PAD;
-        g.text(font, title, x, y0 + 24, Parchment.INK_TITLE, false);
+        g.drawString(font, title, x, y0 + 24, Parchment.INK_TITLE, false);
         String name = MidiKeyboard.connected();
         String problem = MidiKeyboard.problem();
         Component status = name != null ? tr("midi_connected", name)
             : problem == null ? tr("midi_none") : tr("midi_problem." + (problem.equals("unplugged") || problem.equals("not found") ? problem.replace(' ', '_') : "other"), problem);
-        g.text(font, status, x + 90, y0 + 24, name != null ? 0xFF2E6A2E : Parchment.INK_HINT, false);
+        g.drawString(font, status, x + 90, y0 + 24, name != null ? 0xFF2E6A2E : Parchment.INK_HINT, false);
         int ly = y0 + 40;
         g.fill(x, ly, x0 + W - PAD, ly + VISIBLE * ROW, 0x30FFFFFF);
-        g.outline(x - 1, ly - 1, W - PAD * 2 + 2, VISIBLE * ROW + 2, Parchment.INK);
+        g.renderOutline(x - 1, ly - 1, W - PAD * 2 + 2, VISIBLE * ROW + 2, Parchment.INK);
         if (devices.isEmpty()) {
-            g.text(font, tr("midi_no_devices"), x + 4, ly + 3, Parchment.INK_HINT, false);
+            g.drawString(font, tr("midi_no_devices"), x + 4, ly + 3, Parchment.INK_HINT, false);
         }
         for (int i = 0; i < Math.min(VISIBLE, devices.size()); i++) {
             MidiKeyboard.Device d = devices.get(i);
@@ -121,7 +122,7 @@ public class MidiDeviceScreen extends Screen {
             boolean on = d.name().equals(name);
             if (on) g.fill(x, y, x0 + W - PAD, y + ROW, 0x6080C070);
             String label = font.plainSubstrByWidth((on ? "● " : "○ ") + d.label(), W - PAD * 2 - 6);
-            g.text(font, Component.literal(label), x + 3, y + 2, Parchment.INK, false);
+            g.drawString(font, Component.literal(label), x + 3, y + 2, Parchment.INK, false);
         }
         // 试一下：收到的消息数与最近按下的音
         int ty = y0 + H - PAD - 12;
@@ -129,12 +130,12 @@ public class MidiDeviceScreen extends Screen {
         Component test = last < 0 ? tr("midi_test_none", MidiKeyboard.received())
             : tr("midi_test", MidiKeyboard.received(), KeyLayout.noteName(last), MidiKeyboard.lastVelocity());
         String testText = font.plainSubstrByWidth(test.getString(), W - PAD * 2 - 66);
-        g.text(font, Component.literal(testText), x, ty, Parchment.INK, false);
+        g.drawString(font, Component.literal(testText), x, ty, Parchment.INK, false);
         // 提示按面板宽度折行，从「试一下」那一行往上排
         var lines = font.split(tr("midi_hint"), W - PAD * 2);
         for (int i = 0; i < lines.size(); i++) {
-            g.text(font, lines.get(i), x, ty - 11 * (lines.size() - i), Parchment.INK_HINT, false);
+            g.drawString(font, lines.get(i), x, ty - 11 * (lines.size() - i), Parchment.INK_HINT, false);
         }
-        super.extractRenderState(g, mouseX, mouseY, partialTick);
+        for (Renderable r : renderables) r.render(g, mouseX, mouseY, partialTick);
     }
 }

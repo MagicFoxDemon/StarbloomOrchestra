@@ -7,10 +7,18 @@
     "PPP"
   ],
   "key": {
-    "G": "minecraft:gold_ingot",
-    "S": "minecraft:string",
-    "N": "minecraft:note_block",
-    "P": "minecraft:birch_planks"
+    "G": {
+      "item": "minecraft:gold_ingot"
+    },
+    "S": {
+      "item": "minecraft:string"
+    },
+    "N": {
+      "item": "minecraft:note_block"
+    },
+    "P": {
+      "item": "minecraft:birch_planks"
+    }
   },
   "result": {
     "id": "starbloom_orchestra:hexen_concert_harp",

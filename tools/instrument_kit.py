@@ -10,6 +10,8 @@
 - 元素用 cube() 造，面上挂的是 FaceRef；写文件时（Out.flush）先排版、画好贴图页，再把 FaceRef 换成 uv。
 
 坐标沿用原版模型：单位是模型像素，方块 0–16，元素只能在 −16–32 之内；欧拉角转动 {"x","y","z"}（先 x、再 y、再 z）。
+1.21.1 原版不认欧拉角和 ±22.5°/±45° 以外的角度：写文件时（write_json → for_1_21_1）这类模型改用本模组的几何加载器
+starbloom_orchestra:rotated_cuboids，元素放进 "cuboids"。
 """
 from __future__ import annotations
 
@@ -974,9 +976,62 @@ def _encode(obj):
     return obj
 
 
+# —— 1.21.1 的模型格式 ——
+# 1.21.1 原版的元素 rotation 只认 {"origin","axis","angle"}，angle 只能是 0、±22.5、±45；欧拉角 {"x","y","z"} 和别的角度直接报错。
+# 这里照旧用 26.1 的写法造元素，写文件时：
+# - 每个 rotation 原版都读得了（单轴、允许的角度）的模型，欧拉角换成 axis/angle，仍是原版格式；
+# - 否则整份模型交给本模组的几何加载器（RotatedCuboidModel）："loader" + 元素放进 "cuboids"（放在 "elements" 里原版会先解析、报错）。
+
+ROTATED_LOADER = f"{NS}:rotated_cuboids"
+VANILLA_ANGLES = (0, 22.5, -22.5, 45, -45)
+# 手持乐器演奏时换模型的物品属性（ItemModelProperties.PLAYING）
+PLAYING_PROPERTY = f"{NS}:playing"
+
+
+def _vanilla_rotation(rot):
+    """1.21.1 原版能读的写法（换不了就返回 None）。"""
+    if "axis" in rot:
+        return rot if rot.get("angle", 0) in VANILLA_ANGLES else None
+    turned = [(a, rot.get(a, 0)) for a in "xyz" if rot.get(a, 0)]
+    if len(turned) > 1 or any(v not in VANILLA_ANGLES for _, v in turned):
+        return None
+    axis, angle = turned[0] if turned else ("y", 0)
+    out = {"origin": rot["origin"], "axis": axis, "angle": angle}
+    if "rescale" in rot:
+        out["rescale"] = rot["rescale"]
+    return out
+
+
+def for_1_21_1(obj):
+    """模型 JSON 换成 1.21.1 读得了的样子（见上）；没有元素的模型原样返回。"""
+    if not isinstance(obj, dict) or not obj.get("elements"):
+        return obj
+    elements = obj["elements"]
+    vanilla = [_vanilla_rotation(e["rotation"]) if "rotation" in e else None for e in elements]
+    if all(v is not None or "rotation" not in e for v, e in zip(vanilla, elements)):
+        converted = [e | {"rotation": v} if v is not None else e for v, e in zip(vanilla, elements)]
+        return {k: (converted if k == "elements" else v) for k, v in obj.items()}
+    out = {}
+    for k, v in obj.items():
+        if k == "elements":
+            out["loader"] = ROTATED_LOADER
+            out["cuboids"] = v
+        else:
+            out[k] = v
+    return out
+
+
+def model_elements(obj):
+    """模型里的元素，不管是原版的 "elements" 还是加载器的 "cuboids"（读写好的模型文件时用）。"""
+    return obj.get("elements") or obj.get("cuboids") or []
+
+
 def write_json(path, obj):
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(_encode(obj), ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
+    obj = _encode(obj)
+    if "models" in path.parts:
+        obj = for_1_21_1(obj)
+    path.write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
 
 
 class Out:
@@ -1031,11 +1086,20 @@ class Out:
     def raw(self, path, obj):
         self.files.append((path, obj))
 
+    def _playing_overrides(self):
+        """有 item/<名字>_playing 的物品模型：演奏（使用中）时换成它。1.21.1 没有 26.1 的物品模型定义（items/*.json 的
+        minecraft:using_item 条件），改用物品模型的 overrides + 物品属性 starbloom_orchestra:playing（ItemModelProperties）。"""
+        items = {path.stem: obj for path, obj in self.files if path.parent.name == "item" and path.parent.parent.name == "models"}
+        for name, obj in items.items():
+            if f"{name}_playing" in items and isinstance(obj, dict):
+                obj["overrides"] = [{"predicate": {PLAYING_PROPERTY: 1}, "model": f"{NS}:item/{name}_playing"}]
+
     def flush(self):
         for s in self.sheets.values():
             s.pack()
             s.save()
         self._particles()
+        self._playing_overrides()
         for path, obj in self.files:
             write_json(path, obj)
         names = ", ".join(f"{s.name} {s.width}x{s.height}" for s in self.sheets.values())

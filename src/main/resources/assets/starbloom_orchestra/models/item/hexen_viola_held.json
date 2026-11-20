@@ -3,7 +3,8 @@
     "hexen_viola": "starbloom_orchestra:block/instrument/hexen_viola",
     "particle": "starbloom_orchestra:block/instrument/hexen_viola"
   },
-  "elements": [
+  "loader": "starbloom_orchestra:rotated_cuboids",
+  "cuboids": [
     {
       "from": [
         9.86,

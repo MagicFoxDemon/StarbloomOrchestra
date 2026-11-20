@@ -1,6 +1,6 @@
 package dev.starbloom.orchestra;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.ModList;
@@ -37,12 +37,12 @@ public final class StarbloomOrchestra {
         dev.starbloom.orchestra.gametest.PonderLayoutGameTests.register(bus);
         dev.starbloom.orchestra.gametest.CommandTreeGameTests.register(bus);
         // 思索（按住 W，Ponder 库打包在本模组的 jar 里）：场景只在客户端注册
-        if (FMLEnvironment.getDist().isClient() && ModList.get().isLoaded("ponder")) {
+        if (FMLEnvironment.dist.isClient() && ModList.get().isLoaded("ponder")) {
             dev.starbloom.orchestra.client.ponder.OrchestraPonder.init();
         }
         // 车万女仆（可选）：女仆的演奏姿势只在装了女仆模组的客户端注册。那个类只在有女仆模组的 jar 时才编译进来，
         // 所以按名字找；它要接的 DefaultGeckoAnimationEvent 很早就发，女仆模组的文档要求在模组初始化时手动注册
-        if (FMLEnvironment.getDist().isClient() && ModList.get().isLoaded("touhou_little_maid")) {
+        if (FMLEnvironment.dist.isClient() && ModList.get().isLoaded("touhou_little_maid")) {
             try {
                 Class.forName("dev.starbloom.orchestra.client.music.MaidMusicians").getMethod("init", IEventBus.class).invoke(null, bus);
             } catch (ReflectiveOperationException e) {
@@ -51,7 +51,7 @@ public final class StarbloomOrchestra {
         }
     }
 
-    public static Identifier id(String path) {
-        return Identifier.fromNamespaceAndPath(ID, path);
+    public static ResourceLocation id(String path) {
+        return ResourceLocation.fromNamespaceAndPath(ID, path);
     }
 }

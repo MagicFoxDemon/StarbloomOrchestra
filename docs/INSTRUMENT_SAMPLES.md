@@ -127,6 +127,8 @@ uv run --no-project --with numpy --with scipy python tools/instrument_audit.py -
 
 - 第一条写模组本体的合成音源，第二条写 `resourcepacks/concert_hall/` 里的录音，第三条把资源包打成 zip，
   第四条核对两层的音高（见第 9 节），重新生成之后跑一遍。
+- 资源包的 `pack.mcmeta`（`resourcepacks/concert_hall/` 里的那份是手写的，脚本只给个人用的尺八包写一份）在这条分支上是
+  1.21.1 的 `pack_format` 34，`main` 上是 26.1 的格式，所以两条线各打各的 zip。
 - `--report` 只分析、打印每个采样的测量结果（音高、切头、循环点、响度、增益），不写文件。
 - `--demo` 另把每件乐器的音阶（轻、重各一遍）与和弦渲染成 ogg：取区、变调、循环、松键淡出都和游戏里一样。
 - 录音第一次运行要下载约 550 个文件（只下用得到的），以后不再下。资源包里的 ogg 共 22.5 MB：钢琴 8.3、大键琴 2.4、竖琴 2.4、
@@ -165,7 +167,7 @@ uv run --no-project --with numpy --with scipy python tools/instrument_audit.py -
 ## 9. 验证
 
 - 单元：`SampleMapTest` 两层各核对一遍——模组本体每件采样乐器都有合成的表（`quality` 为 synth），资源包里至少 20 件是录音
-  （`quality` 为 recorded，没有钢片琴）、`pack.mcmeta` 的格式是 26.1 的 84、带 `NOTICE.txt`。每张表：音域内每个音、每个力度都有
+  （`quality` 为 recorded，没有钢片琴）、`pack.mcmeta` 的格式是 1.21.1 的 34（`pack_format`）、带 `NOTICE.txt`。每张表：音域内每个音、每个力度都有
   正好覆盖它的区，变调不超过 4 个半音，音量在 (0, 1]，同一区里力度越大越响；文件、循环点、松键声都在；只有弓弦、管乐循环；
   大键琴每个音都有松键声。
 - 生成脚本自己核对：每个采样实测的八度和预期一致（不一致会打印出来）；换层处的响度差（钢琴 0.34 dB，竖琴、巴松管各一个音约 1.9–2.0 dB，

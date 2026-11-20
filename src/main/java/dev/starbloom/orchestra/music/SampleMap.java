@@ -5,7 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.util.ArrayList;
 import java.util.List;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * 一件乐器的采样表：assets/starbloom_orchestra/instruments/&lt;乐器&gt;.json。模组本体里是合成音源

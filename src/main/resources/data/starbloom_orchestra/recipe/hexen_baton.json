@@ -2,8 +2,12 @@
   "type": "minecraft:crafting_shapeless",
   "category": "misc",
   "ingredients": [
-    "minecraft:stick",
-    "minecraft:gold_nugget"
+    {
+      "item": "minecraft:stick"
+    },
+    {
+      "item": "minecraft:gold_nugget"
+    }
   ],
   "result": {
     "id": "starbloom_orchestra:hexen_baton",

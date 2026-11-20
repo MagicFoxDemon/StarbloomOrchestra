@@ -28,9 +28,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Supplier;
-import net.createmod.catnip.api.client.gui.ScreenOpener;
-import net.createmod.ponder.api.client.PonderIndex;
-import net.createmod.ponder.impl.client.gui.PonderUI;
+import net.createmod.catnip.gui.ScreenOpener;
+import net.createmod.ponder.foundation.PonderIndex;
+import net.createmod.ponder.foundation.ui.PonderUI;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.world.item.ItemStack;
@@ -101,7 +101,7 @@ public class PonderViews implements UIScenario {
                 .step("hold W on " + shot.scene() + " (" + lang + ")", ctx -> ScreenOpener.transitionTo(PonderUI.of(new ItemStack(shot.item().get()))))
                 .waitUntil(shot.scene() + " is on screen", ctx -> ui() != null)
                 .ticks(30)
-                .check(shot.scene() + " opens", ctx -> ui() != null && ui().getActiveScene().getSceneId().equals(StarbloomOrchestra.id(shot.scene())))
+                .check(shot.scene() + " opens", ctx -> ui() != null && ui().getActiveScene().getId().equals(StarbloomOrchestra.id(shot.scene())))
                 .check(shot.scene() + " has " + shot.keyframes() + " key frames", ctx -> {
                     int n = ui().getActiveScene().getKeyframeCount();
                     if (n != shot.keyframes()) LOGGER.error("{} has {} key frames", shot.scene(), n);

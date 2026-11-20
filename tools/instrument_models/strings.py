@@ -409,7 +409,7 @@ def violin_family(out, kind):
 
 
 def held_model(out, name, el, sheets, budget):
-    """没有显示变换的物品模型（items/held/ 用：HeldRig、乐谱架画）。"""
+    """没有显示变换的物品模型（客户端按模型 id 直接加载：HeldRig、乐谱架画）。"""
     kit.lint(f"item/{name}", el, budget)
     tex = {s.name: s.texture for s in sheets} | {"particle": sheets[0].texture}
     out.raw(kit.ASSETS / f"models/item/{name}.json", {"textures": tex, "elements": el})

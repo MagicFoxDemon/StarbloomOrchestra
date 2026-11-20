@@ -4,7 +4,8 @@
     "hexen_triangle": "starbloom_orchestra:block/instrument/hexen_triangle",
     "particle": "starbloom_orchestra:block/instrument/particle_walnut"
   },
-  "elements": [
+  "loader": "starbloom_orchestra:rotated_cuboids",
+  "cuboids": [
     {
       "from": [
         4.5,

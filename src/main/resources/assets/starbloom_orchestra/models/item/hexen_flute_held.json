@@ -4,7 +4,8 @@
     "hexen_flute": "starbloom_orchestra:block/instrument/hexen_flute",
     "particle": "starbloom_orchestra:block/instrument/hexen_flute"
   },
-  "elements": [
+  "loader": "starbloom_orchestra:rotated_cuboids",
+  "cuboids": [
     {
       "from": [
         0.8,

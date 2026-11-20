@@ -16,12 +16,12 @@ import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.client.sounds.WeighedSoundEvents;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.valueproviders.ConstantFloat;
 import net.minecraft.world.phys.Vec3;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * 乐器的发声：
@@ -44,7 +44,7 @@ import org.jspecify.annotations.Nullable;
  * <p>「声源」是一件乐器上的一路演奏（实时演奏一路、纸带播放一路、编辑器试听一路），各自记踏板和发声的音。
  */
 public final class VoiceBank {
-    private static final Map<Identifier, SoundEvent> EVENTS = new HashMap<>();
+    private static final Map<ResourceLocation, SoundEvent> EVENTS = new HashMap<>();
     private static final Map<String, Source> SOURCES = new HashMap<>();
     private static final int MAX_TAILS = 32;
 
@@ -185,10 +185,10 @@ public final class VoiceBank {
      * （{@link OrganMixer}）。可闻距离和字幕在这里给。
      */
     static final class DirectSound extends NoteSound {
-        private final Identifier buffer;
+        private final ResourceLocation buffer;
         private final int range;
 
-        DirectSound(Identifier buffer, float pitch, float volume, Vec3 at, int range, int attackTicks, boolean loop) {
+        DirectSound(ResourceLocation buffer, float pitch, float volume, Vec3 at, int range, int attackTicks, boolean loop) {
             super(event(buffer), pitch, volume, at, attackTicks, loop);
             this.buffer = buffer;
             this.range = range;
@@ -208,7 +208,7 @@ public final class VoiceBank {
         }
     }
 
-    private static SoundEvent event(Identifier id) {
+    private static SoundEvent event(ResourceLocation id) {
         return EVENTS.computeIfAbsent(id, SoundEvent::createVariableRangeEvent);
     }
 
@@ -348,7 +348,7 @@ public final class VoiceBank {
      * 管风琴一个音的声音。buffer 是整个采样、只有循环段，或尾音；volume 是相对这套组合基准音量的倍数。
      * 基准音量 = 组合的响度（{@link OrganMixer.Mix#loudness}）× 0.9，没有音管时减半，再乘乐团里这个声部的响度。
      */
-    private static DirectSound organSound(OrganMixer.Mix mix, InstrumentBlockEntity be, int pitch, Identifier buffer, float volume, int attack, boolean loop, float gain) {
+    private static DirectSound organSound(OrganMixer.Mix mix, InstrumentBlockEntity be, int pitch, ResourceLocation buffer, float volume, int attack, boolean loop, float gain) {
         var o = be.organ();
         int range = o == null ? 16 : o.range();
         float base = Math.min(1f, mix.loudness * (o != null && o.pipes() == 0 ? 0.5f : 1f) * gain) * 0.9f;
@@ -366,7 +366,7 @@ public final class VoiceBank {
         if (be == null) return;
         OrganMixer.Mix mix = OrganMixer.byGen(v.gen);
         if (mix == null) return;
-        Identifier tailBuffer = mix.tail(v.pitch);
+        ResourceLocation tailBuffer = mix.tail(v.pitch);
         if (tailBuffer == null) return;
         int tails = 0;
         for (Voice t : s.voices) {

@@ -3,16 +3,14 @@ package dev.starbloom.orchestra.client.music;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.starbloom.orchestra.StarbloomOrchestra;
 import dev.starbloom.orchestra.music.orchestra.Orchestra;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.client.renderer.entity.state.AvatarRenderState;
-import net.minecraft.client.renderer.entity.state.HumanoidRenderState;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
@@ -22,7 +20,7 @@ import net.neoforged.fml.common.asm.enumextension.EnumProxy;
 import net.neoforged.neoforge.client.IArmPoseTransformer;
 import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
 import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * 指挥的姿势（docs/ORCHESTRA.md 第 7 节）：站在指挥台上、拿着指挥棒、乐团在演奏时，右臂让棒尖按拍子画图形
@@ -32,7 +30,7 @@ import org.jspecify.annotations.Nullable;
 @EventBusSubscriber(modid = StarbloomOrchestra.ID, value = Dist.CLIENT)
 public final class ConductingPoses {
     public static final EnumProxy<HumanoidModel.ArmPose> CONDUCT = new EnumProxy<>(HumanoidModel.ArmPose.class,
-        true, true, (IArmPoseTransformer) (m, s, a) -> pose(m, s));
+        true, (IArmPoseTransformer) (m, e, a) -> pose(m, e));
 
     /**
      * 拍子平面在身前的位置与大小（模型像素：−Y 向上、−Z 向前、+X 是身体左侧；肩的支点在 y=2）。拍点（图形的最低处）手臂在水平下约 28°，
@@ -69,12 +67,18 @@ public final class ConductingPoses {
         }, Orchestra.BATON.get());
     }
 
-    private static void pose(HumanoidModel<?> model, HumanoidRenderState state) {
-        if (!(state instanceof AvatarRenderState avatar) || Minecraft.getInstance().level == null) return;
-        var entity = Minecraft.getInstance().level.getEntity(avatar.id);
-        Conducting.Pose p = entity == null ? null : Conducting.poseOf(entity);
+    /**
+     * 只对玩家（26.1 是渲染状态为 AvatarRenderState 的人），并且只在正画着这个人时摆（{@link MusicianPoses#drawing}）：
+     * 1.21.1 第一人称画手时也会走一遍 setupAnim，那时不动（26.1 画手不走 setupAnim）。
+     */
+    private static void pose(HumanoidModel<?> model, LivingEntity entity) {
+        MusicianPoses.Drawing drawing = MusicianPoses.drawing(entity);
+        if (!(entity instanceof Player) || drawing == null) return;
+        Conducting.Pose p = Conducting.poseOf(entity);
         if (p == null) return;
-        boolean left = avatar.mainArm == HumanoidArm.LEFT;
+        // 原版这时还没按蹲没蹲写肩的高度，先写成站着的（同 26.1 复位后的值），见 HandheldPoses.standingBase
+        HandheldPoses.standingBase(model);
+        boolean left = entity.getMainArm() == HumanoidArm.LEFT;
         float sx = left ? -1 : 1;
         double amp = p.amplitude();
         float tx = (float) (BASE_X - p.tip()[0] * WIDTH * amp);
@@ -84,10 +88,10 @@ public final class ConductingPoses {
         ModelPart main = left ? model.leftArm : model.rightArm;
         ModelPart off = left ? model.rightArm : model.leftArm;
         reach(main, sx * Mth.lerp(b, REST_X, tx), Mth.lerp(b, REST_Y, ty), Mth.lerp(b, REST_Z, BASE_Z), left ? 1 : -1);
-        if (p.cue() != null && entity != null && b > 0.5f) {
+        if (p.cue() != null && b > 0.5f) {
             // 左手指向要进来的声部：世界方向换到模型里（按身体朝向），抬到肩高
             Vec3 d = p.cue().subtract(entity.position().add(0, 1.3, 0)).normalize();
-            double yaw = Math.toRadians(avatar.bodyRot);
+            double yaw = Math.toRadians(drawing.bodyRot(entity));
             double fx = -Math.sin(yaw), fz = Math.cos(yaw);
             double lx = Math.cos(yaw), lz = Math.sin(yaw);
             float mx = (float) (d.x * lx + d.z * lz), mz = (float) -(d.x * fx + d.z * fz);

@@ -4,7 +4,8 @@
     "kagura_suzu": "starbloom_orchestra:block/instrument/kagura_suzu",
     "particle": "starbloom_orchestra:block/instrument/kagura_suzu"
   },
-  "elements": [
+  "loader": "starbloom_orchestra:rotated_cuboids",
+  "cuboids": [
     {
       "from": [
         7.45,
@@ -4114,5 +4115,13 @@
         0.5
       ]
     }
-  }
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "starbloom_orchestra:playing": 1
+      },
+      "model": "starbloom_orchestra:item/kagura_suzu_playing"
+    }
+  ]
 }

@@ -16,11 +16,11 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.permissions.Permissions;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.material.MapColor;
@@ -39,7 +39,7 @@ import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * 魔女之森乐器：方块、物品、纸带数据组件、复制配方、采样声音事件，以及服务端的网络处理
@@ -58,41 +58,41 @@ public final class Instruments {
 
     public static final DeferredBlock<GrandPianoBlock> GRAND_PIANO = OrchestraRegistries.BLOCKS.registerBlock(
         "starbloom_grand_piano", GrandPianoBlock::new,
-        p -> p.mapColor(MapColor.QUARTZ).strength(2.5f).sound(SoundType.WOOD).noOcclusion().pushReaction(PushReaction.BLOCK));
+        BlockBehaviour.Properties.of().mapColor(MapColor.QUARTZ).strength(2.5f).sound(SoundType.WOOD).noOcclusion().pushReaction(PushReaction.BLOCK));
     public static final DeferredBlock<ConcertHarpBlock> CONCERT_HARP = OrchestraRegistries.BLOCKS.registerBlock(
         "hexen_concert_harp", ConcertHarpBlock::new,
-        p -> p.mapColor(MapColor.GOLD).strength(1.5f).sound(SoundType.WOOD).noOcclusion().pushReaction(PushReaction.BLOCK));
+        BlockBehaviour.Properties.of().mapColor(MapColor.GOLD).strength(1.5f).sound(SoundType.WOOD).noOcclusion().pushReaction(PushReaction.BLOCK));
 
     public static final DeferredBlock<dev.starbloom.orchestra.music.organ.OrganConsoleBlock> ORGAN_CONSOLE = OrchestraRegistries.BLOCKS.registerBlock(
         "hexen_organ_console", dev.starbloom.orchestra.music.organ.OrganConsoleBlock::new,
-        p -> p.mapColor(MapColor.COLOR_BROWN).strength(2.5f).sound(SoundType.WOOD).noOcclusion().pushReaction(PushReaction.BLOCK));
+        BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BROWN).strength(2.5f).sound(SoundType.WOOD).noOcclusion().pushReaction(PushReaction.BLOCK));
     public static final DeferredBlock<net.minecraft.world.level.block.Block> ORGAN_WIND_CHEST = OrchestraRegistries.BLOCKS.registerBlock(
         "organ_wind_chest", net.minecraft.world.level.block.Block::new,
-        p -> p.mapColor(MapColor.COLOR_BROWN).strength(2.0f).sound(SoundType.WOOD));
+        BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BROWN).strength(2.0f).sound(SoundType.WOOD));
     public static final DeferredBlock<dev.starbloom.orchestra.music.organ.OrganPipeBlock> ORGAN_TIN_PIPE = OrchestraRegistries.BLOCKS.registerBlock(
         "organ_tin_pipe", p -> new dev.starbloom.orchestra.music.organ.OrganPipeBlock(p, 3.5),
-        p -> p.mapColor(MapColor.METAL).strength(2.0f).sound(SoundType.COPPER).noOcclusion());
+        BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.0f).sound(SoundType.COPPER).noOcclusion());
     public static final DeferredBlock<dev.starbloom.orchestra.music.organ.OrganPipeBlock> ORGAN_WOOD_PIPE = OrchestraRegistries.BLOCKS.registerBlock(
         "organ_wood_pipe", p -> new dev.starbloom.orchestra.music.organ.OrganPipeBlock(p, 4.0),
-        p -> p.mapColor(MapColor.COLOR_BROWN).strength(1.5f).sound(SoundType.WOOD).noOcclusion());
+        BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BROWN).strength(1.5f).sound(SoundType.WOOD).noOcclusion());
     public static final DeferredBlock<dev.starbloom.orchestra.music.organ.OrganTrumpetBlock> ORGAN_TRUMPET_PIPE = OrchestraRegistries.BLOCKS.registerBlock(
         "organ_trumpet_pipe", dev.starbloom.orchestra.music.organ.OrganTrumpetBlock::new,
-        p -> p.mapColor(MapColor.GOLD).strength(2.0f).sound(SoundType.COPPER).noOcclusion());
+        BlockBehaviour.Properties.of().mapColor(MapColor.GOLD).strength(2.0f).sound(SoundType.COPPER).noOcclusion());
 
     /** 第二批：钟琴、钢片琴（一格）、管钟（两格高）、大键琴（一宽两深）。 */
     public static final DeferredBlock<SingleInstrumentBlock> GLOCKENSPIEL = OrchestraRegistries.BLOCKS.registerBlock(
         "hexen_glockenspiel", p -> new SingleInstrumentBlock(p, InstrumentKind.GLOCKENSPIEL, net.minecraft.world.level.block.Block.box(1, 0, 3, 15, 12, 13)),
-        p -> p.mapColor(MapColor.METAL).strength(1.5f).sound(SoundType.METAL).noOcclusion().pushReaction(PushReaction.BLOCK));
+        BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(1.5f).sound(SoundType.METAL).noOcclusion().pushReaction(PushReaction.BLOCK));
     public static final DeferredBlock<SingleInstrumentBlock> CELESTA = OrchestraRegistries.BLOCKS.registerBlock(
         "hexen_celesta", p -> new SingleInstrumentBlock(p, InstrumentKind.CELESTA, net.minecraft.world.level.block.Block.box(0, 0, 2, 16, 15, 16)),
-        p -> p.mapColor(MapColor.COLOR_BROWN).strength(2.0f).sound(SoundType.WOOD).noOcclusion().pushReaction(PushReaction.BLOCK));
+        BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BROWN).strength(2.0f).sound(SoundType.WOOD).noOcclusion().pushReaction(PushReaction.BLOCK));
     public static final DeferredBlock<TallInstrumentBlock> TUBULAR_BELLS = OrchestraRegistries.BLOCKS.registerBlock(
         "hexen_tubular_bells", p -> new TallInstrumentBlock(p, InstrumentKind.TUBULAR_BELLS, net.minecraft.world.level.block.Block.box(1, 0, 5, 15, 16, 11)),
-        p -> p.mapColor(MapColor.GOLD).strength(2.0f).sound(SoundType.COPPER).noOcclusion().pushReaction(PushReaction.BLOCK));
+        BlockBehaviour.Properties.of().mapColor(MapColor.GOLD).strength(2.0f).sound(SoundType.COPPER).noOcclusion().pushReaction(PushReaction.BLOCK));
     public static final DeferredBlock<LongInstrumentBlock> HARPSICHORD = OrchestraRegistries.BLOCKS.registerBlock(
         "hexen_harpsichord", p -> new LongInstrumentBlock(p, InstrumentKind.HARPSICHORD,
             net.minecraft.world.level.block.Block.box(1, 0, 0, 15, 15, 16), net.minecraft.world.level.block.Block.box(2, 0, 0, 14, 15, 14)),
-        p -> p.mapColor(MapColor.QUARTZ).strength(2.5f).sound(SoundType.WOOD).noOcclusion().pushReaction(PushReaction.BLOCK));
+        BlockBehaviour.Properties.of().mapColor(MapColor.QUARTZ).strength(2.5f).sound(SoundType.WOOD).noOcclusion().pushReaction(PushReaction.BLOCK));
 
     public static final DeferredItem<?> GRAND_PIANO_ITEM = OrchestraRegistries.ITEMS.registerSimpleBlockItem("starbloom_grand_piano", GRAND_PIANO);
     public static final DeferredItem<?> CONCERT_HARP_ITEM = OrchestraRegistries.ITEMS.registerSimpleBlockItem("hexen_concert_harp", CONCERT_HARP);
@@ -125,13 +125,13 @@ public final class Instruments {
         p -> new HandheldInstrumentItem(InstrumentKind.BASSOON, p.stacksTo(1)));
     public static final DeferredBlock<SeatedInstrumentBlock> CELLO = OrchestraRegistries.BLOCKS.registerBlock(
         "hexen_cello", p -> new SeatedInstrumentBlock(p, InstrumentKind.CELLO, net.minecraft.world.level.block.Block.box(3, 0, 1, 13, 16, 16)),
-        p -> p.mapColor(MapColor.COLOR_BROWN).strength(1.5f).sound(SoundType.WOOD).noOcclusion().pushReaction(PushReaction.BLOCK));
+        BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BROWN).strength(1.5f).sound(SoundType.WOOD).noOcclusion().pushReaction(PushReaction.BLOCK));
     public static final DeferredBlock<SeatedInstrumentBlock> DOUBLE_BASS = OrchestraRegistries.BLOCKS.registerBlock(
         "hexen_double_bass", p -> new SeatedInstrumentBlock(p, InstrumentKind.DOUBLE_BASS, net.minecraft.world.level.block.Block.box(2, 0, 0, 14, 16, 10)),
-        p -> p.mapColor(MapColor.COLOR_BROWN).strength(1.5f).sound(SoundType.WOOD).noOcclusion().pushReaction(PushReaction.BLOCK));
+        BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BROWN).strength(1.5f).sound(SoundType.WOOD).noOcclusion().pushReaction(PushReaction.BLOCK));
     public static final DeferredBlock<SingleInstrumentBlock> TIMPANI = OrchestraRegistries.BLOCKS.registerBlock(
         "hexen_timpani", p -> new SingleInstrumentBlock(p, InstrumentKind.TIMPANI, net.minecraft.world.level.block.Block.box(0, 0, 0, 16, 14, 16)),
-        p -> p.mapColor(MapColor.COLOR_ORANGE).strength(2.0f).sound(SoundType.COPPER).noOcclusion().pushReaction(PushReaction.BLOCK));
+        BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_ORANGE).strength(2.0f).sound(SoundType.COPPER).noOcclusion().pushReaction(PushReaction.BLOCK));
     public static final DeferredItem<?> CELLO_ITEM = OrchestraRegistries.ITEMS.registerSimpleBlockItem("hexen_cello", CELLO);
     public static final DeferredItem<?> DOUBLE_BASS_ITEM = OrchestraRegistries.ITEMS.registerSimpleBlockItem("hexen_double_bass", DOUBLE_BASS);
     public static final DeferredItem<?> TIMPANI_ITEM = OrchestraRegistries.ITEMS.registerSimpleBlockItem("hexen_timpani", TIMPANI);
@@ -139,16 +139,16 @@ public final class Instruments {
     /** 第四批：无音高的打击乐（一格，站在前面的工位上敲；docs/ORCHESTRA.md 第 20 节）。 */
     public static final DeferredBlock<SingleInstrumentBlock> BASS_DRUM = OrchestraRegistries.BLOCKS.registerBlock(
         "hexen_bass_drum", p -> new SingleInstrumentBlock(p, InstrumentKind.BASS_DRUM, net.minecraft.world.level.block.Block.box(4, 0, 1, 12, 16, 15)),
-        p -> p.mapColor(MapColor.COLOR_BROWN).strength(1.5f).sound(SoundType.WOOD).noOcclusion().pushReaction(PushReaction.BLOCK));
+        BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BROWN).strength(1.5f).sound(SoundType.WOOD).noOcclusion().pushReaction(PushReaction.BLOCK));
     public static final DeferredBlock<SingleInstrumentBlock> SNARE_DRUM = OrchestraRegistries.BLOCKS.registerBlock(
         "hexen_snare_drum", p -> new SingleInstrumentBlock(p, InstrumentKind.SNARE_DRUM, net.minecraft.world.level.block.Block.box(3, 0, 2, 13, 14, 11)),
-        p -> p.mapColor(MapColor.GOLD).strength(1.5f).sound(SoundType.COPPER).noOcclusion().pushReaction(PushReaction.BLOCK));
+        BlockBehaviour.Properties.of().mapColor(MapColor.GOLD).strength(1.5f).sound(SoundType.COPPER).noOcclusion().pushReaction(PushReaction.BLOCK));
     public static final DeferredBlock<SingleInstrumentBlock> SUSPENDED_CYMBAL = OrchestraRegistries.BLOCKS.registerBlock(
         "hexen_suspended_cymbal", p -> new SingleInstrumentBlock(p, InstrumentKind.SUSPENDED_CYMBAL, net.minecraft.world.level.block.Block.box(2, 0, 2, 14, 16, 13)),
-        p -> p.mapColor(MapColor.GOLD).strength(1.5f).sound(SoundType.COPPER).noOcclusion().pushReaction(PushReaction.BLOCK));
+        BlockBehaviour.Properties.of().mapColor(MapColor.GOLD).strength(1.5f).sound(SoundType.COPPER).noOcclusion().pushReaction(PushReaction.BLOCK));
     public static final DeferredBlock<SingleInstrumentBlock> TRIANGLE = OrchestraRegistries.BLOCKS.registerBlock(
         "hexen_triangle", p -> new SingleInstrumentBlock(p, InstrumentKind.TRIANGLE, net.minecraft.world.level.block.Block.box(4, 0, 5, 14, 20, 11)),
-        p -> p.mapColor(MapColor.METAL).strength(1.0f).sound(SoundType.METAL).noOcclusion().pushReaction(PushReaction.BLOCK));
+        BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(1.0f).sound(SoundType.METAL).noOcclusion().pushReaction(PushReaction.BLOCK));
     public static final DeferredItem<?> BASS_DRUM_ITEM = OrchestraRegistries.ITEMS.registerSimpleBlockItem("hexen_bass_drum", BASS_DRUM);
     public static final DeferredItem<?> SNARE_DRUM_ITEM = OrchestraRegistries.ITEMS.registerSimpleBlockItem("hexen_snare_drum", SNARE_DRUM);
     public static final DeferredItem<?> SUSPENDED_CYMBAL_ITEM = OrchestraRegistries.ITEMS.registerSimpleBlockItem("hexen_suspended_cymbal", SUSPENDED_CYMBAL);
@@ -168,7 +168,7 @@ public final class Instruments {
     public static final DeferredHolder<net.minecraft.world.entity.EntityType<?>, net.minecraft.world.entity.EntityType<InstrumentSeat>> SEAT =
         ENTITY_TYPES.register("instrument_seat", () -> net.minecraft.world.entity.EntityType.Builder.<InstrumentSeat>of(InstrumentSeat::new,
                 net.minecraft.world.entity.MobCategory.MISC).sized(0.25f, 0.25f).noSummon().clientTrackingRange(10).updateInterval(20)
-            .build(net.minecraft.resources.ResourceKey.create(Registries.ENTITY_TYPE, StarbloomOrchestra.id("instrument_seat"))));
+            .build(StarbloomOrchestra.id("instrument_seat").toString()));
     /**
      * 站着演奏的工位（低音提琴、钟琴、管钟、大鼓、小军鼓、吊镲、三角铁）：和 {@link #SEAT} 同一个类，只是另一种实体，
      * 别的模组按骑乘的实体分动作时（车万女仆的 GeckoLib 模型 {@code vehicle#...}，标签 data/starbloom_orchestra/tags/entity_type/）能分清坐着和站着。
@@ -176,22 +176,22 @@ public final class Instruments {
     public static final DeferredHolder<net.minecraft.world.entity.EntityType<?>, net.minecraft.world.entity.EntityType<InstrumentSeat>> STANDING_POST =
         ENTITY_TYPES.register("standing_post", () -> net.minecraft.world.entity.EntityType.Builder.<InstrumentSeat>of(InstrumentSeat::new,
                 net.minecraft.world.entity.MobCategory.MISC).sized(0.25f, 0.25f).noSummon().clientTrackingRange(10).updateInterval(20)
-            .build(net.minecraft.resources.ResourceKey.create(Registries.ENTITY_TYPE, StarbloomOrchestra.id("standing_post"))));
+            .build(StarbloomOrchestra.id("standing_post").toString()));
 
     /** 乐谱架：放一件手持乐器和一卷纸带，就像方块乐器一样受红石控制。 */
     public static final DeferredBlock<MusicStandBlock> MUSIC_STAND = OrchestraRegistries.BLOCKS.registerBlock(
         "hexen_music_stand", MusicStandBlock::new,
-        p -> p.mapColor(MapColor.COLOR_BROWN).strength(1.0f).sound(SoundType.WOOD).noOcclusion());
+        BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BROWN).strength(1.0f).sound(SoundType.WOOD).noOcclusion());
     public static final DeferredItem<?> MUSIC_STAND_ITEM = OrchestraRegistries.ITEMS.registerSimpleBlockItem("hexen_music_stand", MUSIC_STAND);
 
     public static final DeferredItem<Item> BLANK_ROLL = OrchestraRegistries.ITEMS.registerItem("blank_music_roll", p -> new Item(p.stacksTo(16)));
     public static final DeferredItem<Item> MUSIC_ROLL_ITEM = OrchestraRegistries.ITEMS.registerItem("music_roll", p -> new MusicRollItem(p.stacksTo(1)));
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<InstrumentBlockEntity>> INSTRUMENT_ENTITY =
-        BLOCK_ENTITIES.register("instrument", () -> new BlockEntityType<>(InstrumentBlockEntity::new, GRAND_PIANO.get(), CONCERT_HARP.get(), ORGAN_CONSOLE.get(),
+        BLOCK_ENTITIES.register("instrument", () -> BlockEntityType.Builder.of(InstrumentBlockEntity::new, GRAND_PIANO.get(), CONCERT_HARP.get(), ORGAN_CONSOLE.get(),
             GLOCKENSPIEL.get(), CELESTA.get(), TUBULAR_BELLS.get(), HARPSICHORD.get(), MUSIC_STAND.get(),
             CELLO.get(), DOUBLE_BASS.get(), TIMPANI.get(), Benches.BENCH.get(), Benches.DUET.get(),
-            BASS_DRUM.get(), SNARE_DRUM.get(), SUSPENDED_CYMBAL.get(), TRIANGLE.get()));
+            BASS_DRUM.get(), SNARE_DRUM.get(), SUSPENDED_CYMBAL.get(), TRIANGLE.get()).build(null));
 
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<RollInfo>> MUSIC_ROLL =
         COMPONENTS.registerComponentType("music_roll", b -> b.persistent(RollInfo.CODEC).networkSynchronized(RollInfo.STREAM_CODEC));
@@ -223,17 +223,21 @@ public final class Instruments {
         return stack.is(BLANK_ROLL.get()) || stack.is(MUSIC_ROLL_ITEM.get());
     }
 
+    /**
+     * 1.21.1 的 NeoForge 没有单独的客户端收包注册，发往客户端的包要在这里连同处理器一起登记。公共代码不引用客户端的类，
+     * 所以只放 {@link ClientPayloadHandlers#dispatch} 转发，客户端初始化时（{@code MusicClient.ModBus}）登记真正的处理器。
+     */
     private static void payloads(RegisterPayloadHandlersEvent event) {
         var r = event.registrar("1");
         r.playToServer(MusicPayloads.LiveNotes.TYPE, MusicPayloads.LiveNotes.CODEC, (p, c) -> c.enqueueWork(() -> live(p, c)));
         r.playToServer(MusicPayloads.Control.TYPE, MusicPayloads.Control.CODEC, (p, c) -> c.enqueueWork(() -> control(p, c)));
         r.playToServer(MusicPayloads.HeldNotes.TYPE, MusicPayloads.HeldNotes.CODEC, (p, c) -> c.enqueueWork(() -> held(p, c)));
-        r.playToClient(MusicPayloads.HeldNotesOut.TYPE, MusicPayloads.HeldNotesOut.CODEC);
+        r.playToClient(MusicPayloads.HeldNotesOut.TYPE, MusicPayloads.HeldNotesOut.CODEC, ClientPayloadHandlers.dispatch(MusicPayloads.HeldNotesOut.TYPE));
         r.playToServer(MusicPayloads.RollRequest.TYPE, MusicPayloads.RollRequest.CODEC, (p, c) -> c.enqueueWork(() -> request(p, c)));
         r.playToServer(MusicPayloads.Upload.TYPE, MusicPayloads.Upload.CODEC, (p, c) -> c.enqueueWork(() -> upload(p, c)));
-        r.playToClient(MusicPayloads.LiveNotesOut.TYPE, MusicPayloads.LiveNotesOut.CODEC);
-        r.playToClient(MusicPayloads.Playback.TYPE, MusicPayloads.Playback.CODEC);
-        r.playToClient(MusicPayloads.RollData.TYPE, MusicPayloads.RollData.CODEC);
+        r.playToClient(MusicPayloads.LiveNotesOut.TYPE, MusicPayloads.LiveNotesOut.CODEC, ClientPayloadHandlers.dispatch(MusicPayloads.LiveNotesOut.TYPE));
+        r.playToClient(MusicPayloads.Playback.TYPE, MusicPayloads.Playback.CODEC, ClientPayloadHandlers.dispatch(MusicPayloads.Playback.TYPE));
+        r.playToClient(MusicPayloads.RollData.TYPE, MusicPayloads.RollData.CODEC, ClientPayloadHandlers.dispatch(MusicPayloads.RollData.TYPE));
     }
 
     public static boolean inReach(ServerPlayer player, InstrumentBlockEntity be) {
@@ -429,7 +433,7 @@ public final class Instruments {
     }
 
     private static void finish(ServerPlayer player, int purpose, BlockPos pos, byte[] data, long now) {
-        boolean op = player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER);
+        boolean op = player.hasPermissions(net.minecraft.commands.Commands.LEVEL_GAMEMASTERS);
         if (!ServerConfig.INSTRUMENTS_ALLOW_UPLOAD.get() && !op) {
             tell(player, "upload_disabled");
             return;
@@ -446,7 +450,7 @@ public final class Instruments {
         byte[] encoded;
         try {
             roll = MusicRoll.decode(data);
-            if (roll.author().isEmpty()) roll = roll.withMeta(roll.title(), player.getGameProfile().name());
+            if (roll.author().isEmpty()) roll = roll.withMeta(roll.title(), player.getGameProfile().getName());
             encoded = roll.encode();
         } catch (MusicRoll.FormatException e) {
             tell(player, "bad_roll", e.getMessage());

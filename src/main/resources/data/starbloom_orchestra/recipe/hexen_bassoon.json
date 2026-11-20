@@ -7,9 +7,15 @@
     "PP "
   ],
   "key": {
-    "R": "minecraft:sugar_cane",
-    "P": "minecraft:mangrove_planks",
-    "I": "minecraft:iron_ingot"
+    "R": {
+      "item": "minecraft:sugar_cane"
+    },
+    "P": {
+      "item": "minecraft:mangrove_planks"
+    },
+    "I": {
+      "item": "minecraft:iron_ingot"
+    }
   },
   "result": {
     "id": "starbloom_orchestra:hexen_bassoon",

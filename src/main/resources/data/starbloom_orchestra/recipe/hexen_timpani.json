@@ -7,9 +7,15 @@
     "C C"
   ],
   "key": {
-    "L": "minecraft:leather",
-    "C": "minecraft:copper_ingot",
-    "N": "minecraft:note_block"
+    "L": {
+      "item": "minecraft:leather"
+    },
+    "C": {
+      "item": "minecraft:copper_ingot"
+    },
+    "N": {
+      "item": "minecraft:note_block"
+    }
   },
   "result": {
     "id": "starbloom_orchestra:hexen_timpani",

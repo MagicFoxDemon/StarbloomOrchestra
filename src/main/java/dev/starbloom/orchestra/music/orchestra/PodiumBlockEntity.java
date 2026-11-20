@@ -1,6 +1,7 @@
 package dev.starbloom.orchestra.music.orchestra;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DynamicOps;
 import dev.starbloom.orchestra.music.InstrumentBlock;
 import dev.starbloom.orchestra.music.InstrumentBlockEntity;
 import dev.starbloom.orchestra.music.InstrumentKind;
@@ -13,12 +14,15 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
@@ -28,11 +32,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.network.PacketDistributor;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * 指挥台的方块实体（docs/ORCHESTRA.md 第 4–6 节）：总谱、成员乐器、声部分派、速度与各声部的响度 / 静音 / 独奏，
@@ -536,7 +538,10 @@ public class PodiumBlockEntity extends BlockEntity {
         if (level != null && !level.isClientSide()) level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
     }
 
-    @Override
+    /**
+     * 指挥台被拆掉、换成别的方块时收尾（服务端）：停奏、放开成员、掉出总谱。
+     * 1.21.1 的方块实体没有这个回调，由 {@link PodiumBlock#onRemove} 在方块实体被移除之前调用。
+     */
     public void preRemoveSideEffects(BlockPos pos, BlockState state) {
         if (level != null && !level.isClientSide()) {
             stop();
@@ -549,52 +554,64 @@ public class PodiumBlockEntity extends BlockEntity {
                 score = ItemStack.EMPTY;
             }
         }
-        super.preRemoveSideEffects(pos, state);
     }
 
     // —— 存盘与同步 ——
 
+    /** 按 codec 读一项（带注册表的 NBT 写法）；没有这一项、读不出来时为空，同新版 {@code ValueInput.read}。 */
+    private static <T> Optional<T> read(CompoundTag tag, DynamicOps<Tag> ops, String key, Codec<T> codec) {
+        Tag value = tag.get(key);
+        return value == null ? Optional.empty() : codec.parse(ops, value).result();
+    }
+
+    /** 按 codec 写一项；写不出来时不写，同新版 {@code ValueOutput.store}。 */
+    private static <T> void store(CompoundTag tag, DynamicOps<Tag> ops, String key, Codec<T> codec, T value) {
+        codec.encodeStart(ops, value).result().ifPresent(v -> tag.put(key, v));
+    }
+
     @Override
-    protected void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
-        score = input.read("score", ItemStack.OPTIONAL_CODEC).orElse(ItemStack.EMPTY);
+    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
+        DynamicOps<Tag> ops = registries.createSerializationContext(NbtOps.INSTANCE);
+        score = read(tag, ops, "score", ItemStack.OPTIONAL_CODEC).orElse(ItemStack.EMPTY);
         members.clear();
         masks.clear();
         locked.clear();
-        List<Long> ms = input.read("members", Codec.LONG.listOf()).orElse(List.of());
-        List<Integer> mk = input.read("masks", Codec.INT.listOf()).orElse(List.of());
-        List<Integer> lk = input.read("locked", Codec.INT.listOf()).orElse(List.of());
+        List<Long> ms = read(tag, ops, "members", Codec.LONG.listOf()).orElse(List.of());
+        List<Integer> mk = read(tag, ops, "masks", Codec.INT.listOf()).orElse(List.of());
+        List<Integer> lk = read(tag, ops, "locked", Codec.INT.listOf()).orElse(List.of());
         // 整座搬走（结构方块、蓝图、世界生成把乐团放到别处）：成员跟着平移
-        BlockPos shift = shift(input, worldPosition);
+        BlockPos shift = shift(tag, worldPosition);
         for (int i = 0; i < ms.size() && i < MAX_MEMBERS; i++) {
             BlockPos m = BlockPos.of(ms.get(i)).offset(shift);
             members.add(m);
             masks.put(m, i < mk.size() ? mk.get(i) : 0);
             if (i < lk.size() && lk.get(i) != 0) locked.add(m);
         }
-        tempo = Math.max(MIN_TEMPO, Math.min(MAX_TEMPO, input.read("tempo", Codec.INT).orElse(100)));
-        List<Integer> g = input.read("gains", Codec.INT.listOf()).orElse(List.of());
+        tempo = Math.max(MIN_TEMPO, Math.min(MAX_TEMPO, read(tag, ops, "tempo", Codec.INT).orElse(100)));
+        List<Integer> g = read(tag, ops, "gains", Codec.INT.listOf()).orElse(List.of());
         for (int i = 0; i < gains.length; i++) gains[i] = (byte) (i < g.size() ? Math.max(MIN_GAIN, Math.min(MAX_GAIN, g.get(i))) : 0);
-        muteMask = input.read("mute", Codec.INT).orElse(0);
-        soloMask = input.read("solo", Codec.INT).orElse(0);
-        master = Math.max(MIN_GAIN, Math.min(MAX_GAIN, input.read("master", Codec.INT).orElse(0)));
-        metronome = input.read("metronome", Codec.BOOL).orElse(false);
-        powered = input.read("powered", Codec.BOOL).orElse(false);
+        muteMask = read(tag, ops, "mute", Codec.INT).orElse(0);
+        soloMask = read(tag, ops, "solo", Codec.INT).orElse(0);
+        master = Math.max(MIN_GAIN, Math.min(MAX_GAIN, read(tag, ops, "master", Codec.INT).orElse(0)));
+        metronome = read(tag, ops, "metronome", Codec.BOOL).orElse(false);
+        powered = read(tag, ops, "powered", Codec.BOOL).orElse(false);
     }
 
     /**
      * 存盘时记着自己在哪（{@code origin}）；读回来的地方不一样（被结构方块、蓝图、世界生成搬到别处）时，返回要平移的量，
      * 记着的成员、乐团位置都按它平移。没有 origin 的旧存档不平移。只处理平移，不处理旋转。
      */
-    public static BlockPos shift(ValueInput input, BlockPos here) {
-        return input.read("origin", Codec.LONG).map(o -> here.subtract(BlockPos.of(o))).orElse(BlockPos.ZERO);
+    public static BlockPos shift(CompoundTag tag, BlockPos here) {
+        return read(tag, NbtOps.INSTANCE, "origin", Codec.LONG).map(o -> here.subtract(BlockPos.of(o))).orElse(BlockPos.ZERO);
     }
 
     @Override
-    protected void saveAdditional(ValueOutput output) {
-        super.saveAdditional(output);
-        output.store("origin", Codec.LONG, worldPosition.asLong());
-        if (!score.isEmpty()) output.store("score", ItemStack.OPTIONAL_CODEC, score);
+    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
+        DynamicOps<Tag> ops = registries.createSerializationContext(NbtOps.INSTANCE);
+        store(tag, ops, "origin", Codec.LONG, worldPosition.asLong());
+        if (!score.isEmpty()) store(tag, ops, "score", ItemStack.OPTIONAL_CODEC, score);
         List<Long> ms = new ArrayList<>();
         List<Integer> mk = new ArrayList<>();
         List<Integer> lk = new ArrayList<>();
@@ -603,18 +620,18 @@ public class PodiumBlockEntity extends BlockEntity {
             mk.add(masks.getOrDefault(m, 0));
             lk.add(locked.contains(m) ? 1 : 0);
         }
-        output.store("members", Codec.LONG.listOf(), ms);
-        output.store("masks", Codec.INT.listOf(), mk);
-        output.store("locked", Codec.INT.listOf(), lk);
-        output.store("tempo", Codec.INT, tempo);
+        store(tag, ops, "members", Codec.LONG.listOf(), ms);
+        store(tag, ops, "masks", Codec.INT.listOf(), mk);
+        store(tag, ops, "locked", Codec.INT.listOf(), lk);
+        store(tag, ops, "tempo", Codec.INT, tempo);
         List<Integer> g = new ArrayList<>();
         for (byte b : gains) g.add((int) b);
-        output.store("gains", Codec.INT.listOf(), g);
-        output.store("mute", Codec.INT, muteMask);
-        output.store("solo", Codec.INT, soloMask);
-        output.store("master", Codec.INT, master);
-        output.store("metronome", Codec.BOOL, metronome);
-        output.store("powered", Codec.BOOL, powered);
+        store(tag, ops, "gains", Codec.INT.listOf(), g);
+        store(tag, ops, "mute", Codec.INT, muteMask);
+        store(tag, ops, "solo", Codec.INT, soloMask);
+        store(tag, ops, "master", Codec.INT, master);
+        store(tag, ops, "metronome", Codec.BOOL, metronome);
+        store(tag, ops, "powered", Codec.BOOL, powered);
     }
 
     @Override

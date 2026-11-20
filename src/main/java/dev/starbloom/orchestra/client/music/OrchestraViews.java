@@ -31,7 +31,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
@@ -107,7 +106,7 @@ public abstract class OrchestraViews implements UIScenario {
                 stand(level, ORIGIN.offset(-2, 1, -5), MusicStandBlock.Holds.VIOLA, Instruments.VIOLA.get());
                 stand(level, ORIGIN.offset(0, 1, -5), MusicStandBlock.Holds.OBOE, Instruments.OBOE.get());
                 stand(level, ORIGIN.offset(2, 1, -5), MusicStandBlock.Holds.BASSOON, Instruments.BASSOON.get());
-                var cam = EntityType.ARMOR_STAND.create(level, EntitySpawnReason.COMMAND);
+                var cam = EntityType.ARMOR_STAND.create(level);
                 cam.setInvisible(true);
                 cam.setNoGravity(true);
                 cam.setPos(ORIGIN.getX() + 0.5, GROUND + 1, ORIGIN.getZ() + 8);
@@ -134,7 +133,7 @@ public abstract class OrchestraViews implements UIScenario {
                 Vec3 look = me.add(0, lookY, 0).subtract(eye);
                 float yaw = (float) (Mth.atan2(look.z, look.x) * Mth.RAD_TO_DEG) - 90;
                 float pitch = (float) -(Mth.atan2(look.y, look.horizontalDistance()) * Mth.RAD_TO_DEG);
-                cam.snapTo(eye.x, eye.y - cam.getEyeHeight(), eye.z, yaw, pitch);
+                cam.moveTo(eye.x, eye.y - cam.getEyeHeight(), eye.z, yaw, pitch);
                 cam.setYHeadRot(yaw);
             })
             .ticks(5)
@@ -188,7 +187,7 @@ public abstract class OrchestraViews implements UIScenario {
                     Item[] items = {Instruments.VIOLA.get(), Instruments.OBOE.get(), Instruments.BASSOON.get(),
                         Instruments.CELLO_ITEM.get(), Instruments.DOUBLE_BASS_ITEM.get(), Instruments.TIMPANI_ITEM.get()};
                     for (int i = 0; i < items.length; i++) inv.setItem(i, new ItemStack(items[i]));
-                    inv.setSelectedSlot(8);
+                    inv.selected = 8;
                     TestTravel.teleport(ctx.player(), ctx.server().overworld(),
                         new Vec3(ORIGIN.getX() + 0.5, GROUND + 2.6, ORIGIN.getZ() + 5.6), 180f, 16f);
                 })
@@ -203,7 +202,7 @@ public abstract class OrchestraViews implements UIScenario {
         private static ScenarioBuilder hold(ScenarioBuilder s, String name, Item item) {
             s = s.server("hold the " + name, ctx -> {
                     ctx.player().getInventory().setItem(0, new ItemStack(item));
-                    ctx.player().getInventory().setSelectedSlot(0);
+                    ctx.player().getInventory().selected = 0;
                 })
                 .ticks(5)
                 .step("raise the " + name, ctx -> {
@@ -422,7 +421,7 @@ public abstract class OrchestraViews implements UIScenario {
                 .check("the celesta stays synthesized", ctx -> !SampleMaps.get(InstrumentKind.CELESTA).recorded())
                 .server("hold the violin", ctx -> {
                     ctx.player().getInventory().setItem(0, new ItemStack(Instruments.VIOLIN.get()));
-                    ctx.player().getInventory().setSelectedSlot(0);
+                    ctx.player().getInventory().selected = 0;
                 })
                 .ticks(5)
                 .step("raise the violin", ctx -> {
