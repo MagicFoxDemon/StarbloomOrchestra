@@ -386,9 +386,13 @@ public abstract class OrchestraViews implements UIScenario {
         reloading = mc.reloadResourcePacks();
     }
 
+    /**
+     * 资源包里该有录音的乐器都读到了录音。跳过两件只有合成层的：钢片琴（两个采样库都没有），
+     * 尺八（维护者买的 ikoa 采样按利用规约不许再分发，资源包里故意不放，见 docs/JAPANESE_INSTRUMENTS.md 第 6 节）。
+     */
     private static boolean allRecorded() {
         for (InstrumentKind kind : InstrumentKind.values()) {
-            if (kind.synthesized() || kind == InstrumentKind.CELESTA) continue;
+            if (kind.synthesized() || kind == InstrumentKind.CELESTA || kind == InstrumentKind.SHAKUHACHI) continue;
             var map = SampleMaps.get(kind);
             if (map == null || !map.recorded()) return false;
         }
@@ -420,6 +424,8 @@ public abstract class OrchestraViews implements UIScenario {
                 .waitUntil("the pack is loaded", ctx -> reloading.isDone() && Minecraft.getInstance().getOverlay() == null)
                 .check("with the pack the sampled instruments play recordings", ctx -> allRecorded())
                 .check("the celesta stays synthesized", ctx -> !SampleMaps.get(InstrumentKind.CELESTA).recorded())
+                // 尺八的录音不能随资源包发布，装上资源包后仍是模组本体的合成音
+                .check("the shakuhachi stays synthesized", ctx -> !SampleMaps.get(InstrumentKind.SHAKUHACHI).recorded())
                 .server("hold the violin", ctx -> {
                     ctx.player().getInventory().setItem(0, new ItemStack(Instruments.VIOLIN.get()));
                     ctx.player().getInventory().setSelectedSlot(0);
