@@ -15,10 +15,10 @@ def tlmJar = file(project.findProperty('tlm_jar') ?: 'libs/touhoulittlemaid-1.20
 def tlmCoord = null
 if (tlmJar.exists()) {
     // ModDevGradle 2.0.148 的 LegacyForge 对 files(...) 会触发 Gradle DependencyConstraint 报错；
-    // 放进 build/tmp/tlm-repo 让 modCompileOnly/modRuntimeOnly 按模块坐标做 SRG→Mojmap 反混淆
+    // 放进 .gradle/tlm-repo（被 .gitignore 忽略且不受 clean 清理影响）让 modCompileOnly/modRuntimeOnly 按模块坐标做 SRG→Mojmap 反混淆
     def tlmVer = "1.20.1-${tlmJar.length()}"
     tlmCoord = "local.tlm:touhoulittlemaid:${tlmVer}"
-    def tlmRepo = layout.buildDirectory.dir('tmp/tlm-repo').get().asFile
+    def tlmRepo = file('.gradle/tlm-repo')
     def staged = new File(tlmRepo, "local/tlm/touhoulittlemaid/${tlmVer}/touhoulittlemaid-${tlmVer}.jar")
     if (!staged.exists() || staged.lastModified() < tlmJar.lastModified()) {
         staged.parentFile.mkdirs()
