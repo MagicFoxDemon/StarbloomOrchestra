@@ -71,6 +71,7 @@ public final class BenchGameTests {
         tests.put("station_timpani_benches", BenchGameTests::timpani);
         tests.put("station_player_posts", BenchGameTests::playerPosts);
         tests.put("station_percussion_posts", BenchGameTests::percussionPosts);
+        tests.put("musicians_look_at_the_conductor", BenchGameTests::gaze);
         tests.forEach((name, test) -> FUNCTIONS.register(name, () -> test));
         FUNCTIONS.register(bus);
         bus.addListener((RegisterGameTestsEvent event) -> {
@@ -480,6 +481,55 @@ public final class BenchGameTests {
         podium.gather();
         h.assertTrue(podium.members().contains(piano) && podium.members().contains(seat) && !podium.members().contains(pianist),
             "gathering takes the piano and the free bench, not the piano's bench: " + podium.members());
+        h.succeed();
+    }
+
+    private static boolean sameYaw(float a, float b) {
+        return Math.abs(net.minecraft.util.Mth.wrapDegrees(a - b)) < 0.5f;
+    }
+
+    /**
+     * 坐下、上工位的生物不留着走过来时的朝向（{@link dev.starbloom.orchestra.music.MusicianGaze}）：不在乐团里看正前方；
+     * 加入乐团后看指挥台上指挥的脸，指挥在身侧时头最多偏 60°，俯仰最多 20°。
+     */
+    private static void gaze(GameTestHelper h) {
+        ServerLevel level = h.getLevel();
+        // 琴凳朝南，精灵从东边牵过来（朝西）
+        BlockPos front = bench(h, new BlockPos(3, 1, 2), Direction.SOUTH);
+        Mob elf = musician(h, new BlockPos(1, 1, 2));
+        elf.setYRot(90);
+        elf.setYHeadRot(90);
+        h.assertTrue(StarbloomBenchBlock.sit(level, front, elf) && elf.getVehicle() instanceof BenchSeat, "the elf sits down");
+        BenchSeat ride = (BenchSeat) elf.getVehicle();
+        ride.positionRider(elf);
+        h.assertTrue(sameYaw(elf.getYHeadRot(), 0) && sameYaw(elf.getYRot(), 0) && elf.getXRot() == 0,
+            "outside an orchestra the elf looks straight ahead, head yaw " + elf.getYHeadRot() + ", pitch " + elf.getXRot());
+        // 指挥台在前面偏东，指挥面朝北（朝着乐团）
+        BlockPos main = h.absolutePos(new BlockPos(4, 1, 6));
+        place(level, main, Orchestra.PODIUM.get().defaultBlockState().setValue(PodiumBlock.FACING, Direction.NORTH));
+        if (!(level.getBlockEntity(main) instanceof PodiumBlockEntity podium)) throw new AssertionError("no podium");
+        h.assertTrue("joined".equals(podium.toggle(front)), "the bench joins");
+        ride.positionRider(elf);
+        Vec3 d = PodiumBlock.standAt(level.getBlockState(main), main).add(0, 1.62, 0).subtract(elf.getEyePosition());
+        float toward = (float) (Math.toDegrees(Math.atan2(d.z, d.x)) - 90);
+        h.assertTrue(sameYaw(elf.getYHeadRot(), toward) && sameYaw(elf.getYRot(), toward) && sameYaw(elf.yBodyRot, 0),
+            "in the orchestra the elf looks at the conductor: head yaw " + elf.getYHeadRot() + ", expected " + toward);
+        h.assertTrue(elf.getXRot() < 0 && elf.getXRot() >= -20, "and looks up at the conductor's face a little, pitch " + elf.getXRot());
+        // 指挥在左手边很远的侧面：头只偏 60°
+        BlockPos side = bench(h, new BlockPos(9, 1, 5), Direction.NORTH);
+        Mob violist = musician(h, new BlockPos(9, 1, 7));
+        h.assertTrue(StarbloomBenchBlock.sit(level, side, violist), "the second elf sits down");
+        h.assertTrue("joined".equals(podium.toggle(side)), "the second bench joins");
+        violist.getVehicle().positionRider(violist);
+        h.assertTrue(sameYaw(violist.getYHeadRot(), 180 - 60), "the head turns at most 60 degrees, got " + violist.getYHeadRot());
+        // 工位：钟琴朝南放，敲的人在北面、面朝北；从南边牵过来（朝南）也看前方
+        BlockPos glock = h.absolutePos(new BlockPos(7, 1, 2));
+        place(level, glock, Instruments.GLOCKENSPIEL.get().defaultBlockState().setValue(InstrumentBlock.FACING, Direction.SOUTH));
+        Mob ringer = musician(h, new BlockPos(7, 1, 4));
+        h.assertTrue(dev.starbloom.orchestra.music.InstrumentPosts.take(level, glock, ringer), "the elf takes the post");
+        ringer.getVehicle().positionRider(ringer);
+        h.assertTrue(sameYaw(ringer.getYHeadRot(), 180) && sameYaw(ringer.getYRot(), 180),
+            "at a post the elf looks ahead too, head yaw " + ringer.getYHeadRot());
         h.succeed();
     }
 }

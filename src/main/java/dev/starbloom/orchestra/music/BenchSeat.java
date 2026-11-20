@@ -128,14 +128,15 @@ public final class BenchSeat extends Entity {
         clampRotation(passenger);
     }
 
-    /** 身体朝着琴凳的方向，头最多转 75°。 */
+    /** 身体朝着琴凳的方向；玩家头最多转 75°，生物看前方或指挥（{@link MusicianGaze}）。 */
     private void clampRotation(Entity passenger) {
-        passenger.setYBodyRot(getYRot());
-        float diff = Mth.wrapDegrees(passenger.getYRot() - getYRot());
-        float clamped = Mth.clamp(diff, -75.0f, 75.0f);
-        passenger.yRotO += clamped - diff;
-        passenger.setYRot(passenger.getYRot() + clamped - diff);
-        passenger.setYHeadRot(passenger.getYRot());
+        MusicianGaze.apply(this, passenger, passenger instanceof Player ? null : member());
+    }
+
+    /** 这张琴凳演奏的乐器：关联了乐器时是那件乐器，否则是琴凳自己（手持乐器的乐手）。 */
+    private BlockPos member() {
+        BlockPos linked = StarbloomBenchBlock.linked(level(), bench());
+        return linked != null ? linked : bench();
     }
 
     @Override
