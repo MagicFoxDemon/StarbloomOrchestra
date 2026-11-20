@@ -134,6 +134,8 @@ class SampleMapTest {
             "every recorded harpsichord note has its jack falling back");
         assertTrue(load(RECORDED, InstrumentKind.GRAND_PIANO).zones().size() >= 5 * 29, "five velocity layers of the piano");
         assertTrue(load(RECORDED, InstrumentKind.CELESTA) == null, "no library records a celesta");
+        // 尺八的 ikoa 采样按利用规约不许再分发，资源包里不能有它的录音（docs/JAPANESE_INSTRUMENTS.md 第 6 节）
+        assertTrue(load(RECORDED, InstrumentKind.SHAKUHACHI) == null, "the pack never ships the shakuhachi samples");
         JsonObject meta;
         try (var in = Files.newBufferedReader(PACK.resolve("pack.mcmeta"))) {
             meta = JsonParser.parseReader(in).getAsJsonObject().getAsJsonObject("pack");
