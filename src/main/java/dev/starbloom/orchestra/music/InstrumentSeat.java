@@ -5,7 +5,6 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
@@ -117,14 +116,9 @@ public final class InstrumentSeat extends Entity {
         clampRotation(passenger);
     }
 
-    /** 身体朝着乐器，头最多转 75°（同原版船上的做法）。 */
+    /** 身体朝着乐器；玩家头最多转 75°（同原版船上的做法），生物看前方或指挥（{@link MusicianGaze}）。 */
     private void clampRotation(Entity passenger) {
-        passenger.setYBodyRot(getYRot());
-        float diff = Mth.wrapDegrees(passenger.getYRot() - getYRot());
-        float clamped = Mth.clamp(diff, -75.0f, 75.0f);
-        passenger.yRotO += clamped - diff;
-        passenger.setYRot(passenger.getYRot() + clamped - diff);
-        passenger.setYHeadRot(passenger.getYRot());
+        MusicianGaze.apply(this, passenger, instrument());
     }
 
     @Override

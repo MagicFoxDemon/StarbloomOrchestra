@@ -425,7 +425,7 @@ uv run --no-project --with pillow --with numpy python tools/instrument_art.py
   `sourceLabel()` 给界面用。
 - 座位：`InstrumentSeat`（看不见的实体，不存盘、打不坏）。`SeatedInstrumentBlock`（继承 `TallInstrumentBlock`）空手右键时在琴后
   生成座位、让玩家骑上；座位的位置就是演奏者双脚的位置（`SeatedInstrumentBlock.feet`，按方块朝向转过去，抵消玩家自己 0.6 格的骑乘挂点）。
-  身体朝向固定为琴的朝向，头最多转 75°（同原版的船）。没人坐了、琴不在了，座位自己消失。
+  身体朝向固定为琴的朝向，头最多转 75°（同原版的船；生物看前方或指挥，见 [ORCHESTRA.md](ORCHESTRA.md) 14.2「往哪看」）。没人坐了、琴不在了，座位自己消失。
 - 姿势：`HandheldPoses` 多三个手持姿势和两个坐姿（`META-INF/enumextensions.json`）。骑在座位上时，玩家层把双手原来拿的东西清掉、
   右臂姿势换成大提琴 / 低音提琴：两腿（大提琴分开前伸、低音提琴伸直），右臂瞄向弓根，左臂瞄向指板。
   原版手臂是直的：`HeldRig.seated` 让右手瞄准弓根该在的位置，手实际到哪弓根就在哪，弓总从琴弦上的那一点穿过（弓毛贴着琴弦）；
