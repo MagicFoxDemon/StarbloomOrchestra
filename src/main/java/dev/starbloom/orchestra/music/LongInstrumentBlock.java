@@ -67,7 +67,7 @@ public class LongInstrumentBlock extends InstrumentBlock {
     }
 
     @Override
-    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return (state.getValue(TAIL) ? back : front).get(state.getValue(FACING));
     }
 
@@ -86,8 +86,8 @@ public class LongInstrumentBlock extends InstrumentBlock {
     }
 
     @Override
-    protected BlockState updateShape(BlockState state, Direction direction, BlockState neighborState, LevelAccessor level,
-                                     BlockPos pos, BlockPos neighborPos) {
+    public BlockState updateShape(BlockState state, Direction direction, BlockState neighborState, LevelAccessor level,
+                                  BlockPos pos, BlockPos neighborPos) {
         Direction facing = state.getValue(FACING);
         boolean tail = state.getValue(TAIL);
         Direction toSibling = tail ? facing : facing.getOpposite();
@@ -99,7 +99,7 @@ public class LongInstrumentBlock extends InstrumentBlock {
     }
 
     @Override
-    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         if (!level.isClientSide() && player.isCreative() && !isMain(state)) {
             BlockPos main = mainPos(state, pos);
             BlockState mainState = level.getBlockState(main);
@@ -107,7 +107,7 @@ public class LongInstrumentBlock extends InstrumentBlock {
                 level.setBlock(main, Blocks.AIR.defaultBlockState(), Block.UPDATE_SUPPRESS_DROPS | Block.UPDATE_ALL);
             }
         }
-        return super.playerWillDestroy(level, pos, state, player);
+        super.playerWillDestroy(level, pos, state, player);
     }
 
     @Override

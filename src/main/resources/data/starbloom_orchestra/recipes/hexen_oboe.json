@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "  R",
+    " P ",
+    "P  "
+  ],
+  "key": {
+    "R": {
+      "item": "minecraft:sugar_cane"
+    },
+    "P": {
+      "item": "minecraft:dark_oak_planks"
+    }
+  },
+  "result": {
+    "item": "starbloom_orchestra:hexen_oboe",
+    "count": 1
+  }
+}

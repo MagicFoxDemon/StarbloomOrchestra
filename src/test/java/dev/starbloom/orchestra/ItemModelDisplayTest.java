@@ -13,19 +13,19 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * 物品拿在手上/掉在地上不能"比正常大一圈"，物品模型要是 1.21.1 读得了的格式。
+ * 物品拿在手上/掉在地上不能"比正常大一圈"，物品模型要是 1.20.1 读得了的格式。
  *
  * <p>实机反馈：浅色精灵木板与叶辉嵌片的手持模型和凋落物太大。原因是它们的方块模型没有
  * `parent`（也没写 `display`），物品形态拿不到原版的 display 变换，于是整块 16×16 直接
  * 糊在手上和地上。
  *
- * <p>1.21.1 没有物品模型定义（`items/*.json` 是 1.21.4 起的），物品 `<id>` 直接用 `models/item/<id>.json`；
+ * <p>1.20.1 没有物品模型定义（`items/*.json` 是 1.21.4 起的），物品 `<id>` 直接用 `models/item/<id>.json`；
  * `models/item/` 里另有只供渲染、不是物品的模型（{@link #renderOnly}）。
  */
 class ItemModelDisplayTest {
     private static final String ROOT="assets/starbloom_orchestra/";
     private static final String NS="starbloom_orchestra:";
-    /** 元素转动超出 1.21.1 原版能读的范围时用的几何加载器（client/music/RotatedCuboidModel）。 */
+    /** 元素转动超出 1.20.1 原版能读的范围时用的几何加载器（client/music/RotatedCuboidModel）。 */
     private static final String ROTATED_LOADER=NS+"rotated_cuboids";
     private static final Set<Double> VANILLA_ANGLES=Set.of(0.0,22.5,-22.5,45.0,-45.0);
 
@@ -50,7 +50,6 @@ class ItemModelDisplayTest {
 
     /**
      * sub（如 "models/item"、"models/block"）下的 JSON 名字（不含子目录）；资源可能是目录也可能打进了 jar。
-     * 1.21.1 的单元测试由 FML 启动，模组的资源挂在 union 文件系统上（{@code union:} 协议），和目录一样用 Path 列。
      */
     static List<String> names(String sub)throws Exception{
         var ids=new ArrayList<String>();
@@ -91,7 +90,7 @@ class ItemModelDisplayTest {
         return ref.contains(":")?ref:"minecraft:"+ref;
     }
 
-    /** 1.21.1 的物品模型是 models/item/<id>.json：名字在语言文件里的物品（不含 tooltip 之类的子键）都要有一份。 */
+    /** 1.20.1 的物品模型是 models/item/<id>.json：名字在语言文件里的物品（不含 tooltip 之类的子键）都要有一份。 */
     @Test void everyNamedItemHasAModel()throws Exception{
         var lang=read("lang/zh_cn.json");
         var missing=new ArrayList<String>();
@@ -102,7 +101,7 @@ class ItemModelDisplayTest {
             if(!exists("models/item/"+id+".json"))missing.add(id);
         }
         assertTrue(missing.isEmpty(),"这些物品没有 models/item/<id>.json，游戏里是紫黑方块：\n"+String.join("\n",missing));
-        assertFalse(exists("items/hexen_violin.json"),"1.21.1 不读 items/ 下的物品模型定义，不该再带着");
+        assertFalse(exists("items/hexen_violin.json"),"1.20.1 不读 items/ 下的物品模型定义，不该再带着");
     }
 
     /**
@@ -156,10 +155,10 @@ class ItemModelDisplayTest {
     }
 
     /**
-     * 1.21.1 原版的元素 rotation 只认 `axis` + `angle`，angle 只能是 0、±22.5、±45；欧拉角 `x`/`y`/`z` 和别的角度整份模型会读不出来。
-     * 这类模型得交给 `starbloom_orchestra:rotated_cuboids` 加载器，元素放在 `cuboids` 里（tools/instrument_kit.py 的 for_1_21_1）。
+     * 1.20.1 原版的元素 rotation 只认 `axis` + `angle`，angle 只能是 0、±22.5、±45；欧拉角 `x`/`y`/`z` 和别的角度整份模型会读不出来。
+     * 这类模型得交给 `starbloom_orchestra:rotated_cuboids` 加载器，元素放在 `cuboids` 里（tools/instrument_kit.py）。
      */
-    @Test void elementRotationsParseIn1211()throws Exception{
+    @Test void elementRotationsParseIn1201()throws Exception{
         var offenders=new ArrayList<String>();
         int loaders=0;
         for(String sub:new String[]{"models/block","models/item"}){
@@ -189,7 +188,7 @@ class ItemModelDisplayTest {
                 }
             }
         }
-        assertTrue(offenders.isEmpty(),"这些模型 1.21.1 读不出来：\n"+String.join("\n",offenders));
+        assertTrue(offenders.isEmpty(),"这些模型 1.20.1 读不出来：\n"+String.join("\n",offenders));
         assertTrue(loaders>0,"乐器模型里有任意角度的转动，应该有用 "+ROTATED_LOADER+" 的模型");
     }
 }

@@ -1,7 +1,6 @@
 package dev.starbloom.orchestra.mixin;
 
 import dev.starbloom.orchestra.client.music.PartOutline;
-import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.renderer.GameRenderer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -16,9 +15,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  */
 @Mixin(GameRenderer.class)
 public abstract class PartOutlineMixin {
-    @Inject(method = "render(Lnet/minecraft/client/DeltaTracker;Z)V",
+    @Inject(method = "render(FJZ)V",
             at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/RenderSystem;clear(IZ)V", ordinal = 0))
-    private void starbloomOrchestra$draw(DeltaTracker deltaTracker, boolean renderLevel, CallbackInfo ci) {
+    private void starbloomOrchestra$draw(float partialTick, long nanoTime, boolean renderLevel, CallbackInfo ci) {
         if (renderLevel) PartOutline.draw();
     }
 }

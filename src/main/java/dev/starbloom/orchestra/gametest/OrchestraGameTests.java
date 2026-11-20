@@ -25,18 +25,18 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.gametest.framework.TestFunction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.bus.api.IEventBus;
+import net.minecraftforge.eventbus.api.IEventBus;
 
 /**
  * 乐团（docs/ORCHESTRA.md）：指挥台两格、拆任一格整座拆掉，只掉一座和谱架上的总谱；指挥棒先绑定指挥台、再点选乐器加入 / 退出；
@@ -94,7 +94,7 @@ public final class OrchestraGameTests {
             byte[] encoded = roll.encode();
             UUID id = RollStore.save(encoded);
             ItemStack stack = new ItemStack(Instruments.MUSIC_ROLL_ITEM.get());
-            stack.set(Instruments.MUSIC_ROLL.get(), RollInfo.of(id, roll, MusicRoll.hash(encoded)));
+            RollInfo.set(stack, RollInfo.of(id, roll, MusicRoll.hash(encoded)));
             return stack;
         } catch (Exception e) {
             throw new AssertionError(e);
@@ -154,12 +154,12 @@ public final class OrchestraGameTests {
         ServerLevel level = h.getLevel();
         PodiumBlockEntity be = podium(h, new BlockPos(2, 1, 1), Direction.SOUTH);
         BlockPos drum = timpani(h, new BlockPos(2, 1, 5));
-        Player player = h.makeMockPlayer(GameType.SURVIVAL);
+        Player player = h.makeMockPlayer();
         ItemStack baton = new ItemStack(Orchestra.BATON.get());
         Orchestra.batonOnInstrument(baton, level, drum, player);
         h.assertTrue(be.members().isEmpty(), "an unbound baton adds nothing");
         Orchestra.batonOnPodium(baton, level, be.getBlockPos(), player);
-        h.assertTrue(GlobalPos.of(level.dimension(), be.getBlockPos()).equals(baton.get(Orchestra.BATON_PODIUM.get())), "the baton remembers the podium");
+        h.assertTrue(GlobalPos.of(level.dimension(), be.getBlockPos()).equals(Orchestra.batonPodium(baton)), "the baton remembers the podium");
         h.assertTrue(!be.isPlaying(), "binding does not start the orchestra");
         Orchestra.batonOnInstrument(baton, level, drum, player);
         h.assertTrue(be.members().equals(List.of(drum)), "the timpani joined");
@@ -209,13 +209,13 @@ public final class OrchestraGameTests {
         be.setGain(1, -6);
         be.toggleMute(0);
         be.assign(be.members().indexOf(right), 1);
-        CompoundTag tag = be.saveWithFullMetadata(level.registryAccess());
-        BlockEntity loaded = BlockEntity.loadStatic(be.getBlockPos(), be.getBlockState(), tag, level.registryAccess());
+        CompoundTag tag = be.saveWithFullMetadata();
+        BlockEntity loaded = BlockEntity.loadStatic(be.getBlockPos(), be.getBlockState(), tag);
         if (!(loaded instanceof PodiumBlockEntity copy)) throw new AssertionError("podium did not load");
         h.assertTrue(copy.members().equals(be.members()), "members saved");
         h.assertTrue(copy.mask(right) == 1 && copy.locked(right) && !copy.locked(left), "manual assignment and lock saved");
         h.assertTrue(copy.tempo() == 80 && copy.gain(1) == -6 && copy.muteMask() == 1, "tempo, gain and mute saved");
-        h.assertTrue(copy.score().has(Instruments.MUSIC_ROLL.get()), "the score saved");
+        h.assertTrue(RollInfo.has(copy.score()), "the score saved");
         h.assertTrue(!copy.isPlaying(), "playback is not saved");
         h.succeed();
     }
@@ -229,9 +229,9 @@ public final class OrchestraGameTests {
         for (BlockPos p : List.of(left, right, drum)) be.toggle(p);
         h.assertTrue(be.members().size() == 3, "three members");
         // 潜行空手右键架子，把小提琴拿下来
-        Player player = h.makeMockPlayer(GameType.SURVIVAL);
+        Player player = h.makeMockPlayer();
         player.setShiftKeyDown(true);
-        level.getBlockState(left).useWithoutItem(level, player, new BlockHitResult(Vec3.atCenterOf(left), Direction.SOUTH, left, false));
+        level.getBlockState(left).use(level, player, InteractionHand.MAIN_HAND, new BlockHitResult(Vec3.atCenterOf(left), Direction.SOUTH, left, false));
         h.assertTrue(level.getBlockState(left).getValue(MusicStandBlock.HOLDS) == MusicStandBlock.Holds.NONE, "the stand is empty");
         h.assertTrue(!be.members().contains(left), "taking the violin off the stand leaves the orchestra");
         h.assertTrue(be.mask(right) == 1, "the other violin now plays the first part");
@@ -253,7 +253,7 @@ public final class OrchestraGameTests {
         be.setScore(punched(duet()));
         be.toggle(left);
         be.toggle(right);
-        net.minecraft.world.entity.player.Player player = h.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        net.minecraft.world.entity.player.Player player = h.makeMockPlayer();
         net.minecraft.world.phys.Vec3 stand = be.standAt();
         player.moveTo(stand.x, stand.y, stand.z, 0, 0);
         player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(Orchestra.BATON.get()));
@@ -275,8 +275,8 @@ public final class OrchestraGameTests {
                 be.setMaster(-4);
                 h.assertTrue(!be.metronome(), "the metronome starts off");
                 be.toggleMetronome();
-                CompoundTag tag = be.saveWithFullMetadata(level.registryAccess());
-                BlockEntity loaded = BlockEntity.loadStatic(be.getBlockPos(), be.getBlockState(), tag, level.registryAccess());
+                CompoundTag tag = be.saveWithFullMetadata();
+                BlockEntity loaded = BlockEntity.loadStatic(be.getBlockPos(), be.getBlockState(), tag);
                 h.assertTrue(loaded instanceof PodiumBlockEntity copy && copy.master() == -4 && copy.metronome(), "the master volume and the metronome saved");
                 be.stop();
                 h.assertTrue(be.leader() == null, "stopping forgets the conductor");

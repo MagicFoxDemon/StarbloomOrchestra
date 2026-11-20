@@ -13,7 +13,7 @@ import net.minecraft.commands.synchronization.ArgumentTypeInfos;
 import net.minecraft.gametest.framework.GameTestGenerator;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.gametest.framework.TestFunction;
-import net.neoforged.bus.api.IEventBus;
+import net.minecraftforge.eventbus.api.IEventBus;
 
 /**
  * 服务端的命令树能发给玩家：每个参数的类型都注册过。没注册的发不出命令树，玩家一进世界就断开——26.1 上官方发布的 catnip 1.0.52 的

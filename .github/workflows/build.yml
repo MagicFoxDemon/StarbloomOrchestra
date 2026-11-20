@@ -2,7 +2,7 @@ name: Build
 
 on:
   push:
-    branches: [main, mc/1.21.1]
+    branches: [main, mc/1.21.1, mc/1.20.1]
   pull_request:
   workflow_dispatch:
 
@@ -19,6 +19,12 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
+
+      # 模组编译与运行用 JDK 17；ModDevGradle 的 NeoFormRuntime（neoform-runtime-2.0.31-all.jar，class 65）需要 JDK 21
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
 
       - uses: actions/setup-java@v6
         with:

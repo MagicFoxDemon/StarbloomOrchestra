@@ -9,7 +9,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
@@ -111,7 +110,7 @@ public class StarbloomBenchBlock extends InstrumentBlock {
     }
 
     @Override
-    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return SHAPES.get(state.getValue(FACING));
     }
 
@@ -288,19 +287,19 @@ public class StarbloomBenchBlock extends InstrumentBlock {
 
     /**
      * 拿着东西右键。成功一律用 sidedSuccess（客户端 SUCCESS 挥手、服务端 CONSUME 不再广播挥手）；
-     * 让手里的东西自己处理时用 {@link ItemInteractionResult#SKIP_DEFAULT_BLOCK_INTERACTION}（不走空手交互、直接用物品）。
+     * 让手里的东西自己处理时返回 {@link InteractionResult#PASS}（不走空手交互、直接用物品）。
      */
     @Override
-    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
-                                              InteractionHand hand, BlockHitResult hit) {
+    protected @Nullable InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
+                                                      InteractionHand hand, BlockHitResult hit) {
         if (stack.is(Orchestra.BATON.get())) {
             // 指挥棒：关联了乐器的凳子就是那件乐器
             BlockPos instrument = linked(level, pos, state);
             if (!level.isClientSide()) Orchestra.batonOnInstrument(stack, (ServerLevel) level, instrument != null ? instrument : mainPos(state, pos), player);
-            return ItemInteractionResult.sidedSuccess(level.isClientSide());
+            return InteractionResult.sidedSuccess(level.isClientSide());
         }
         if (stack.is(Items.LEAD)) {
-            if (level.isClientSide()) return ItemInteractionResult.SUCCESS;
+            if (level.isClientSide()) return InteractionResult.SUCCESS;
             Mob led = nearestLed(player);
             if (led != null) {
                 if (occupant(level, pos) == null) {
@@ -309,13 +308,12 @@ public class StarbloomBenchBlock extends InstrumentBlock {
                     if (!player.getAbilities().instabuild) player.getInventory().add(new ItemStack(Items.LEAD));
                     sit(level, pos, led);
                 }
-                return ItemInteractionResult.CONSUME;
+                return InteractionResult.CONSUME;
             }
         }
         // 已经坐在这张凳上：把右键交给手里的东西（例如举起小提琴自己拉）
-        if (occupant(level, pos) == player) return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
-        return seatPlayer(level, pos, player) == InteractionResult.PASS ? ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION
-            : ItemInteractionResult.sidedSuccess(level.isClientSide());
+        if (occupant(level, pos) == player) return InteractionResult.PASS;
+        return seatPlayer(level, pos, player);
     }
 
     @Override
@@ -353,7 +351,7 @@ public class StarbloomBenchBlock extends InstrumentBlock {
 
     /** 前面的乐器放上、拆掉、换了：关联变了，重算演奏什么。 */
     @Override
-    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos neighborPos, boolean movedByPiston) {
+    public void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos neighborPos, boolean movedByPiston) {
         super.neighborChanged(state, level, pos, block, neighborPos, movedByPiston);
         refresh(level, pos);
     }

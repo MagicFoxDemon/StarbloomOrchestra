@@ -30,12 +30,12 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.EventPriority;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.EntityRenderersEvent;
-import net.neoforged.neoforge.client.event.RenderLivingEvent;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.EntityRenderersEvent;
+import net.minecraftforge.client.event.RenderLivingEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 
@@ -50,10 +50,10 @@ import org.joml.Vector3f;
  * 这两种坐标就是「手要到的位置」（IK 目标）：原版的人形模型手臂是直的，转过去指着它；NPC 的骨架有手肘，两段手臂正好够到
  * （{@link NpcMusician}）。以后别的骨架只要把这两种坐标换算到自己的骨骼上就能套用。
  * <p>
- * 1.21.1 没有渲染状态：画一个人之前（{@link RenderLivingEvent.Pre}）按实体算好这一帧的 {@link Drawing}，模型的 setupAnim
+ * 1.20.1 没有渲染状态：画一个人之前（{@link RenderLivingEvent.Pre}）按实体算好这一帧的 {@link Drawing}，模型的 setupAnim
  * 之后（{@code MusicianModelMixin}）按它摆手臂、腿，乐器层按它画乐器；画完（{@link RenderLivingEvent.Post}）就去掉。
  */
-@EventBusSubscriber(modid = StarbloomOrchestra.ID, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = StarbloomOrchestra.ID, value = Dist.CLIENT)
 public final class MusicianPoses {
     /** HANDHELD 手持乐器；KEYS 键盘；HARP 竖琴；BOWED 大提琴、低音提琴琴后拉弓；MALLETS 钟琴、管钟、定音鼓拿槌敲（{@link StationPoses}）。 */
     public enum Mode { HANDHELD, KEYS, HARP, BOWED, MALLETS }
@@ -436,11 +436,16 @@ public final class MusicianPoses {
         model.rightPants.copyFrom(model.rightLeg);
     }
 
-    @SubscribeEvent
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    static void layers(EntityRenderersEvent.AddLayers event) {
-        for (EntityType<?> type : event.getEntityTypes()) {
-            if (event.getRenderer(type) instanceof HumanoidMobRenderer renderer) renderer.addLayer(new MobLayer(renderer));
+    @Mod.EventBusSubscriber(modid = StarbloomOrchestra.ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
+    static final class ModEvents {
+        private ModEvents() {}
+
+        @SubscribeEvent
+        @SuppressWarnings({"unchecked", "rawtypes"})
+        static void layers(EntityRenderersEvent.AddLayers event) {
+            for (EntityType<?> type : net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES.getValues()) {
+                if (event.getRenderer((EntityType) type) instanceof HumanoidMobRenderer renderer) renderer.addLayer(new MobLayer(renderer));
+            }
         }
     }
 

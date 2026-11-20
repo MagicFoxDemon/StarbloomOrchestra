@@ -1,13 +1,10 @@
 package dev.starbloom.orchestra.music.orchestra;
 
-import dev.starbloom.orchestra.StarbloomOrchestra;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.FriendlyByteBuf;
 import org.jetbrains.annotations.Nullable;
 
 /** 乐团的网络包（docs/ORCHESTRA.md 第 6 节）。 */
@@ -26,47 +23,46 @@ public final class EnsemblePayloads {
      */
     public record EnsembleState(BlockPos podium, @Nullable UUID roll, long hash, int positionMs, int durationMs, int tempo,
                                 List<MemberPart> members, byte[] gains, int muteMask, int soloMask,
-                                int rateMilli, int expressionMilli, int master, @Nullable UUID leader) implements CustomPacketPayload {
-        public static final Type<EnsembleState> TYPE = new Type<>(StarbloomOrchestra.id("ensemble_state"));
-        public static final StreamCodec<RegistryFriendlyByteBuf, EnsembleState> CODEC = StreamCodec.of(
-            (b, p) -> {
-                b.writeBlockPos(p.podium);
-                b.writeBoolean(p.roll != null);
-                if (p.roll != null) b.writeUUID(p.roll);
-                b.writeLong(p.hash);
-                b.writeInt(p.positionMs);
-                b.writeVarInt(p.durationMs);
-                b.writeVarInt(p.tempo);
-                b.writeVarInt(p.members.size());
-                for (MemberPart m : p.members) {
-                    b.writeBlockPos(m.pos());
-                    b.writeVarInt(m.mask());
-                }
-                b.writeByteArray(p.gains);
-                b.writeVarInt(p.muteMask);
-                b.writeVarInt(p.soloMask);
-                b.writeVarInt(p.rateMilli);
-                b.writeVarInt(p.expressionMilli);
-                b.writeByte(p.master);
-                b.writeBoolean(p.leader != null);
-                if (p.leader != null) b.writeUUID(p.leader);
-            },
-            b -> {
-                BlockPos podium = b.readBlockPos();
-                UUID roll = b.readBoolean() ? b.readUUID() : null;
-                long hash = b.readLong();
-                int pos = b.readInt();
-                int duration = b.readVarInt();
-                int tempo = b.readVarInt();
-                int n = Math.min(PodiumBlockEntity.MAX_MEMBERS, b.readVarInt());
-                List<MemberPart> members = new ArrayList<>(n);
-                for (int i = 0; i < n; i++) members.add(new MemberPart(b.readBlockPos(), b.readVarInt()));
-                byte[] gains = b.readByteArray(64);
-                int mute = b.readVarInt(), solo = b.readVarInt(), rate = b.readVarInt(), expression = b.readVarInt();
-                int master = b.readByte();
-                UUID leader = b.readBoolean() ? b.readUUID() : null;
-                return new EnsembleState(podium, roll, hash, pos, duration, tempo, members, gains, mute, solo, rate, expression, master, leader);
-            });
+                                int rateMilli, int expressionMilli, int master, @Nullable UUID leader) {
+        public void encode(FriendlyByteBuf b) {
+            b.writeBlockPos(podium);
+            b.writeBoolean(roll != null);
+            if (roll != null) b.writeUUID(roll);
+            b.writeLong(hash);
+            b.writeInt(positionMs);
+            b.writeVarInt(durationMs);
+            b.writeVarInt(tempo);
+            b.writeVarInt(members.size());
+            for (MemberPart m : members) {
+                b.writeBlockPos(m.pos());
+                b.writeVarInt(m.mask());
+            }
+            b.writeByteArray(gains);
+            b.writeVarInt(muteMask);
+            b.writeVarInt(soloMask);
+            b.writeVarInt(rateMilli);
+            b.writeVarInt(expressionMilli);
+            b.writeByte(master);
+            b.writeBoolean(leader != null);
+            if (leader != null) b.writeUUID(leader);
+        }
+
+        public static EnsembleState decode(FriendlyByteBuf b) {
+            BlockPos podium = b.readBlockPos();
+            UUID roll = b.readBoolean() ? b.readUUID() : null;
+            long hash = b.readLong();
+            int pos = b.readInt();
+            int duration = b.readVarInt();
+            int tempo = b.readVarInt();
+            int n = Math.min(PodiumBlockEntity.MAX_MEMBERS, b.readVarInt());
+            List<MemberPart> members = new ArrayList<>(n);
+            for (int i = 0; i < n; i++) members.add(new MemberPart(b.readBlockPos(), b.readVarInt()));
+            byte[] gains = b.readByteArray(64);
+            int mute = b.readVarInt(), solo = b.readVarInt(), rate = b.readVarInt(), expression = b.readVarInt();
+            int master = b.readByte();
+            UUID leader = b.readBoolean() ? b.readUUID() : null;
+            return new EnsembleState(podium, roll, hash, pos, duration, tempo, members, gains, mute, solo, rate, expression, master, leader);
+        }
 
         public boolean playing() {
             return roll != null;
@@ -76,12 +72,10 @@ public final class EnsemblePayloads {
         public boolean held() {
             return roll != null && rateMilli == 0;
         }
-
-        @Override public Type<EnsembleState> type() { return TYPE; }
     }
 
     /** 客户端 → 服务端：指挥台界面上的操作。 */
-    public record PodiumControl(BlockPos podium, int action, int a, int b) implements CustomPacketPayload {
+    public record PodiumControl(BlockPos podium, int action, int a, int b) {
         /** a = 从第几小节（从 0 起）；b = 起奏前打的两拍之间隔了多少毫秒（0：按设定的速度），这时打拍子的人就是指挥。 */
         public static final int START = 0;
         public static final int STOP = 1;
@@ -108,24 +102,33 @@ public final class EnsemblePayloads {
         /** 切换节拍器（站在台上指挥的人听得到）。 */
         public static final int METRONOME = 13;
 
-        public static final Type<PodiumControl> TYPE = new Type<>(StarbloomOrchestra.id("podium_control"));
-        public static final StreamCodec<RegistryFriendlyByteBuf, PodiumControl> CODEC = StreamCodec.of(
-            (b, p) -> { b.writeBlockPos(p.podium); b.writeVarInt(p.action); b.writeInt(p.a); b.writeInt(p.b); },
-            b -> new PodiumControl(b.readBlockPos(), b.readVarInt(), b.readInt(), b.readInt()));
+        public void encode(FriendlyByteBuf buf) {
+            buf.writeBlockPos(podium);
+            buf.writeVarInt(action);
+            buf.writeInt(a);
+            buf.writeInt(b);
+        }
 
-        @Override public Type<PodiumControl> type() { return TYPE; }
+        public static PodiumControl decode(FriendlyByteBuf buf) {
+            return new PodiumControl(buf.readBlockPos(), buf.readVarInt(), buf.readInt(), buf.readInt());
+        }
     }
 
     /**
      * 客户端 → 服务端：站在指挥台上的人打了一拍（或延长、或画拍子的幅度变了）。positionMs 是他那边乐团此刻的位置，
      * rateMilli 是此后时钟的速度（千分之几），expressionMilli 是手势给的力度，held 为真时乐团停在这里（延长）。
      */
-    public record ConductBeat(BlockPos podium, int positionMs, int rateMilli, int expressionMilli, boolean held) implements CustomPacketPayload {
-        public static final Type<ConductBeat> TYPE = new Type<>(StarbloomOrchestra.id("conduct_beat"));
-        public static final StreamCodec<RegistryFriendlyByteBuf, ConductBeat> CODEC = StreamCodec.of(
-            (b, p) -> { b.writeBlockPos(p.podium); b.writeInt(p.positionMs); b.writeVarInt(p.rateMilli); b.writeVarInt(p.expressionMilli); b.writeBoolean(p.held); },
-            b -> new ConductBeat(b.readBlockPos(), b.readInt(), b.readVarInt(), b.readVarInt(), b.readBoolean()));
+    public record ConductBeat(BlockPos podium, int positionMs, int rateMilli, int expressionMilli, boolean held) {
+        public void encode(FriendlyByteBuf buf) {
+            buf.writeBlockPos(podium);
+            buf.writeInt(positionMs);
+            buf.writeVarInt(rateMilli);
+            buf.writeVarInt(expressionMilli);
+            buf.writeBoolean(held);
+        }
 
-        @Override public Type<ConductBeat> type() { return TYPE; }
+        public static ConductBeat decode(FriendlyByteBuf buf) {
+            return new ConductBeat(buf.readBlockPos(), buf.readInt(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean());
+        }
     }
 }

@@ -1,39 +1,38 @@
 package dev.starbloom.orchestra;
 
+import dev.starbloom.orchestra.music.OrchestraNetwork;
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.ModList;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.config.ModConfig;
-import net.neoforged.fml.loading.FMLEnvironment;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.fml.ModList;
+import net.minecraftforge.fml.ModLoadingContext;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.loading.FMLEnvironment;
 
 /**
- * 星辰花乐团：方块乐器、手持乐器、打孔纸带与 MIDI、乐团与指挥（docs/ORCHESTRA.md）。独立的模组，不依赖 Logos；
- * Logos 的附属「炼金釜」依赖它，用附属里的精灵、神狐、灵猫当乐手（附属的 NpcMusician）。
- *
- * <p>这些乐器原先在附属里（ID {@code logos_dimension:*}），老存档里的方块、物品、实体由 {@link LegacyIds} 换到本模组的 ID。
+ * 星辰花乐团：方块乐器、手持乐器、打孔纸带与 MIDI、乐团与指挥（docs/ORCHESTRA.md）。独立的模组。
  */
 @Mod(StarbloomOrchestra.ID)
 public final class StarbloomOrchestra {
     public static final String ID = "starbloom_orchestra";
 
-    public StarbloomOrchestra(IEventBus bus, ModContainer container) {
-        container.registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC);
-        container.registerConfig(ModConfig.Type.SERVER, ServerConfig.SPEC);
+    public StarbloomOrchestra() {
+        IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
+        ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC);
+        ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, ServerConfig.SPEC);
+        OrchestraNetwork.register();
         dev.starbloom.orchestra.music.Instruments.register(bus);
         dev.starbloom.orchestra.music.orchestra.Orchestra.register(bus);
         dev.starbloom.orchestra.music.Benches.register(bus);
         OrchestraRegistries.BLOCKS.register(bus);
         OrchestraRegistries.ITEMS.register(bus);
         OrchestraTabs.register(bus);
-        LegacyIds.register(bus);
         dev.starbloom.orchestra.gametest.InstrumentGameTests.register(bus);
         dev.starbloom.orchestra.gametest.OrchestraGameTests.register(bus);
         dev.starbloom.orchestra.gametest.BenchGameTests.register(bus);
         dev.starbloom.orchestra.gametest.OrganGameTests.register(bus);
         dev.starbloom.orchestra.gametest.CreativeTabGameTests.register(bus);
-        dev.starbloom.orchestra.gametest.LegacyIdGameTests.register(bus);
         dev.starbloom.orchestra.gametest.PonderLayoutGameTests.register(bus);
         dev.starbloom.orchestra.gametest.CommandTreeGameTests.register(bus);
         // 思索（按住 W，Ponder 库打包在本模组的 jar 里）：场景只在客户端注册
@@ -52,6 +51,6 @@ public final class StarbloomOrchestra {
     }
 
     public static ResourceLocation id(String path) {
-        return ResourceLocation.fromNamespaceAndPath(ID, path);
+        return new ResourceLocation(ID, path);
     }
 }

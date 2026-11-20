@@ -103,7 +103,7 @@ public class OrganConsoleBlock extends InstrumentBlock {
     }
 
     @Override
-    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return ((state.getValue(PART) & 2) == 0 ? LOWER : UPPER).get(state.getValue(FACING));
     }
 
@@ -149,8 +149,8 @@ public class OrganConsoleBlock extends InstrumentBlock {
     }
 
     @Override
-    protected BlockState updateShape(BlockState state, Direction direction, BlockState neighborState, LevelAccessor level,
-                                     BlockPos pos, BlockPos neighborPos) {
+    public BlockState updateShape(BlockState state, Direction direction, BlockState neighborState, LevelAccessor level,
+                                  BlockPos pos, BlockPos neighborPos) {
         int sibling = sibling(state, direction);
         if (sibling >= 0 && !(neighborState.is(this) && neighborState.getValue(PART) == sibling
                 && neighborState.getValue(FACING) == state.getValue(FACING) && neighborState.getValue(WIDE) == state.getValue(WIDE))) {
@@ -160,7 +160,7 @@ public class OrganConsoleBlock extends InstrumentBlock {
     }
 
     @Override
-    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         if (!level.isClientSide() && player.isCreative() && !isMain(state)) {
             BlockPos main = mainPos(state, pos);
             BlockState mainState = level.getBlockState(main);
@@ -168,7 +168,7 @@ public class OrganConsoleBlock extends InstrumentBlock {
                 level.setBlock(main, Blocks.AIR.defaultBlockState(), Block.UPDATE_SUPPRESS_DROPS | Block.UPDATE_ALL);
             }
         }
-        return super.playerWillDestroy(level, pos, state, player);
+        super.playerWillDestroy(level, pos, state, player);
     }
 
     @Override

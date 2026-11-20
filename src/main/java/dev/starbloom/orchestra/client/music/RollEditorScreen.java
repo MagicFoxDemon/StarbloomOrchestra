@@ -429,15 +429,14 @@ public class RollEditorScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double x, double y, double scrollX, double scrollY) {
+    public boolean mouseScrolled(double x, double y, double delta) {
         if (controlDown()) {
-            msPerPx = Math.max(1f, Math.min(80f, msPerPx * (scrollY > 0 ? 0.8f : 1.25f)));
-        } else if (shiftDown() || scrollX != 0) {
-            double d = scrollX != 0 ? scrollX : scrollY;
-            viewStart = Math.max(0, viewStart - (int) (d * 40 * msPerPx));
+            msPerPx = Math.max(1f, Math.min(80f, msPerPx * (delta > 0 ? 0.8f : 1.25f)));
+        } else if (shiftDown()) {
+            viewStart = Math.max(0, viewStart - (int) (delta * 40 * msPerPx));
         } else {
             int rows = gridH / ROW;
-            topPitch = Math.max(kind().low() + rows - 1, Math.min(kind().high(), topPitch + (int) Math.signum(scrollY) * 2));
+            topPitch = Math.max(kind().low() + rows - 1, Math.min(kind().high(), topPitch + (int) Math.signum(delta) * 2));
         }
         return true;
     }
@@ -480,8 +479,8 @@ public class RollEditorScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        // Screen.render 先画原版背景（模糊、压暗）再画控件；羊皮纸和网格要夹在两者之间，所以拆开来调用
-        renderBackground(g, mouseX, mouseY, partialTick);
+        // Screen.render 先画原版背景（压暗）再画控件；羊皮纸和网格要夹在两者之间，所以拆开来调用
+        renderBackground(g);
         Parchment.draw(g, x0, y0, W, H);
         g.drawString(font, tr("bpm"), x0 + PAD + 146, y0 + 24, Parchment.INK, false);
         int keysLeft = x0 + PAD;

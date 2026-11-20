@@ -20,12 +20,11 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
-import net.neoforged.neoforge.client.event.RenderFrameEvent;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -33,7 +32,7 @@ import org.jetbrains.annotations.Nullable;
  * 共用指挥台的时钟、只放分给它的声部、按声部的响度 / 静音 / 独奏；算指挥此刻的手势（拍子、强弱、提示、预备拍、收束）；
  * 记着指挥选中的声部（画面里描边，只有自己看得到）。
  */
-@EventBusSubscriber(modid = StarbloomOrchestra.ID, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = StarbloomOrchestra.ID, value = Dist.CLIENT)
 public final class Conducting {
     /** 16 个声部的颜色：魔女之森的配色，互不相同（界面的色块、选中时的描边同色）。 */
     public static final int[] PART_COLORS = {
@@ -90,12 +89,11 @@ public final class Conducting {
     // —— 网络 ——
 
     /**
-     * 收到乐团状态。1.21.1 没有单独的客户端收包注册：这个包在公共端 {@code RegisterPayloadHandlersEvent} 里登记时只放转发
-     * （{@code Orchestra#payloads}），客户端初始化时 {@code MusicClient.ModBus} 把这里登记进 {@code ClientPayloadHandlers}；
-     * 专用服务端上什么都不登记，也就不会加载客户端的类。
+     * 收到乐团状态。1.20.1 在公共端 {@code OrchestraNetwork#register} 里登记转发，
+     * 客户端初始化时 {@code MusicClient.ModBus} 把这里登记进 {@code ClientPayloadHandlers}。
      */
-    public static void onEnsembleState(EnsemblePayloads.EnsembleState p, IPayloadContext c) {
-        c.enqueueWork(() -> state(p));
+    public static void onEnsembleState(EnsemblePayloads.EnsembleState p) {
+        state(p);
     }
 
     static void state(EnsemblePayloads.EnsembleState p) {
@@ -163,8 +161,8 @@ public final class Conducting {
     }
 
     @SubscribeEvent
-    static void frame(RenderFrameEvent.Pre event) {
-        if (ENSEMBLES.isEmpty()) return;
+    static void frame(TickEvent.RenderTickEvent event) {
+        if (event.phase != TickEvent.Phase.START || ENSEMBLES.isEmpty()) return;
         long now = System.nanoTime();
         for (Ensemble e : new ArrayList<>(ENSEMBLES.values())) {
             if (e.roll == null) {

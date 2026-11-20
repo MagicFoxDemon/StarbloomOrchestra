@@ -1,6 +1,5 @@
 package dev.starbloom.orchestra.music.orchestra;
 
-import com.mojang.serialization.MapCodec;
 import dev.starbloom.orchestra.music.InstrumentShapes;
 import dev.starbloom.orchestra.music.Instruments;
 import java.util.List;
@@ -10,7 +9,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -34,6 +32,8 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.fml.DistExecutor;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -43,7 +43,6 @@ import org.jetbrains.annotations.Nullable;
  * 红石上升沿开始演奏。
  */
 public class PodiumBlock extends Block implements EntityBlock {
-    public static final MapCodec<PodiumBlock> CODEC = simpleCodec(PodiumBlock::new);
     public static final EnumProperty<Direction> FACING = HorizontalDirectionalBlock.FACING;
     /** 是不是指挥右手边那一格。 */
     public static final BooleanProperty SIDE = BooleanProperty.create("side");
@@ -54,11 +53,6 @@ public class PodiumBlock extends Block implements EntityBlock {
     public PodiumBlock(Properties properties) {
         super(properties);
         registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(SIDE, false).setValue(SCORE, false));
-    }
-
-    @Override
-    protected MapCodec<? extends Block> codec() {
-        return CODEC;
     }
 
     public static boolean isMain(BlockState state) {
@@ -107,12 +101,12 @@ public class PodiumBlock extends Block implements EntityBlock {
     }
 
     @Override
-    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return SHAPES.get(state.getValue(FACING));
     }
 
     @Override
-    protected RenderShape getRenderShape(BlockState state) {
+    public RenderShape getRenderShape(BlockState state) {
         return isMain(state) ? RenderShape.MODEL : RenderShape.INVISIBLE;
     }
 
@@ -143,8 +137,8 @@ public class PodiumBlock extends Block implements EntityBlock {
     }
 
     @Override
-    protected BlockState updateShape(BlockState state, Direction direction, BlockState neighborState, LevelAccessor level,
-                                     BlockPos pos, BlockPos neighborPos) {
+    public BlockState updateShape(BlockState state, Direction direction, BlockState neighborState, LevelAccessor level,
+                                  BlockPos pos, BlockPos neighborPos) {
         Direction facing = state.getValue(FACING);
         boolean side = state.getValue(SIDE);
         Direction toSibling = side ? right(facing).getOpposite() : right(facing);
@@ -156,7 +150,7 @@ public class PodiumBlock extends Block implements EntityBlock {
     }
 
     @Override
-    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         if (!level.isClientSide() && player.isCreative() && !isMain(state)) {
             BlockPos main = mainPos(state, pos);
             BlockState mainState = level.getBlockState(main);
@@ -164,15 +158,15 @@ public class PodiumBlock extends Block implements EntityBlock {
                 level.setBlock(main, Blocks.AIR.defaultBlockState(), Block.UPDATE_SUPPRESS_DROPS | Block.UPDATE_ALL);
             }
         }
-        return super.playerWillDestroy(level, pos, state, player);
+        super.playerWillDestroy(level, pos, state, player);
     }
 
     /**
      * 换成别的方块（拆掉、被炸、被替换）时先让方块实体收尾（停奏、放开成员、掉出总谱），再按原版移除方块实体。
-     * 1.21.1 的方块实体还没有 {@code preRemoveSideEffects}，原版的讲台、唱片机也是在这里做的；只在服务端调用。
+     * 只在服务端调用。
      */
     @Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
         if (!state.is(newState.getBlock()) && !level.isClientSide() && level.getBlockEntity(pos) instanceof PodiumBlockEntity be) {
             be.preRemoveSideEffects(pos, state);
         }
@@ -181,37 +175,38 @@ public class PodiumBlock extends Block implements EntityBlock {
 
     /** 成功一律用 sidedSuccess 的写法：客户端 SUCCESS（挥手），服务端 CONSUME（不再广播挥手）。 */
     @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
-        if (level.isClientSide()) dev.starbloom.orchestra.client.music.Conducting.openPodium(mainPos(state, pos));
+    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+        ItemStack stack = player.getItemInHand(hand);
+        BlockPos main = mainPos(state, pos);
+        if (!stack.isEmpty()) {
+            if (stack.is(Orchestra.BATON.get())) {
+                if (level.isClientSide()) return InteractionResult.SUCCESS;
+                Orchestra.batonOnPodium(stack, (ServerLevel) level, main, player);
+                return InteractionResult.CONSUME;
+            }
+            if (Instruments.isRoll(stack)) {
+                if (level.isClientSide()) return InteractionResult.SUCCESS;
+                if (!(level.getBlockEntity(main) instanceof PodiumBlockEntity be)) return InteractionResult.PASS;
+                if (be.isPlaying()) {
+                    Orchestra.tell(player, "busy");
+                    return InteractionResult.CONSUME;
+                }
+                ItemStack old = be.takeScore();
+                be.setScore(stack.copyWithCount(1));
+                if (!player.getAbilities().instabuild) stack.shrink(1);
+                if (!old.isEmpty() && !player.getInventory().add(old)) player.drop(old, false);
+                return InteractionResult.CONSUME;
+            }
+        }
+        if (level.isClientSide()) {
+            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> dev.starbloom.orchestra.client.music.Conducting.openPodium(main));
+        }
         return InteractionResult.sidedSuccess(level.isClientSide());
     }
 
     @Override
-    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
-                                              InteractionHand hand, BlockHitResult hit) {
-        BlockPos main = mainPos(state, pos);
-        if (stack.is(Orchestra.BATON.get())) {
-            if (level.isClientSide()) return ItemInteractionResult.SUCCESS;
-            Orchestra.batonOnPodium(stack, (ServerLevel) level, main, player);
-            return ItemInteractionResult.CONSUME;
-        }
-        if (!Instruments.isRoll(stack)) return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
-        if (level.isClientSide()) return ItemInteractionResult.SUCCESS;
-        if (!(level.getBlockEntity(main) instanceof PodiumBlockEntity be)) return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
-        if (be.isPlaying()) {
-            Orchestra.tell(player, "busy");
-            return ItemInteractionResult.CONSUME;
-        }
-        ItemStack old = be.takeScore();
-        be.setScore(stack.copyWithCount(1));
-        if (!player.getAbilities().instabuild) stack.shrink(1);
-        if (!old.isEmpty() && !player.getInventory().add(old)) player.drop(old, false);
-        return ItemInteractionResult.CONSUME;
-    }
-
-    @Override
-    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos neighborPos,
-                                   boolean movedByPiston) {
+    public void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos neighborPos,
+                                boolean movedByPiston) {
         if (level.isClientSide()) return;
         BlockPos main = mainPos(state, pos);
         BlockState mainState = level.getBlockState(main);

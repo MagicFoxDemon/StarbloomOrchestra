@@ -33,7 +33,7 @@ class LangCoverageTest {
     }
 
     /**
-     * 注册项 ID：blockstates/ 里的方块和 models/item/ 里的物品（1.21.1 没有 items/ 物品模型定义，物品 `<id>` 用 `models/item/<id>.json`；
+     * 注册项 ID：blockstates/ 里的方块和 models/item/ 里的物品（1.20.1 没有 items/ 物品模型定义，物品 `<id>` 用 `models/item/<id>.json`；
      * 只供渲染的模型不是物品，见 {@link ItemModelDisplayTest#renderOnly}）。目录、jar 两种资源形态都由 {@link ItemModelDisplayTest#names} 处理。
      */
     private Set<String> registeredIds()throws Exception{

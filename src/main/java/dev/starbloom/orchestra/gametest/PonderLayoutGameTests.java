@@ -36,7 +36,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.bus.api.IEventBus;
+import net.minecraftforge.eventbus.api.IEventBus;
 
 /**
  * 思索场景的布置（{@link PonderLayouts}）在世界里像玩家那样放一遍，核对场景里讲的事是真的；
@@ -122,7 +122,7 @@ public final class PonderLayoutGameTests {
         }
         try {
             Files.createDirectories(dir);
-            NbtIo.writeCompressed(saved, dir.resolve(layout.id() + ".nbt"));
+            NbtIo.writeCompressed(saved, dir.resolve(layout.id() + ".nbt").toFile());
         } catch (IOException e) {
             throw new IllegalStateException("cannot write ponder schematic " + layout.id(), e);
         }

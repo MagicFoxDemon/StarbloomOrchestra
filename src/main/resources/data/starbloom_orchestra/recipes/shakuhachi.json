@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "B",
+    "B",
+    "N"
+  ],
+  "key": {
+    "B": {
+      "item": "minecraft:bamboo"
+    },
+    "N": {
+      "item": "minecraft:bone"
+    }
+  },
+  "result": {
+    "item": "starbloom_orchestra:shakuhachi",
+    "count": 1
+  }
+}

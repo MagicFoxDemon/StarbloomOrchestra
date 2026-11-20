@@ -6,9 +6,7 @@ import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
-import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import dev.starbloom.orchestra.StarbloomOrchestra;
@@ -33,13 +31,13 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.RegisterShadersEvent;
-import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
-import net.neoforged.neoforge.client.model.IQuadTransformer;
-import net.neoforged.neoforge.client.model.data.ModelData;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.RegisterShadersEvent;
+import net.minecraftforge.client.event.RenderLevelStageEvent;
+import net.minecraftforge.client.model.IQuadTransformer;
+import net.minecraftforge.client.model.data.ModelData;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL11;
@@ -63,7 +61,7 @@ import org.lwjgl.opengl.GL30;
  * <p>只有选了这个声部的人看得到：选中是各自客户端的事，并且要拿着绑在这座指挥台上的指挥棒，或者开着它的界面。
  * 没选中时一个通道都不跑。
  */
-@EventBusSubscriber(modid = StarbloomOrchestra.ID, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = StarbloomOrchestra.ID, value = Dist.CLIENT)
 public final class PartOutline {
     private PartOutline() {}
 
@@ -81,7 +79,7 @@ public final class PartOutline {
     private static Conducting.@Nullable Selection active;
     private static long passes;
     private static @Nullable RenderTarget depth, mask;
-    private static @Nullable ByteBufferBuilder bytes;
+    private static @Nullable BufferBuilder meshBuffer;
     /** 剪影、全屏描边两个着色器（{@link RegisterShadersEvent} 加载）。 */
     private static @Nullable ShaderInstance maskShader, outlineShader;
     /** 世界渲染时镜头的朝向（世界坐标轴到镜头）和位置，和 {@link #PROJECTION} 同一时刻记下。 */
@@ -102,8 +100,8 @@ public final class PartOutline {
         return new Matrix4f(PROJECTION).mul(VIEW);
     }
 
-    /** 模组总线上的事件（FML 4 也会按事件类型自动分到模组总线，这里写明 {@code bus = MOD} 只是一目了然）。 */
-    @EventBusSubscriber(modid = StarbloomOrchestra.ID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
+    /** 模组总线上的事件。 */
+    @Mod.EventBusSubscriber(modid = StarbloomOrchestra.ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
     static final class ModEvents {
         private ModEvents() {}
 
@@ -124,7 +122,7 @@ public final class PartOutline {
         if (s == null || s.members().isEmpty()) return null;
         if (mc.screen instanceof PodiumScreen screen && screen.podium().equals(s.podium())) return s;
         for (ItemStack stack : new ItemStack[]{mc.player.getMainHandItem(), mc.player.getOffhandItem()}) {
-            GlobalPos bound = stack.get(Orchestra.BATON_PODIUM.get());
+            GlobalPos bound = Orchestra.batonPodium(stack);
             if (bound != null && bound.pos().equals(s.podium()) && bound.dimension().equals(mc.level.dimension())) return s;
         }
         return null;
@@ -138,7 +136,7 @@ public final class PartOutline {
     static void onRenderStage(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_BLOCK_ENTITIES) return;
         PROJECTION.set(event.getProjectionMatrix());
-        VIEW.set(event.getModelViewMatrix());
+        VIEW.set(event.getPoseStack().last().pose());
         cameraPos = event.getCamera().getPosition();
         active = wanted();
         if (active == null) return;
@@ -179,11 +177,11 @@ public final class PartOutline {
         Minecraft mc = Minecraft.getInstance();
         RenderTarget main = mc.getMainRenderTarget();
         if (mc.level == null || depth.width != main.width || depth.height != main.height) return;
-        if (bytes == null) bytes = new ByteBufferBuilder(1 << 18);
+        if (meshBuffer == null) meshBuffer = new BufferBuilder(1 << 18);
         if (SHAPES.size() > 96) SHAPES.clear();
 
         Vec3 camera = cameraPos;
-        BufferBuilder buffer = new BufferBuilder(bytes, VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
+        meshBuffer.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
         ResourceLocation atlas = null;
         int vertices = 0;
         for (BlockPos member : s.members()) {
@@ -193,12 +191,14 @@ public final class PartOutline {
             float ox = (float) (member.getX() - camera.x), oy = (float) (member.getY() - camera.y), oz = (float) (member.getZ() - camera.z);
             float[] d = shape.data;
             for (int i = 0; i + STRIDE <= d.length && vertices < MAX_VERTICES; i += STRIDE, vertices++) {
-                buffer.addVertex(d[i] + ox, d[i + 1] + oy, d[i + 2] + oz).setUv(d[i + 3], d[i + 4]);
+                meshBuffer.vertex(d[i] + ox, d[i + 1] + oy, d[i + 2] + oz).uv(d[i + 3], d[i + 4]).endVertex();
             }
         }
-        if (atlas == null) return;
-        MeshData mesh = buffer.build();
-        if (mesh == null) return;
+        if (atlas == null || vertices == 0) {
+            meshBuffer.discard();
+            return;
+        }
+        BufferBuilder.RenderedBuffer mesh = meshBuffer.end();
         // 建、改尺寸的时候 RenderTarget 会把帧缓冲换回 0；放在所有提前返回之后，后面一定走到 main.bindWrite 换回主画面
         mask = fit(mask, main, false);
 
@@ -230,12 +230,13 @@ public final class PartOutline {
                 GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
         RenderSystem.setShader(() -> outlineProgram);
         outlineProgram.setSampler("InSampler", mask.getColorTextureId());
-        BufferBuilder quad = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION);
-        quad.addVertex(0f, 0f, 0f);
-        quad.addVertex(1f, 0f, 0f);
-        quad.addVertex(1f, 1f, 0f);
-        quad.addVertex(0f, 1f, 0f);
-        BufferUploader.drawWithShader(quad.buildOrThrow());
+        BufferBuilder quad = Tesselator.getInstance().getBuilder();
+        quad.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION);
+        quad.vertex(0f, 0f, 0f).endVertex();
+        quad.vertex(1f, 0f, 0f).endVertex();
+        quad.vertex(1f, 1f, 0f).endVertex();
+        quad.vertex(0f, 1f, 0f).endVertex();
+        BufferUploader.drawWithShader(quad.end());
 
         // 还原成渲染类型之间的默认状态。
         RenderSystem.disableDepthTest();
@@ -273,7 +274,8 @@ public final class PartOutline {
             if (!(state.getBlock() instanceof InstrumentBlock)) continue;
             // 和区块里画方块一样取模型面：同一个种子（每个面重新播种），带上方块的模型数据，不分渲染类型。
             BakedModel model = mc.getBlockRenderer().getBlockModel(state);
-            ModelData modelData = model.getModelData(level, cell, state, level.getModelData(cell));
+            ModelData atCell = level.getModelDataManager().getAt(cell);
+            ModelData modelData = model.getModelData(level, cell, state, atCell != null ? atCell : ModelData.EMPTY);
             long seed = state.getSeed(cell);
             float ox = cell.getX() - member.getX(), oy = cell.getY() - member.getY(), oz = cell.getZ() - member.getZ();
             for (int d = 0; d <= sides.length; d++) {

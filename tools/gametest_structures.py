@@ -1,6 +1,6 @@
-"""世界测试用的结构模板（gametest/GameTestFunctions）：一块全是空气的立方体，存成 1.21.1 的结构 NBT。
+"""世界测试用的结构模板（gametest/GameTestFunctions）：一块全是空气的立方体，存成 1.20.1 的结构 NBT。
 
-26.1 的世界测试用原版 1×1×1 的空结构加 padding 格空出来的地方；1.21.1 没有 padding，测试框架在结构外面围一圈屏障，
+26.1 的世界测试用原版 1×1×1 的空结构加 padding 格空出来的地方；1.20.1 没有 padding，测试框架在结构外面围一圈屏障，
 所以按 26.1 里的 padding 做边长 2×padding+1 的空气块（测试原点在西北下角）。只用标准库，gzip 的时间戳固定为 0，
 每次生成的文件逐字节一致。
 
@@ -10,8 +10,8 @@ import gzip
 import struct
 from pathlib import Path
 
-OUT = Path(__file__).resolve().parent.parent / "src/main/resources/data/starbloom_orchestra/structure/gametest"
-DATA_VERSION = 3955  # 1.21.1
+OUT = Path(__file__).resolve().parent.parent / "src/main/resources/data/starbloom_orchestra/structures/gametest"
+DATA_VERSION = 3465  # 1.20.1
 # 测试类用到的 padding：命令树 0；创造物品栏、旧 ID 2；琴凳、乐器、乐团 6；管风琴 12；思索布置 14
 PADDINGS = (0, 2, 6, 12, 14)
 

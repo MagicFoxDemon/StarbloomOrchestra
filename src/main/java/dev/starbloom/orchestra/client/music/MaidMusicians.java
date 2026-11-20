@@ -4,6 +4,7 @@ import com.github.tartaricacid.simplebedrockmodel.client.bedrock.model.BedrockPa
 import com.github.tartaricacid.touhoulittlemaid.api.ILittleMaid;
 import com.github.tartaricacid.touhoulittlemaid.api.LittleMaidExtension;
 import com.github.tartaricacid.touhoulittlemaid.api.event.client.DefaultGeckoAnimationEvent;
+import com.github.tartaricacid.touhoulittlemaid.capability.GeckoMaidEntityCapabilityProvider;
 import com.github.tartaricacid.touhoulittlemaid.client.animation.gecko.condition.ConditionManager;
 import com.github.tartaricacid.touhoulittlemaid.client.entity.GeckoMaidEntity;
 import com.github.tartaricacid.touhoulittlemaid.client.model.bedrock.BedrockModel;
@@ -41,10 +42,10 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
-import net.neoforged.bus.api.EventPriority;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.client.event.RenderLivingEvent;
-import net.neoforged.neoforge.common.NeoForge;
+import net.minecraftforge.client.event.RenderLivingEvent;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.eventbus.api.EventPriority;
+import net.minecraftforge.eventbus.api.IEventBus;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
@@ -92,7 +93,8 @@ public final class MaidMusicians {
     private static final class Look {
         final boolean gecko;
         final float scale;
-        PoseStack.@Nullable Pose beforeAnim;
+        @Nullable Matrix4f beforePose;
+        @Nullable Matrix3f beforeNormal;
 
         Look(boolean gecko, float scale) {
             this.gecko = gecko;
@@ -114,14 +116,18 @@ public final class MaidMusicians {
     }
 
     /**
-     * modBus 留着给调用方（{@code StarbloomOrchestra} 按这个签名反射调用）；1.21.1 里用到的事件都在游戏事件总线上。
+     * modBus 留着给调用方（{@code StarbloomOrchestra} 按这个签名反射调用）；1.20.1 里用到的事件都在游戏事件总线上。
      * 女仆模组的文档要求 {@link DefaultGeckoAnimationEvent} 在模组初始化时注册（它发得很早）。两层由女仆模组按 {@link Extension} 加。
      */
     public static void init(IEventBus modBus) {
-        NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, false, RenderLivingEvent.Pre.class, MaidMusicians::beforeRender);
-        NeoForge.EVENT_BUS.addListener(RenderLivingEvent.Post.class, MaidMusicians::afterRender);
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, false, RenderLivingEvent.Pre.class, MaidMusicians::beforeRender);
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.NORMAL, false, RenderLivingEvent.Post.class, MaidMusicians::afterRender);
         MusicianPoses.addPoser(POSER);
-        NeoForge.EVENT_BUS.addListener(MaidMusicians::geckoClips);
+        MinecraftForge.EVENT_BUS.addListener(MaidMusicians::geckoClips);
+    }
+
+    private static @Nullable GeckoMaidEntity<?> geckoMaid(LivingEntity maid) {
+        return maid.getCapability(GeckoMaidEntityCapabilityProvider.CAP).orElse(null);
     }
 
     /**
@@ -138,7 +144,8 @@ public final class MaidMusicians {
         } else if (event.getRenderer() instanceof GeckoEntityMaidRenderer<?>) {
             look = new Look(true, 1);
             // 女仆渲染器在交给 GeckoLib 渲染器之前已经换好了模型信息，动画文件就是这一帧要用的
-            if (maid.getData(GeckoMaidEntity.TYPE) instanceof GeckoMaidEntity<?> geo) ensureClips(geo.getAnimationFileLocation());
+            GeckoMaidEntity<?> geo = geckoMaid(maid);
+            if (geo != null) ensureClips(geo.getAnimationFileLocation());
         } else {
             return;
         }
@@ -243,7 +250,8 @@ public final class MaidMusicians {
 
     /** 这只 GeckoLib 女仆眼下用的动画文件里有没有本模组的默认动作（模型包自带的，或 {@link #ensureClips} 补上的）。 */
     static boolean hasClips(LivingEntity maid) {
-        if (!(maid.getData(GeckoMaidEntity.TYPE) instanceof GeckoMaidEntity<?> geo)) return false;
+        GeckoMaidEntity<?> geo = geckoMaid(maid);
+        if (geo == null) return false;
         AnimationFile file = GeckoLibCache.getInstance().getAnimations().get(geo.getAnimationFileLocation());
         return file != null && file.animations().containsKey("vehicle#starbloom_orchestra:bench_seat")
             && file.animations().containsKey("vehicle#starbloom_orchestra:standing_post");
@@ -251,7 +259,9 @@ public final class MaidMusicians {
 
     /** 女仆模组此刻按骑着的实体给这只 GeckoLib 女仆挑的动作（{@code vehicle#...}），同它画之前查的那一路；没有时为空串。 */
     static String vehicleClip(LivingEntity maid) {
-        if (!(maid instanceof Mob mob) || !(maid.getData(GeckoMaidEntity.TYPE) instanceof GeckoMaidEntity<?> geo)) return "";
+        if (!(maid instanceof Mob mob)) return "";
+        GeckoMaidEntity<?> geo = geckoMaid(maid);
+        if (geo == null) return "";
         var vehicle = ConditionManager.getVehicle(geo.getAnimationFileLocation());
         return vehicle == null ? "" : vehicle.doTest(mob);
     }
@@ -386,7 +396,8 @@ public final class MaidMusicians {
             Look look = LOOKS.get(entity);
             MusicianPoses.Drawing d = MusicianPoses.drawing(entity);
             if (look == null || look.gecko || d == null || d.musician == null || !(model instanceof BedrockModel<?>)) return;
-            look.beforeAnim = pose.last().copy();
+            look.beforePose = new Matrix4f(pose.last().pose());
+            look.beforeNormal = new Matrix3f(pose.last().normal());
         }
 
         @Override
@@ -406,13 +417,15 @@ public final class MaidMusicians {
         Frame f = frame(look.scale, m, models);
         if (f == null) return;
         posed++;
-        PoseStack.Pose before = look.beforeAnim;
-        look.beforeAnim = null;
-        if (pose != null && before != null) {
+        Matrix4f beforePose = look.beforePose;
+        Matrix3f beforeNormal = look.beforeNormal;
+        look.beforePose = null;
+        look.beforeNormal = null;
+        if (pose != null && beforePose != null && beforeNormal != null) {
             // 女仆模组坐下时把整个人往下挪 0.3 格（为它自己的坐垫，GlWrapper 直接挪 PoseStack；骑扫帚时还会转），
             // 这里换回 setupAnim 之前的矩阵，再换成琴凳、工位的高度（模型坐标 y 向下，1 格按模型的缩放）。身体和后面各层都画在这里
-            pose.last().pose().set(before.pose());
-            pose.last().normal().set(before.normal());
+            pose.last().pose().set(beforePose);
+            pose.last().normal().set(beforeNormal);
             pose.translate(0, -f.lift() / (16 * f.scale()), 0);
         }
         BedrockPart left = models.get("armLeft"), right = models.get("armRight");
@@ -747,7 +760,7 @@ public final class MaidMusicians {
     private static void draw(PoseStack pose, MultiBufferSource buffers, int light, Matrix4f pixels, HeldModel item) {
         pose.pushPose();
         pose.scale(1 / 16f, 1 / 16f, 1 / 16f);
-        pose.mulPose(pixels);
+        pose.mulPoseMatrix(pixels);
         pose.scale(16, 16, 16);
         item.render(pose, buffers, light);
         pose.popPose();

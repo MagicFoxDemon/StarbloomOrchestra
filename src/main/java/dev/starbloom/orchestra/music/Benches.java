@@ -2,7 +2,8 @@ package dev.starbloom.orchestra.music;
 
 import dev.starbloom.orchestra.OrchestraRegistries;
 import dev.starbloom.orchestra.StarbloomOrchestra;
-import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.EntityType;
@@ -11,20 +12,19 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.attachment.AttachmentType;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import net.neoforged.neoforge.registries.DeferredBlock;
-import net.neoforged.neoforge.registries.DeferredHolder;
-import net.neoforged.neoforge.registries.DeferredItem;
-import net.neoforged.neoforge.registries.DeferredRegister;
-import net.neoforged.neoforge.registries.NeoForgeRegistries;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.entity.living.LivingDropsEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.RegistryObject;
 
 /**
  * 星辰花琴凳的注册与生物那一边（docs/ORCHESTRA.md 第 14 节）：
@@ -32,30 +32,40 @@ import net.neoforged.neoforge.registries.NeoForgeRegistries;
  * 空手右键它，把乐器拿回来，原来的东西还给它。
  */
 public final class Benches {
-    private static final DeferredRegister<EntityType<?>> ENTITY_TYPES = DeferredRegister.create(Registries.ENTITY_TYPE, StarbloomOrchestra.ID);
-    private static final DeferredRegister<AttachmentType<?>> ATTACHMENTS = DeferredRegister.create(NeoForgeRegistries.Keys.ATTACHMENT_TYPES, StarbloomOrchestra.ID);
+    private static final DeferredRegister<EntityType<?>> ENTITY_TYPES = DeferredRegister.create(ForgeRegistries.ENTITY_TYPES, StarbloomOrchestra.ID);
+    private static final String STOWED_TAG = "starbloom_orchestra:stowed_main_hand";
 
-    public static final DeferredBlock<StarbloomBenchBlock> BENCH = OrchestraRegistries.BLOCKS.registerBlock("starbloom_bench", StarbloomBenchBlock::new,
-        BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_RED).strength(1.0f).sound(SoundType.WOOD).noOcclusion());
-    public static final DeferredItem<?> BENCH_ITEM = OrchestraRegistries.ITEMS.registerSimpleBlockItem("starbloom_bench", BENCH);
+    public static final RegistryObject<StarbloomBenchBlock> BENCH = OrchestraRegistries.BLOCKS.register("starbloom_bench",
+        () -> new StarbloomBenchBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_RED).strength(1.0f).sound(SoundType.WOOD).noOcclusion()));
+    public static final RegistryObject<Item> BENCH_ITEM = OrchestraRegistries.ITEMS.register("starbloom_bench",
+        () -> new BlockItem(BENCH.get(), new Item.Properties()));
     /** 双人琴凳：两格宽，坐在正中，两格宽的钢琴前用。 */
-    public static final DeferredBlock<StarbloomDuetBenchBlock> DUET = OrchestraRegistries.BLOCKS.registerBlock("starbloom_duet_bench",
-        StarbloomDuetBenchBlock::new, BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_RED).strength(1.0f).sound(SoundType.WOOD).noOcclusion());
-    public static final DeferredItem<?> DUET_ITEM = OrchestraRegistries.ITEMS.registerSimpleBlockItem("starbloom_duet_bench", DUET);
-    public static final DeferredHolder<EntityType<?>, EntityType<BenchSeat>> SEAT = ENTITY_TYPES.register("bench_seat",
+    public static final RegistryObject<StarbloomDuetBenchBlock> DUET = OrchestraRegistries.BLOCKS.register("starbloom_duet_bench",
+        () -> new StarbloomDuetBenchBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_RED).strength(1.0f).sound(SoundType.WOOD).noOcclusion()));
+    public static final RegistryObject<Item> DUET_ITEM = OrchestraRegistries.ITEMS.register("starbloom_duet_bench",
+        () -> new BlockItem(DUET.get(), new Item.Properties()));
+    public static final RegistryObject<EntityType<BenchSeat>> SEAT = ENTITY_TYPES.register("bench_seat",
         () -> EntityType.Builder.<BenchSeat>of(BenchSeat::new, MobCategory.MISC).sized(0.25f, 0.25f).noSummon().clientTrackingRange(10)
             .updateInterval(20).build(StarbloomOrchestra.id("bench_seat").toString()));
-    /** 生物主手原来拿着的东西：交给它乐器时替它收着，拿回乐器时还给它，死了照样掉出来。 */
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<ItemStack>> STOWED = ATTACHMENTS.register("stowed_main_hand",
-        () -> AttachmentType.builder(() -> ItemStack.EMPTY).serialize(ItemStack.OPTIONAL_CODEC.fieldOf("item").codec(), s -> !s.isEmpty()).build());
 
     private Benches() {}
 
     public static void register(IEventBus bus) {
         ENTITY_TYPES.register(bus);
-        ATTACHMENTS.register(bus);
-        NeoForge.EVENT_BUS.addListener(Benches::interact);
-        NeoForge.EVENT_BUS.addListener(Benches::drops);
+        MinecraftForge.EVENT_BUS.addListener(Benches::interact);
+        MinecraftForge.EVENT_BUS.addListener(Benches::drops);
+    }
+
+    /** 替生物收着的主手物品（存在实体的 {@code PersistentData} 里，没有时为空）。 */
+    public static ItemStack stowed(Mob mob) {
+        CompoundTag data = mob.getPersistentData();
+        if (!data.contains(STOWED_TAG, Tag.TAG_COMPOUND)) return ItemStack.EMPTY;
+        return ItemStack.of(data.getCompound(STOWED_TAG));
+    }
+
+    private static void setStowed(Mob mob, ItemStack stack) {
+        if (stack.isEmpty()) mob.getPersistentData().remove(STOWED_TAG);
+        else mob.getPersistentData().put(STOWED_TAG, stack.save(new CompoundTag()));
     }
 
     /** 右键坐在琴凳上的生物：拿着手持乐器时交给它，空手时把它的乐器拿回来。两边都取消，免得生物自己的交互（交易、对话）也跑一遍。 */
@@ -85,7 +95,7 @@ public final class Benches {
         if (old.getItem() instanceof HandheldInstrumentItem) {
             if (!from.getInventory().add(old.copy())) from.drop(old.copy(), false);
         } else if (!old.isEmpty()) {
-            if (mob.getData(STOWED).isEmpty()) mob.setData(STOWED, old.copy());
+            if (stowed(mob).isEmpty()) setStowed(mob, old.copy());
             else if (!mob.level().isClientSide()) mob.spawnAtLocation(old.copy());
         }
         mob.setItemSlot(EquipmentSlot.MAINHAND, instrument.copyWithCount(1));
@@ -96,19 +106,19 @@ public final class Benches {
     /** 把生物手里的乐器拿回来，替它收着的东西还给它。 */
     public static void takeBack(Mob mob, Player to) {
         ItemStack instrument = mob.getMainHandItem().copy();
-        ItemStack stowed = mob.getData(STOWED);
+        ItemStack stowed = stowed(mob);
         mob.setItemSlot(EquipmentSlot.MAINHAND, stowed.copy());
         mob.setDropChance(EquipmentSlot.MAINHAND, 0.085f);
-        mob.removeData(STOWED);
+        mob.getPersistentData().remove(STOWED_TAG);
         if (!to.getInventory().add(instrument)) to.drop(instrument, false);
     }
 
     /** 替生物收着的东西：死的时候照样掉出来。 */
     private static void drops(LivingDropsEvent event) {
-        if (!(event.getEntity() instanceof Mob mob) || !mob.hasData(STOWED)) return;
-        ItemStack stowed = mob.getData(STOWED);
+        if (!(event.getEntity() instanceof Mob mob)) return;
+        ItemStack stowed = stowed(mob);
         if (stowed.isEmpty()) return;
         event.getDrops().add(new ItemEntity(mob.level(), mob.getX(), mob.getY(), mob.getZ(), stowed.copy()));
-        mob.removeData(STOWED);
+        mob.getPersistentData().remove(STOWED_TAG);
     }
 }

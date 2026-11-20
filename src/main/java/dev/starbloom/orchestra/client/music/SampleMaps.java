@@ -15,11 +15,11 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
-import net.neoforged.neoforge.client.event.sound.SoundEngineLoadEvent;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.RegisterClientReloadListenersEvent;
+import net.minecraftforge.client.event.sound.SoundEngineLoadEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -29,7 +29,7 @@ import org.slf4j.Logger;
  * 按表里的文件名直接播放（{@link VoiceBank}），第一次用到时才解码，所以不会在启动时把几百个采样全读进内存。
  * 有循环点的文件登记在这里，声音引擎读出它的缓冲时设上循环点（见 SoundBufferLoopMixin）。
  */
-@EventBusSubscriber(modid = StarbloomOrchestra.ID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
+@Mod.EventBusSubscriber(modid = StarbloomOrchestra.ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class SampleMaps {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Map<InstrumentKind, SampleMap> MAPS = new EnumMap<>(InstrumentKind.class);

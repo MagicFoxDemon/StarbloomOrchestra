@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "  R",
+    "PIP",
+    "PP "
+  ],
+  "key": {
+    "R": {
+      "item": "minecraft:sugar_cane"
+    },
+    "P": {
+      "item": "minecraft:mangrove_planks"
+    },
+    "I": {
+      "item": "minecraft:iron_ingot"
+    }
+  },
+  "result": {
+    "item": "starbloom_orchestra:hexen_bassoon",
+    "count": 1
+  }
+}

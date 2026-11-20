@@ -5,8 +5,8 @@ import com.mojang.serialization.DynamicOps;
 import dev.starbloom.orchestra.music.InstrumentBlock;
 import dev.starbloom.orchestra.music.InstrumentBlockEntity;
 import dev.starbloom.orchestra.music.InstrumentKind;
-import dev.starbloom.orchestra.music.Instruments;
 import dev.starbloom.orchestra.music.MusicRoll;
+import dev.starbloom.orchestra.music.OrchestraNetwork;
 import dev.starbloom.orchestra.music.RollInfo;
 import dev.starbloom.orchestra.music.RollStore;
 import java.util.ArrayList;
@@ -19,7 +19,6 @@ import java.util.Set;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
@@ -33,7 +32,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -135,7 +133,7 @@ public class PodiumBlockEntity extends BlockEntity {
     }
 
     private @Nullable MusicRoll scoreRoll() {
-        RollInfo info = score.get(Instruments.MUSIC_ROLL.get());
+        RollInfo info = RollInfo.get(score);
         byte[] data = info == null ? null : RollStore.load(info.id());
         if (data == null) return null;
         try {
@@ -357,7 +355,7 @@ public class PodiumBlockEntity extends BlockEntity {
      */
     public boolean start(int fromBar, int countInMs, net.minecraft.world.entity.player.@Nullable Player who) {
         if (!(level instanceof ServerLevel)) return false;
-        RollInfo info = score.get(Instruments.MUSIC_ROLL.get());
+        RollInfo info = RollInfo.get(score);
         MusicRoll roll = scoreRoll();
         if (info == null || roll == null) return false;
         validate();
@@ -526,10 +524,10 @@ public class PodiumBlockEntity extends BlockEntity {
             gains.clone(), muteMask, soloMask, (int) Math.round(rate * 1000), Math.round(expression * 1000), master,
             leader == null ? null : leader.getUUID());
         if (to != null) {
-            PacketDistributor.sendToPlayer(to, p);
+            OrchestraNetwork.sendToPlayer(to, p);
         } else {
             Vec3 at = standAt();
-            PacketDistributor.sendToPlayersNear(server, null, at.x, at.y, at.z, BROADCAST_RANGE, p);
+            OrchestraNetwork.sendToPlayersNear(server, null, at.x, at.y, at.z, BROADCAST_RANGE, p);
         }
     }
 
@@ -570,10 +568,10 @@ public class PodiumBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
-        DynamicOps<Tag> ops = registries.createSerializationContext(NbtOps.INSTANCE);
-        score = read(tag, ops, "score", ItemStack.OPTIONAL_CODEC).orElse(ItemStack.EMPTY);
+    public void load(CompoundTag tag) {
+        super.load(tag);
+        DynamicOps<Tag> ops = NbtOps.INSTANCE;
+        score = ItemStack.of(tag.getCompound("score"));
         members.clear();
         masks.clear();
         locked.clear();
@@ -607,11 +605,11 @@ public class PodiumBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
-        DynamicOps<Tag> ops = registries.createSerializationContext(NbtOps.INSTANCE);
+    protected void saveAdditional(CompoundTag tag) {
+        super.saveAdditional(tag);
+        DynamicOps<Tag> ops = NbtOps.INSTANCE;
         store(tag, ops, "origin", Codec.LONG, worldPosition.asLong());
-        if (!score.isEmpty()) store(tag, ops, "score", ItemStack.OPTIONAL_CODEC, score);
+        if (!score.isEmpty()) tag.put("score", score.save(new CompoundTag()));
         List<Long> ms = new ArrayList<>();
         List<Integer> mk = new ArrayList<>();
         List<Integer> lk = new ArrayList<>();
@@ -640,7 +638,7 @@ public class PodiumBlockEntity extends BlockEntity {
     }
 
     @Override
-    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
-        return saveCustomOnly(registries);
+    public CompoundTag getUpdateTag() {
+        return saveWithoutMetadata();
     }
 }

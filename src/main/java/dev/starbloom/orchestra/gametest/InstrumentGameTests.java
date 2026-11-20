@@ -27,18 +27,20 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.gametest.framework.TestFunction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.CraftingContainer;
+import net.minecraft.world.inventory.TransientCraftingContainer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.CraftingInput;
-import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.bus.api.IEventBus;
+import net.minecraftforge.eventbus.api.IEventBus;
 
 /**
  * 魔女之森乐器：钢琴 2×2、竖琴两格高，拆任意一块整体拆掉、只掉一件乐器和槽里的纸带；
@@ -81,8 +83,24 @@ public final class InstrumentGameTests {
     private static ItemStack punched(byte[] encoded, MusicRoll roll) throws Exception {
         UUID id = RollStore.save(encoded);
         ItemStack stack = new ItemStack(Instruments.MUSIC_ROLL_ITEM.get());
-        stack.set(Instruments.MUSIC_ROLL.get(), RollInfo.of(id, roll, MusicRoll.hash(encoded)));
+        RollInfo.set(stack, RollInfo.of(id, roll, MusicRoll.hash(encoded)));
         return stack;
+    }
+
+    private static CraftingContainer grid(ItemStack... stacks) {
+        TransientCraftingContainer container = new TransientCraftingContainer(new AbstractContainerMenu(null, -1) {
+            @Override
+            public ItemStack quickMoveStack(Player player, int index) {
+                return ItemStack.EMPTY;
+            }
+
+            @Override
+            public boolean stillValid(Player player) {
+                return true;
+            }
+        }, stacks.length, 1);
+        for (int i = 0; i < stacks.length; i++) container.setItem(i, stacks[i]);
+        return container;
     }
 
     private static MusicRoll scale() {
@@ -137,16 +155,16 @@ public final class InstrumentGameTests {
             throw new AssertionError(e);
         }
         ItemStack blank = new ItemStack(Instruments.BLANK_ROLL.get());
-        CraftingInput input = CraftingInput.of(3, 1, List.of(source, blank, blank.copy()));
+        CraftingContainer input = grid(source, blank, blank.copy());
         RollCopyRecipe recipe = RollCopyRecipe.INSTANCE;
         h.assertTrue(recipe.matches(input, h.getLevel()), "roll + blanks matches");
-        ItemStack out = recipe.assemble(input);
+        ItemStack out = recipe.assemble(input, h.getLevel().registryAccess());
         h.assertTrue(out.getCount() == 2, "one copy per blank roll, got " + out.getCount());
-        h.assertTrue(source.get(Instruments.MUSIC_ROLL.get()).equals(out.get(Instruments.MUSIC_ROLL.get())), "copies point to the same contents");
+        h.assertTrue(RollInfo.get(source).equals(RollInfo.get(out)), "copies point to the same contents");
         var rest = recipe.getRemainingItems(input);
         h.assertTrue(rest.get(0).is(Instruments.MUSIC_ROLL_ITEM.get()), "the original roll stays in the grid");
-        h.assertTrue(!recipe.matches(CraftingInput.of(2, 1, List.of(blank, blank.copy())), h.getLevel()), "blanks alone do not match");
-        h.assertTrue(!recipe.matches(CraftingInput.of(2, 1, List.of(source, source.copy())), h.getLevel()), "two sources do not match");
+        h.assertTrue(!recipe.matches(grid(blank, blank.copy()), h.getLevel()), "blanks alone do not match");
+        h.assertTrue(!recipe.matches(grid(source, source.copy()), h.getLevel()), "two sources do not match");
         h.succeed();
     }
 
@@ -266,10 +284,10 @@ public final class InstrumentGameTests {
         BlockPos cello = h.absolutePos(new BlockPos(2, 1, 2));
         place(level, cello, Instruments.CELLO.get().defaultBlockState().setValue(InstrumentBlock.FACING, Direction.SOUTH));
         h.assertTrue(level.getBlockState(cello.above()).is(Instruments.CELLO.get()), "the cello is two tall");
-        Player first = h.makeMockPlayer(GameType.SURVIVAL);
+        Player first = h.makeMockPlayer();
         first.moveTo(cello.getX() + 0.5, cello.getY(), cello.getZ() + 2.5);
         BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(cello), Direction.SOUTH, cello, false);
-        level.getBlockState(cello.above()).useWithoutItem(level, first, hit.withPosition(cello.above()));
+        level.getBlockState(cello.above()).use(level, first, InteractionHand.MAIN_HAND, hit.withPosition(cello.above()));
         if (!(first.getVehicle() instanceof InstrumentSeat seat)) throw new AssertionError("right-clicking the cello seats the player");
         h.assertTrue(seat.instrument().equals(cello) && seat.kind() == InstrumentKind.CELLO, "the seat belongs to the cello");
         Vec3 at = SeatedInstrumentBlock.seatPosition(cello, Direction.SOUTH, InstrumentKind.CELLO);
@@ -277,15 +295,15 @@ public final class InstrumentGameTests {
         h.assertTrue(first.position().distanceTo(at) < 1e-4, "the player's feet are on the seat: " + first.position() + " vs " + at);
         h.assertTrue(Math.abs(Mth.wrapDegrees(seat.getYRot() - Direction.SOUTH.toYRot())) < 1e-3, "the seat faces the way the cello faces");
         h.assertTrue(at.z < cello.getZ() + 0.5, "the player sits behind a south-facing cello");
-        Player second = h.makeMockPlayer(GameType.SURVIVAL);
-        level.getBlockState(cello).useWithoutItem(level, second, hit);
+        Player second = h.makeMockPlayer();
+        level.getBlockState(cello).use(level, second, InteractionHand.MAIN_HAND, hit);
         h.assertTrue(second.getVehicle() == null && level.getEntitiesOfClass(InstrumentSeat.class, new AABB(cello).inflate(3)).size() == 1,
             "a taken seat is not doubled");
         // 起身：站在座位后面的地面上，不陷进地里（座位要等原版问完「人放哪」才消失）；再坐回去
         first.stopRiding();
         h.assertTrue(Math.abs(first.getY() - cello.getY()) < 1e-6 && first.getZ() < at.z - 0.5,
             "standing up puts the player on the floor behind the seat: " + first.position());
-        level.getBlockState(cello.above()).useWithoutItem(level, first, hit.withPosition(cello.above()));
+        level.getBlockState(cello.above()).use(level, first, InteractionHand.MAIN_HAND, hit.withPosition(cello.above()));
         h.assertTrue(first.getVehicle() instanceof InstrumentSeat, "the player can sit down again right away");
         BlockPos bass = h.absolutePos(new BlockPos(5, 1, 2));
         place(level, bass, Instruments.DOUBLE_BASS.get().defaultBlockState().setValue(InstrumentBlock.FACING, Direction.EAST));
@@ -315,8 +333,9 @@ public final class InstrumentGameTests {
     }
 
     /**
-     * 区块里的实体已经读进来、而且在走实体刻（26.1 的 {@code ServerLevel.areEntitiesActuallyLoadedAndTicking}）：
-     * 1.21.1 里 {@code isNaturalSpawningAllowed(ChunkPos)} 就是实体管理器的「这个区块在走刻」，{@code areEntitiesLoaded} 是「实体读完了」。
+     * 区块里的实体已经读进来、而且在走实体刻：
+     * {@code areEntitiesLoaded} 是「实体读完了」，{@code isPositionEntityTicking} / {@code getChunkSource().chunkMap...}
+     * 在 1.20.1 里用 {@code areEntitiesLoaded} 与 {@code isNaturalSpawningAllowed} 检查。
      */
     private static boolean entitiesTicking(ServerLevel level, net.minecraft.world.level.ChunkPos chunk) {
         return level.isNaturalSpawningAllowed(chunk) && level.areEntitiesLoaded(chunk.toLong());

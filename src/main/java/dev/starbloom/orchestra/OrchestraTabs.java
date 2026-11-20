@@ -8,9 +8,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ItemLike;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredHolder;
-import net.neoforged.neoforge.registries.DeferredRegister;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.RegistryObject;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -34,7 +34,7 @@ public final class OrchestraTabs {
             "blank_music_roll", "hexen_violin", "hexen_viola", "hexen_flute", "hexen_oboe", "hexen_bassoon", "hexen_trumpet",
             "shinobue", "shakuhachi", "kagura_suzu", "hexen_baton");
 
-    public static final DeferredHolder<CreativeModeTab, CreativeModeTab> INSTRUMENTS = TABS.register("instruments", () -> CreativeModeTab.builder()
+    public static final RegistryObject<CreativeModeTab> INSTRUMENTS = TABS.register("instruments", () -> CreativeModeTab.builder()
             .title(Component.translatable("itemGroup." + StarbloomOrchestra.ID))
             .icon(() -> new ItemStack(item("starbloom_grand_piano")))
             .displayItems((params, out) -> {

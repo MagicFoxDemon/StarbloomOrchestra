@@ -8,6 +8,7 @@ import dev.starbloom.orchestra.music.InstrumentSeat;
 import dev.starbloom.orchestra.music.Instruments;
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.function.Consumer;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelPart;
@@ -17,21 +18,18 @@ import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
-import net.minecraft.client.resources.PlayerSkin;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.fml.common.asm.enumextension.EnumProxy;
-import net.neoforged.neoforge.client.IArmPoseTransformer;
-import net.neoforged.neoforge.client.event.EntityRenderersEvent;
-import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
-import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.IArmPoseTransformer;
+import net.minecraftforge.client.event.EntityRenderersEvent;
+import net.minecraftforge.client.extensions.common.IClientItemExtensions;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
@@ -42,35 +40,35 @@ import org.joml.Vector3f;
  * 乐器不再挂在手上：小提琴夹在下巴下（跟着身体），长笛、小号在嘴边（跟着头），由这里的玩家层按 {@link HeldRig}
  * 画出来（models/item/ 下单独加载的 *_held 模型，{@link HeldModel}），双臂再伸向乐器上的手位——小提琴是经典的样子，
  * 非惯用手托琴、惯用手运弓。两只手里原本拿的东西这时不画。
- * 最近 0.6 秒有音时弓来回拉、管乐器轻轻起伏，不弹时静止。姿势经 META-INF/enumextensions.json 加进 {@link HumanoidModel.ArmPose}。
+ * 最近 0.6 秒有音时弓来回拉、管乐器轻轻起伏，不弹时静止。姿势经 {@link HumanoidModel.ArmPose#create} 加进 {@link HumanoidModel.ArmPose}。
  *
  * <p>坐在大提琴、低音提琴后面（骑着 {@link InstrumentSeat}）时也在这里：乐器是方块、不画，只画琴弓；
  * 双腿分开夹着大提琴（低音提琴站着拉，腿伸直），左手按琴颈、右手运弓，那件乐器最近在响时弓来回拉（纸带、红石放的也算）。
  */
-@EventBusSubscriber(modid = StarbloomOrchestra.ID, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = StarbloomOrchestra.ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class HandheldPoses {
-    public static final EnumProxy<HumanoidModel.ArmPose> VIOLIN = new EnumProxy<>(HumanoidModel.ArmPose.class,
-        true, armPose(InstrumentKind.VIOLIN));
-    public static final EnumProxy<HumanoidModel.ArmPose> FLUTE = new EnumProxy<>(HumanoidModel.ArmPose.class,
-        true, armPose(InstrumentKind.FLUTE));
-    public static final EnumProxy<HumanoidModel.ArmPose> TRUMPET = new EnumProxy<>(HumanoidModel.ArmPose.class,
-        true, armPose(InstrumentKind.TRUMPET));
-    public static final EnumProxy<HumanoidModel.ArmPose> VIOLA = new EnumProxy<>(HumanoidModel.ArmPose.class,
-        true, armPose(InstrumentKind.VIOLA));
-    public static final EnumProxy<HumanoidModel.ArmPose> OBOE = new EnumProxy<>(HumanoidModel.ArmPose.class,
-        true, armPose(InstrumentKind.OBOE));
-    public static final EnumProxy<HumanoidModel.ArmPose> BASSOON = new EnumProxy<>(HumanoidModel.ArmPose.class,
-        true, armPose(InstrumentKind.BASSOON));
-    public static final EnumProxy<HumanoidModel.ArmPose> SHINOBUE = new EnumProxy<>(HumanoidModel.ArmPose.class,
-        true, armPose(InstrumentKind.SHINOBUE));
-    public static final EnumProxy<HumanoidModel.ArmPose> KAGURA_SUZU = new EnumProxy<>(HumanoidModel.ArmPose.class,
-        true, armPose(InstrumentKind.KAGURA_SUZU));
-    public static final EnumProxy<HumanoidModel.ArmPose> SHAKUHACHI = new EnumProxy<>(HumanoidModel.ArmPose.class,
-        true, armPose(InstrumentKind.SHAKUHACHI));
-    public static final EnumProxy<HumanoidModel.ArmPose> CELLO = new EnumProxy<>(HumanoidModel.ArmPose.class,
-        true, armPose(InstrumentKind.CELLO));
-    public static final EnumProxy<HumanoidModel.ArmPose> DOUBLE_BASS = new EnumProxy<>(HumanoidModel.ArmPose.class,
-        true, armPose(InstrumentKind.DOUBLE_BASS));
+    public static final HumanoidModel.ArmPose VIOLIN = HumanoidModel.ArmPose.create(
+        "STARBLOOM_ORCHESTRA_VIOLIN", true, armPose(InstrumentKind.VIOLIN));
+    public static final HumanoidModel.ArmPose FLUTE = HumanoidModel.ArmPose.create(
+        "STARBLOOM_ORCHESTRA_FLUTE", true, armPose(InstrumentKind.FLUTE));
+    public static final HumanoidModel.ArmPose TRUMPET = HumanoidModel.ArmPose.create(
+        "STARBLOOM_ORCHESTRA_TRUMPET", true, armPose(InstrumentKind.TRUMPET));
+    public static final HumanoidModel.ArmPose VIOLA = HumanoidModel.ArmPose.create(
+        "STARBLOOM_ORCHESTRA_VIOLA", true, armPose(InstrumentKind.VIOLA));
+    public static final HumanoidModel.ArmPose OBOE = HumanoidModel.ArmPose.create(
+        "STARBLOOM_ORCHESTRA_OBOE", true, armPose(InstrumentKind.OBOE));
+    public static final HumanoidModel.ArmPose BASSOON = HumanoidModel.ArmPose.create(
+        "STARBLOOM_ORCHESTRA_BASSOON", true, armPose(InstrumentKind.BASSOON));
+    public static final HumanoidModel.ArmPose SHINOBUE = HumanoidModel.ArmPose.create(
+        "STARBLOOM_ORCHESTRA_SHINOBUE", true, armPose(InstrumentKind.SHINOBUE));
+    public static final HumanoidModel.ArmPose KAGURA_SUZU = HumanoidModel.ArmPose.create(
+        "STARBLOOM_ORCHESTRA_KAGURA_SUZU", true, armPose(InstrumentKind.KAGURA_SUZU));
+    public static final HumanoidModel.ArmPose SHAKUHACHI = HumanoidModel.ArmPose.create(
+        "STARBLOOM_ORCHESTRA_SHAKUHACHI", true, armPose(InstrumentKind.SHAKUHACHI));
+    public static final HumanoidModel.ArmPose CELLO = HumanoidModel.ArmPose.create(
+        "STARBLOOM_ORCHESTRA_CELLO", true, armPose(InstrumentKind.CELLO));
+    public static final HumanoidModel.ArmPose DOUBLE_BASS = HumanoidModel.ArmPose.create(
+        "STARBLOOM_ORCHESTRA_DOUBLE_BASS", true, armPose(InstrumentKind.DOUBLE_BASS));
 
     /**
      * 两手姿势（双手，原版只为拿着乐器的那只手调用）。1.21.1 的 ArmPose 只有「是否双手」一个开关：使用物品时原版本来就只摆
@@ -100,17 +98,17 @@ public final class HandheldPoses {
 
     private static HumanoidModel.ArmPose poseOf(InstrumentKind kind) {
         return switch (kind) {
-            case VIOLIN -> VIOLIN.getValue();
-            case FLUTE -> FLUTE.getValue();
-            case VIOLA -> VIOLA.getValue();
-            case OBOE -> OBOE.getValue();
-            case BASSOON -> BASSOON.getValue();
-            case SHINOBUE -> SHINOBUE.getValue();
-            case KAGURA_SUZU -> KAGURA_SUZU.getValue();
-            case SHAKUHACHI -> SHAKUHACHI.getValue();
-            case CELLO -> CELLO.getValue();
-            case DOUBLE_BASS -> DOUBLE_BASS.getValue();
-            default -> TRUMPET.getValue();
+            case VIOLIN -> VIOLIN;
+            case FLUTE -> FLUTE;
+            case VIOLA -> VIOLA;
+            case OBOE -> OBOE;
+            case BASSOON -> BASSOON;
+            case SHINOBUE -> SHINOBUE;
+            case KAGURA_SUZU -> KAGURA_SUZU;
+            case SHAKUHACHI -> SHAKUHACHI;
+            case CELLO -> CELLO;
+            case DOUBLE_BASS -> DOUBLE_BASS;
+            default -> TRUMPET;
         };
     }
 
@@ -121,22 +119,19 @@ public final class HandheldPoses {
     /** 画乐器用的模型：models/item/ 下拿在手上演奏的那一份（小提琴不带弓）和 hexen_violin_bow。 */
     private static final Map<InstrumentKind, HeldModel> BODIES = new EnumMap<>(InstrumentKind.class);
     private static @Nullable HeldModel bow;
+    private static final IClientItemExtensions ITEM_EXT = new IClientItemExtensions() {
+        @Override
+        public HumanoidModel.@Nullable ArmPose getArmPose(LivingEntity entity, InteractionHand hand, ItemStack stack) {
+            if (!entity.isUsingItem() || entity.getUsedItemHand() != hand) return null;
+            if (!(stack.getItem() instanceof HandheldInstrumentItem item)) return null;
+            return poseOf(item.kind());
+        }
+    };
 
     private HandheldPoses() {}
 
-    @SubscribeEvent
-    static void extensions(RegisterClientExtensionsEvent event) {
-        IClientItemExtensions ext = new IClientItemExtensions() {
-            @Override
-            public HumanoidModel.@Nullable ArmPose getArmPose(LivingEntity entity, InteractionHand hand, ItemStack stack) {
-                if (!entity.isUsingItem() || entity.getUsedItemHand() != hand) return null;
-                if (!(stack.getItem() instanceof HandheldInstrumentItem item)) return null;
-                return poseOf(item.kind());
-            }
-        };
-        event.registerItem(ext, Instruments.VIOLIN.get(), Instruments.FLUTE.get(), Instruments.TRUMPET.get(),
-            Instruments.VIOLA.get(), Instruments.OBOE.get(), Instruments.BASSOON.get(), Instruments.SHINOBUE.get(), Instruments.KAGURA_SUZU.get(),
-            Instruments.SHAKUHACHI.get());
+    public static void initClient(Consumer<IClientItemExtensions> consumer) {
+        consumer.accept(ITEM_EXT);
     }
 
     @SubscribeEvent
@@ -148,7 +143,7 @@ public final class HandheldPoses {
 
     @SubscribeEvent
     static void layers(EntityRenderersEvent.AddLayers event) {
-        for (PlayerSkin.Model skin : event.getSkins()) {
+        for (String skin : event.getSkins()) {
             EntityRenderer<? extends Player> renderer = event.getSkin(skin);
             if (renderer instanceof PlayerRenderer player) player.addLayer(new Layer(player));
         }
@@ -303,7 +298,7 @@ public final class HandheldPoses {
         }
         // HeldRig 用像素；物品模型以方块为单位、已居中
         pose.scale(1 / 16f, 1 / 16f, 1 / 16f);
-        pose.mulPose(pixels);
+        pose.mulPoseMatrix(pixels);
         pose.scale(16, 16, 16);
         item.render(pose, buffers, light);
         pose.popPose();

@@ -17,20 +17,20 @@ import net.minecraft.gametest.framework.LogTestReporter;
 import net.minecraft.gametest.framework.TestFunction;
 import net.minecraft.gametest.framework.TestReporter;
 import net.minecraft.world.level.block.Rotation;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.event.RegisterGameTestsEvent;
+import net.minecraftforge.event.RegisterGameTestsEvent;
+import net.minecraftforge.eventbus.api.IEventBus;
 
 /**
- * 1.21.1 的世界测试框架：测试是 {@link TestFunction}，由各测试类里带 {@code @GameTestGenerator} 的方法交给
- * {@code RegisterGameTestsEvent}，每个测试要一份结构模板（{@code data/starbloom_orchestra/structure/gametest/empty_<边长>.nbt}，
+ * 1.20.1 的世界测试框架：测试是 {@link TestFunction}，由各测试类里带 {@code @GameTestGenerator} 的方法交给
+ * {@code RegisterGameTestsEvent}，每个测试要一份结构模板（{@code data/starbloom_orchestra/structures/gametest/empty_<边长>.nbt}，
  * {@code tools/gametest_structures.py} 生成）。
  *
  * <p>测试名就是原来的名字（{@code bench_links_to_instruments} 这样，不加类名前缀），一个测试类一批（同 26.1 一个环境一批）。
- * 26.1 的测试用 1×1×1 的空结构加 padding 格空出来的地方；1.21.1 没有 padding，测试框架还在结构外面围一圈屏障，所以模板做成
+ * 26.1 的测试用 1×1×1 的空结构加 padding 格空出来的地方；1.20.1 没有 padding，测试框架还在结构外面围一圈屏障，所以模板做成
  * 同样大小的一块空气（边长 2×padding+1），只是测试的原点在模板的西北下角、不在正中。下面没有地板（26.1 的测试也悬在空中），
- * 1.21.1 清场时在模板下面第二格起铺石头。
+ * 1.20.1 清场时在模板下面第二格起铺石头。
  *
- * <p>1.21.1 的 {@code GameTestServer} 没有 {@code --tests}、{@code --report}、{@code --repeatCount}，这里读系统属性代替
+ * <p>1.20.1 的 {@code GameTestServer} 没有 {@code --tests}、{@code --report}、{@code --repeatCount}，这里读系统属性代替
  * （build.gradle 的 gameTestServer 按 -PorchestraTests、-PorchestraTestRepeat 设置）：
  * <ul>
  *   <li>{@value #TESTS}：要跑的测试，逗号分开，{@code starbloom_orchestra:instrument_*} 这样的通配；不设时全跑。</li>
@@ -73,7 +73,7 @@ final class GameTestFunctions {
             if (!selected.isEmpty() && selected.stream().noneMatch(p -> p.matcher(StarbloomOrchestra.ID + ":" + name).matches())) return;
             for (int i = 1; i <= repeat; i++) {
                 out.add(new TestFunction(batchName, i == 1 ? name : name + "." + i, structure, Rotation.NONE, maxTicks, setupTicks,
-                    true, false, 1, 1, false, test));
+                    true, 1, 1, test));
             }
         });
         matched += out.size();

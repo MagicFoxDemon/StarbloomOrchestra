@@ -83,11 +83,11 @@ public class HandheldScreen extends Screen implements MidiKeyboard.Target {
         return false;
     }
 
-    /** 不画模糊的背景：演奏时看得到世界和别的乐手。 */
+    /** 不模糊的背景：演奏时看得到世界和别的乐手。 */
     @Override
-    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float a) {
+    public void renderBackground(GuiGraphics g) {
         // 原版在这里发的背景事件照发（别的模组可能在背景上画东西）
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(new net.neoforged.neoforge.client.event.ScreenEvent.BackgroundRendered(this, g));
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(new net.minecraftforge.client.event.ScreenEvent.BackgroundRendered(this, g));
     }
 
     @Override
@@ -263,7 +263,7 @@ public class HandheldScreen extends Screen implements MidiKeyboard.Target {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        renderBackground(g, mouseX, mouseY, partialTick);
+        renderBackground(g);
         Parchment.draw(g, x0, y0, W, H, 20);
         g.drawString(font, title, x0 + 20, y0 + 16, Parchment.INK_TITLE, false);
         Component status = pads ? tr("held_status_pads", velocity) : tr("held_status", KeyLayout.noteName(base), velocity,

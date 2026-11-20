@@ -1,13 +1,16 @@
 package dev.starbloom.orchestra.music;
 
+import java.util.function.Consumer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.UseAnim;
 import net.minecraft.world.level.Level;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.extensions.common.IClientItemExtensions;
+import net.minecraftforge.fml.DistExecutor;
 
 /**
  * 拿在手上的乐器（小提琴、长笛、小号）。右键举起来演奏：和拉弓一样进入「使用中」（同步给附近的人，
@@ -31,18 +34,23 @@ public class HandheldInstrumentItem extends Item {
         player.startUsingItem(hand);
         if (level.isClientSide()) {
             // 界面类只在客户端存在：经静态入口打开，本类不出现任何客户端类型
-            dev.starbloom.orchestra.client.music.MusicClient.openHandheld(kind, hand);
+            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> dev.starbloom.orchestra.client.music.MusicClient.openHandheld(kind, hand));
         }
         return InteractionResultHolder.consume(player.getItemInHand(hand));
     }
 
     @Override
-    public int getUseDuration(ItemStack stack, LivingEntity user) {
+    public int getUseDuration(ItemStack stack) {
         return 72_000;
     }
 
     @Override
     public UseAnim getUseAnimation(ItemStack stack) {
         return UseAnim.NONE;
+    }
+
+    @Override
+    public void initializeClient(Consumer<IClientItemExtensions> consumer) {
+        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> dev.starbloom.orchestra.client.music.HandheldPoses.initClient(consumer));
     }
 }

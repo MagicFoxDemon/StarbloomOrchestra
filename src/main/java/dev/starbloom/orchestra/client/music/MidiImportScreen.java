@@ -68,7 +68,7 @@ public class MidiImportScreen extends Screen {
         int x = x0 + PAD, by = y0 + H - PAD - 16;
         addRenderableWidget(Button.builder(tr("open_folder"), b -> {
             try {
-                Util.getPlatform().openPath(MidiLibrary.ensureFolder());
+                Util.getPlatform().openFile(MidiLibrary.ensureFolder().toFile());
             } catch (IOException e) {
                 error = tr("folder_error").getString();
             }
@@ -194,15 +194,15 @@ public class MidiImportScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double x, double y, double sx, double sy) {
-        scroll = Math.max(0, Math.min(Math.max(0, files.size() - VISIBLE), scroll - (int) Math.signum(sy)));
+    public boolean mouseScrolled(double x, double y, double delta) {
+        scroll = Math.max(0, Math.min(Math.max(0, files.size() - VISIBLE), scroll - (int) Math.signum(delta)));
         return true;
     }
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        // Screen.render 先画原版背景（模糊、压暗）再画控件；羊皮纸和列表要夹在两者之间，所以拆开来调用
-        renderBackground(g, mouseX, mouseY, partialTick);
+        // Screen.render 先画原版背景（压暗）再画控件；羊皮纸和列表要夹在两者之间，所以拆开来调用
+        renderBackground(g);
         Parchment.draw(g, x0, y0, W, H);
         int lx = x0 + PAD, ly = y0 + 40;
         g.drawString(font, title, lx, y0 + 24, Parchment.INK_TITLE, false);

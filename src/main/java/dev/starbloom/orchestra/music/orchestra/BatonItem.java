@@ -1,12 +1,18 @@
 package dev.starbloom.orchestra.music.orchestra;
 
 import java.util.List;
+import java.util.function.Consumer;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.level.Level;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.extensions.common.IClientItemExtensions;
+import net.minecraftforge.fml.DistExecutor;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * 指挥棒（docs/ORCHESTRA.md 第 3、4 节）：右键指挥台绑定它（绑定后再右键就开始 / 停止演奏）；右键乐器把它加进或移出那个乐团；
@@ -18,15 +24,19 @@ public class BatonItem extends Item {
         super(properties);
     }
 
-
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> out, TooltipFlag flag) {
-        GlobalPos p = stack.get(Orchestra.BATON_PODIUM.get());
+    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> out, TooltipFlag flag) {
+        GlobalPos p = Orchestra.batonPodium(stack);
         if (p == null) {
             out.add(Component.translatable("item.starbloom_orchestra.hexen_baton.unbound").withStyle(ChatFormatting.GRAY));
         } else {
             out.add(Component.translatable("item.starbloom_orchestra.hexen_baton.bound", p.pos().getX(), p.pos().getY(), p.pos().getZ())
                 .withStyle(ChatFormatting.GRAY));
         }
+    }
+
+    @Override
+    public void initializeClient(Consumer<IClientItemExtensions> consumer) {
+        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> dev.starbloom.orchestra.client.music.ConductingPoses.initClient(consumer));
     }
 }

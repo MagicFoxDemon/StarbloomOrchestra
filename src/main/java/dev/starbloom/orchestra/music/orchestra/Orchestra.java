@@ -5,74 +5,76 @@ import dev.starbloom.orchestra.StarbloomOrchestra;
 import dev.starbloom.orchestra.music.Instruments;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
-import net.minecraft.core.component.DataComponentType;
-import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
-import net.neoforged.neoforge.registries.DeferredBlock;
-import net.neoforged.neoforge.registries.DeferredHolder;
-import net.neoforged.neoforge.registries.DeferredItem;
-import net.neoforged.neoforge.registries.DeferredRegister;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.entity.player.AttackEntityEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.RegistryObject;
+import org.jetbrains.annotations.Nullable;
 
 /** 乐团：指挥台、指挥棒的注册与服务端的处理（docs/ORCHESTRA.md）。 */
 public final class Orchestra {
     private static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
-        DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, StarbloomOrchestra.ID);
-    private static final DeferredRegister.DataComponents COMPONENTS =
-        DeferredRegister.createDataComponents(Registries.DATA_COMPONENT_TYPE, StarbloomOrchestra.ID);
+        DeferredRegister.create(ForgeRegistries.BLOCK_ENTITY_TYPES, StarbloomOrchestra.ID);
+    /** 指挥棒绑定指挥台的 NBT 键名。 */
+    public static final String BATON_PODIUM_TAG = "starbloom_orchestra_podium";
 
-    public static final DeferredBlock<PodiumBlock> PODIUM = OrchestraRegistries.BLOCKS.registerBlock("hexen_podium", PodiumBlock::new,
-        net.minecraft.world.level.block.state.BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BROWN).strength(2.0f).sound(SoundType.WOOD).noOcclusion());
-    public static final DeferredItem<?> PODIUM_ITEM = OrchestraRegistries.ITEMS.registerSimpleBlockItem("hexen_podium", PODIUM);
-    public static final DeferredItem<BatonItem> BATON = OrchestraRegistries.ITEMS.registerItem("hexen_baton", p -> new BatonItem(p.stacksTo(1)));
+    public static final RegistryObject<PodiumBlock> PODIUM = OrchestraRegistries.BLOCKS.register("hexen_podium",
+        () -> new PodiumBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BROWN).strength(2.0f).sound(SoundType.WOOD).noOcclusion()));
+    public static final RegistryObject<Item> PODIUM_ITEM = OrchestraRegistries.ITEMS.register("hexen_podium",
+        () -> new BlockItem(PODIUM.get(), new Item.Properties()));
+    public static final RegistryObject<BatonItem> BATON = OrchestraRegistries.ITEMS.register("hexen_baton",
+        () -> new BatonItem(new Item.Properties().stacksTo(1)));
 
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PodiumBlockEntity>> PODIUM_ENTITY =
+    public static final RegistryObject<BlockEntityType<PodiumBlockEntity>> PODIUM_ENTITY =
         BLOCK_ENTITIES.register("podium", () -> BlockEntityType.Builder.of(PodiumBlockEntity::new, PODIUM.get()).build(null));
-    /** 指挥棒绑定的指挥台。 */
-    public static final DeferredHolder<DataComponentType<?>, DataComponentType<GlobalPos>> BATON_PODIUM =
-        COMPONENTS.registerComponentType("baton_podium", b -> b.persistent(GlobalPos.CODEC).networkSynchronized(GlobalPos.STREAM_CODEC));
 
     private Orchestra() {}
 
     public static void register(IEventBus bus) {
         BLOCK_ENTITIES.register(bus);
-        COMPONENTS.register(bus);
-        bus.addListener(Orchestra::payloads);
         // 指挥状态下左键不攻击生物、不挖方块：客户端已经不发，这里防别的客户端或延迟
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.entity.player.AttackEntityEvent e) -> {
+        MinecraftForge.EVENT_BUS.addListener((AttackEntityEvent e) -> {
             if (PodiumBlock.conducting(e.getEntity())) e.setCanceled(true);
         });
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.LeftClickBlock e) -> {
+        MinecraftForge.EVENT_BUS.addListener((PlayerInteractEvent.LeftClickBlock e) -> {
             if (PodiumBlock.conducting(e.getEntity())) e.setCanceled(true);
         });
     }
 
-    /**
-     * 1.21.1 的 NeoForge 没有单独的客户端收包注册，发往客户端的包要在这里连同处理器一起登记。公共代码不引用客户端的类，
-     * 所以只放 {@link dev.starbloom.orchestra.music.ClientPayloadHandlers#dispatch} 转发，客户端初始化时（{@code MusicClient.ModBus}）登记真正的处理器。
-     */
-    private static void payloads(RegisterPayloadHandlersEvent event) {
-        var r = event.registrar("1");
-        r.playToServer(EnsemblePayloads.PodiumControl.TYPE, EnsemblePayloads.PodiumControl.CODEC, (p, c) -> c.enqueueWork(() -> control(p, c)));
-        r.playToClient(EnsemblePayloads.EnsembleState.TYPE, EnsemblePayloads.EnsembleState.CODEC, dev.starbloom.orchestra.music.ClientPayloadHandlers.dispatch(EnsemblePayloads.EnsembleState.TYPE));
-        r.playToServer(EnsemblePayloads.ConductBeat.TYPE, EnsemblePayloads.ConductBeat.CODEC, (p, c) -> c.enqueueWork(() -> beat(p, c)));
+    public static @Nullable GlobalPos batonPodium(ItemStack stack) {
+        CompoundTag tag = stack.getTag();
+        if (tag == null || !tag.contains(BATON_PODIUM_TAG, Tag.TAG_COMPOUND)) return null;
+        return GlobalPos.CODEC.parse(NbtOps.INSTANCE, tag.getCompound(BATON_PODIUM_TAG)).result().orElse(null);
+    }
+
+    public static void setBatonPodium(ItemStack stack, GlobalPos pos) {
+        GlobalPos.CODEC.encodeStart(NbtOps.INSTANCE, pos).result()
+            .ifPresent(t -> stack.getOrCreateTag().put(BATON_PODIUM_TAG, t));
     }
 
     public static void tell(Player player, String key, Object... args) {
         if (player instanceof ServerPlayer sp) sp.sendSystemMessage(Component.translatable("message.starbloom_orchestra.orchestra." + key, args), true);
     }
 
-    private static void control(EnsemblePayloads.PodiumControl p, IPayloadContext c) {
-        if (!(c.player() instanceof ServerPlayer player) || !player.level().isLoaded(p.podium())) return;
+    public static void handleControl(EnsemblePayloads.PodiumControl p, ServerPlayer player) {
+        if (!player.level().isLoaded(p.podium())) return;
         PodiumBlockEntity be = PodiumBlock.entityAt(player.level(), p.podium());
         if (be == null || player.distanceToSqr(be.standAt()) > Instruments.REACH * Instruments.REACH) return;
         switch (p.action()) {
@@ -109,8 +111,8 @@ public final class Orchestra {
     }
 
     /** 指挥打的一拍：只收站在这座指挥台上、拿着指挥棒的人的。 */
-    private static void beat(EnsemblePayloads.ConductBeat p, IPayloadContext c) {
-        if (!(c.player() instanceof ServerPlayer player) || !player.level().isLoaded(p.podium())) return;
+    public static void handleBeat(EnsemblePayloads.ConductBeat p, ServerPlayer player) {
+        if (!player.level().isLoaded(p.podium())) return;
         if (!PodiumBlock.conducting(player) || !p.podium().equals(PodiumBlock.under(player))) return;
         PodiumBlockEntity be = PodiumBlock.entityAt(player.level(), p.podium());
         if (be == null || !be.isPlaying()) return;
@@ -120,8 +122,8 @@ public final class Orchestra {
     /** 指挥棒右键指挥台：没绑定这座时绑定；绑定了就开始 / 停止演奏。 */
     public static void batonOnPodium(ItemStack stack, ServerLevel level, BlockPos main, Player player) {
         GlobalPos here = GlobalPos.of(level.dimension(), main);
-        if (!here.equals(stack.get(BATON_PODIUM.get()))) {
-            stack.set(BATON_PODIUM.get(), here);
+        if (!here.equals(batonPodium(stack))) {
+            setBatonPodium(stack, here);
             tell(player, "bound");
             return;
         }
@@ -138,7 +140,7 @@ public final class Orchestra {
 
     /** 指挥棒右键乐器：加进（或移出）指挥棒绑定的乐团。 */
     public static void batonOnInstrument(ItemStack stack, ServerLevel level, BlockPos instrument, Player player) {
-        GlobalPos bound = stack.get(BATON_PODIUM.get());
+        GlobalPos bound = batonPodium(stack);
         if (bound == null || !bound.dimension().equals(level.dimension())) {
             tell(player, "unbound");
             return;

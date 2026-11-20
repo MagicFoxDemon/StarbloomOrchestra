@@ -33,12 +33,11 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.bus.api.IEventBus;
+import net.minecraftforge.eventbus.api.IEventBus;
 
 /**
  * 星辰花琴凳（docs/ORCHESTRA.md 第 14 节）：在键盘的琴键一面、竖琴的背后才和乐器关联，方向不对、位置不对都不关联；
@@ -193,11 +192,11 @@ public final class BenchGameTests {
         BlockPos cello = h.absolutePos(new BlockPos(2, 1, 2));
         place(level, cello, Instruments.CELLO.get().defaultBlockState().setValue(InstrumentBlock.FACING, Direction.SOUTH));
         Mob elf = musician(h, new BlockPos(2, 1, 6));
-        Player player = h.makeMockPlayer(GameType.SURVIVAL);
+        Player player = h.makeMockPlayer();
         player.moveTo(cello.getX() + 0.5, cello.getY(), cello.getZ() + 3.5, 0, 0);
         player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.LEAD));
         elf.setLeashedTo(player, true);
-        level.getBlockState(cello).useItemOn(player.getMainHandItem(), level, player, InteractionHand.MAIN_HAND, hit(cello));
+        level.getBlockState(cello).use(level, player, InteractionHand.MAIN_HAND, hit(cello));
         if (!(elf.getVehicle() instanceof dev.starbloom.orchestra.music.InstrumentSeat seat)) throw new AssertionError("the led elf takes the cello's seat");
         h.assertTrue(!elf.isLeashed() && player.getInventory().countItem(Items.LEAD) == 2, "the lead comes back");
         h.assertTrue(seat.kind() == InstrumentKind.CELLO && seat.shouldBeSaved(), "the seat is the cello's and is saved with the elf");
@@ -207,13 +206,13 @@ public final class BenchGameTests {
         // 已有人：另一只牵着的生物带不上去
         Mob other = musician(h, new BlockPos(4, 1, 6));
         other.setLeashedTo(player, true);
-        level.getBlockState(cello).useItemOn(player.getMainHandItem(), level, player, InteractionHand.MAIN_HAND, hit(cello));
+        level.getBlockState(cello).use(level, player, InteractionHand.MAIN_HAND, hit(cello));
         h.assertTrue(other.getVehicle() == null && other.isLeashed(), "a taken post takes no one else");
         other.dropLeash(true, true);
         // 潜行空手右键：离开
         player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
         player.setShiftKeyDown(true);
-        level.getBlockState(cello).useWithoutItem(level, player, hit(cello));
+        level.getBlockState(cello).use(level, player, InteractionHand.MAIN_HAND, hit(cello));
         h.assertTrue(elf.getVehicle() == null, "sneaking with an empty hand sends the elf off the post");
         player.setShiftKeyDown(false);
         // 钟琴：站在前面（朝北放置时站在北面），面朝南
@@ -238,13 +237,13 @@ public final class BenchGameTests {
         place(level, glock, Instruments.GLOCKENSPIEL.get().defaultBlockState().setValue(InstrumentBlock.FACING, Direction.NORTH));
         place(level, bells, Instruments.TUBULAR_BELLS.get().defaultBlockState().setValue(InstrumentBlock.FACING, Direction.NORTH));
         place(level, cello, Instruments.CELLO.get().defaultBlockState().setValue(InstrumentBlock.FACING, Direction.NORTH));
-        Player player = h.makeMockPlayer(GameType.SURVIVAL);
+        Player player = h.makeMockPlayer();
         player.moveTo(glock.getX() + 0.5, glock.getY(), glock.getZ() - 1.5, 180, 0);
         player.setShiftKeyDown(true);
-        level.getBlockState(glock).useWithoutItem(level, player, hit(glock));
+        level.getBlockState(glock).use(level, player, InteractionHand.MAIN_HAND, hit(glock));
         h.assertTrue(player.getVehicle() == null, "sneaking only opens the screen");
         player.setShiftKeyDown(false);
-        level.getBlockState(glock).useWithoutItem(level, player, hit(glock));
+        level.getBlockState(glock).use(level, player, InteractionHand.MAIN_HAND, hit(glock));
         if (!(player.getVehicle() instanceof dev.starbloom.orchestra.music.InstrumentSeat post)) throw new AssertionError("an empty hand takes the glockenspiel's post");
         h.assertTrue(post.getType() == Instruments.STANDING_POST.get() && post.instrument().equals(glock) && post.kind() == InstrumentKind.GLOCKENSPIEL,
             "the glockenspiel's post is a standing post: " + post.getType());
@@ -254,10 +253,10 @@ public final class BenchGameTests {
         Mob elf = musician(h, new BlockPos(5, 1, 6));
         h.assertTrue(dev.starbloom.orchestra.music.InstrumentPosts.take(level, bells, elf), "the elf takes the bells");
         player.stopRiding();
-        level.getBlockState(bells).useWithoutItem(level, player, hit(bells));
+        level.getBlockState(bells).use(level, player, InteractionHand.MAIN_HAND, hit(bells));
         h.assertTrue(player.getVehicle() == null, "a taken post takes no one else");
         // 大提琴：坐着的工位
-        level.getBlockState(cello).useWithoutItem(level, player, hit(cello));
+        level.getBlockState(cello).use(level, player, InteractionHand.MAIN_HAND, hit(cello));
         h.assertTrue(player.getVehicle() instanceof dev.starbloom.orchestra.music.InstrumentSeat seat && seat.getType() == Instruments.SEAT.get()
             && seat.kind() == InstrumentKind.CELLO, "the cello's post is a seat");
         h.succeed();
@@ -271,13 +270,13 @@ public final class BenchGameTests {
         ServerLevel level = h.getLevel();
         var blocks = List.of(Instruments.BASS_DRUM.get(), Instruments.SNARE_DRUM.get(), Instruments.SUSPENDED_CYMBAL.get(), Instruments.TRIANGLE.get());
         var kinds = List.of(InstrumentKind.BASS_DRUM, InstrumentKind.SNARE_DRUM, InstrumentKind.SUSPENDED_CYMBAL, InstrumentKind.TRIANGLE);
-        Player player = h.makeMockPlayer(GameType.SURVIVAL);
+        Player player = h.makeMockPlayer();
         for (int i = 0; i < blocks.size(); i++) {
             BlockPos drum = h.absolutePos(new BlockPos(1 + 2 * i, 1, 3));
             place(level, drum, blocks.get(i).defaultBlockState().setValue(InstrumentBlock.FACING, Direction.NORTH));
             player.stopRiding();
             player.moveTo(drum.getX() + 0.5, drum.getY(), drum.getZ() - 1.5, 180, 0);
-            level.getBlockState(drum).useWithoutItem(level, player, hit(drum));
+            level.getBlockState(drum).use(level, player, InteractionHand.MAIN_HAND, hit(drum));
             if (!(player.getVehicle() instanceof dev.starbloom.orchestra.music.InstrumentSeat post)) {
                 throw new AssertionError("an empty hand takes the " + kinds.get(i) + " post");
             }
@@ -301,11 +300,11 @@ public final class BenchGameTests {
         Mob elf = musician(h, new BlockPos(1, 1, 6));
         player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.LEAD));
         elf.setLeashedTo(player, true);
-        level.getBlockState(bass).useItemOn(player.getMainHandItem(), level, player, InteractionHand.MAIN_HAND, hit(bass));
+        level.getBlockState(bass).use(level, player, InteractionHand.MAIN_HAND, hit(bass));
         h.assertTrue(elf.getVehicle() instanceof dev.starbloom.orchestra.music.InstrumentSeat seat && seat.kind() == InstrumentKind.BASS_DRUM,
             "the led elf takes the bass drum");
         player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
-        level.getBlockState(bass).useWithoutItem(level, player, hit(bass));
+        level.getBlockState(bass).use(level, player, InteractionHand.MAIN_HAND, hit(bass));
         h.assertTrue(player.getVehicle() == null, "a taken post takes no one else");
         h.succeed();
     }
@@ -339,13 +338,13 @@ public final class BenchGameTests {
         BlockPos seat = bench(h, new BlockPos(2, 1, 2), Direction.SOUTH);
         Mob elf = musician(h, new BlockPos(2, 1, 5));
         elf.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.BOW));
-        Player player = h.makeMockPlayer(GameType.SURVIVAL);
+        Player player = h.makeMockPlayer();
         player.moveTo(seat.getX() + 0.5, seat.getY(), seat.getZ() + 2.5, 0, 0);
         player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.LEAD));
         elf.setLeashedTo(player, true);
         h.assertTrue(elf.isLeashed(), "the elf is on a lead");
         // 牵着它右键琴凳
-        level.getBlockState(seat).useItemOn(player.getMainHandItem(), level, player, InteractionHand.MAIN_HAND, hit(seat));
+        level.getBlockState(seat).use(level, player, InteractionHand.MAIN_HAND, hit(seat));
         h.assertTrue(elf.getVehicle() instanceof BenchSeat s && s.bench().equals(seat), "the led elf sits on the bench");
         h.assertTrue(!elf.isLeashed(), "and is let off the lead");
         h.assertTrue(player.getInventory().countItem(Items.LEAD) == 2, "the lead comes back");
@@ -358,7 +357,7 @@ public final class BenchGameTests {
         player.interactOn(elf, InteractionHand.MAIN_HAND);
         h.assertTrue(elf.getMainHandItem().is(Instruments.VIOLIN.get()), "the elf holds the violin");
         h.assertTrue(player.getMainHandItem().isEmpty(), "the player's violin went to the elf");
-        h.assertTrue(elf.getData(Benches.STOWED).is(Items.BOW), "the bow is kept for the elf");
+        h.assertTrue(Benches.stowed(elf).is(Items.BOW), "the bow is kept for the elf");
         h.assertTrue(level.getBlockState(seat).getValue(StarbloomBenchBlock.PLAYS) == MusicStandBlock.Holds.VIOLIN, "the bench now plays the violin");
         // 空手右键：拿回小提琴，弓还给它
         player.interactOn(elf, InteractionHand.MAIN_HAND);
@@ -366,14 +365,15 @@ public final class BenchGameTests {
         h.assertTrue(player.getInventory().countItem(Instruments.VIOLIN.get()) == 1, "the violin is back with the player");
         h.assertTrue(level.getBlockState(seat).getValue(StarbloomBenchBlock.PLAYS) == MusicStandBlock.Holds.NONE, "the bench rests again");
         // 潜行空手右键琴凳：站起来，座位消失
+        player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
         player.setShiftKeyDown(true);
-        level.getBlockState(seat).useWithoutItem(level, player, hit(seat));
+        level.getBlockState(seat).use(level, player, InteractionHand.MAIN_HAND, hit(seat));
         h.assertTrue(elf.getVehicle() == null, "the elf stands up");
         h.assertTrue(StarbloomBenchBlock.isFree(level, seat), "the bench is free again (the empty seat goes on its next tick)");
         // 玩家自己坐：座位不存盘
         player.setShiftKeyDown(false);
         player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
-        level.getBlockState(seat).useWithoutItem(level, player, hit(seat));
+        level.getBlockState(seat).use(level, player, InteractionHand.MAIN_HAND, hit(seat));
         h.assertTrue(player.getVehicle() instanceof BenchSeat s && !s.shouldBeSaved(), "a player's seat is not saved");
         // 起身：站在凳子后面的地面上，不陷进地里
         player.stopRiding();
@@ -392,17 +392,17 @@ public final class BenchGameTests {
         place(level, drum, Instruments.TIMPANI.get().defaultBlockState().setValue(InstrumentBlock.FACING, Direction.NORTH));
         h.assertTrue("joined".equals(podium.toggle(drum)), "the timpani joins");
         BlockPos away = new BlockPos(40, 3, -25);
-        var podiumTag = podium.saveWithFullMetadata(level.registryAccess());
-        if (!(net.minecraft.world.level.block.entity.BlockEntity.loadStatic(main.offset(away), podium.getBlockState(), podiumTag,
-                level.registryAccess()) instanceof PodiumBlockEntity moved)) throw new AssertionError("podium did not load");
+        var podiumTag = podium.saveWithFullMetadata();
+        if (!(net.minecraft.world.level.block.entity.BlockEntity.loadStatic(main.offset(away), podium.getBlockState(), podiumTag)
+                instanceof PodiumBlockEntity moved)) throw new AssertionError("podium did not load");
         h.assertTrue(moved.members().equals(List.of(drum.offset(away))), "members move with the podium: " + moved.members());
         var drumEntity = InstrumentBlock.entityAt(level, drum);
-        var drumTag = drumEntity.saveWithFullMetadata(level.registryAccess());
-        if (!(net.minecraft.world.level.block.entity.BlockEntity.loadStatic(drum.offset(away), drumEntity.getBlockState(), drumTag,
-                level.registryAccess()) instanceof dev.starbloom.orchestra.music.InstrumentBlockEntity movedDrum)) throw new AssertionError("timpani did not load");
+        var drumTag = drumEntity.saveWithFullMetadata();
+        if (!(net.minecraft.world.level.block.entity.BlockEntity.loadStatic(drum.offset(away), drumEntity.getBlockState(), drumTag)
+                instanceof dev.starbloom.orchestra.music.InstrumentBlockEntity movedDrum)) throw new AssertionError("timpani did not load");
         h.assertTrue(main.offset(away).equals(movedDrum.orchestra()), "the instrument remembers the moved podium: " + movedDrum.orchestra());
         // 原地读回不动
-        var same = net.minecraft.world.level.block.entity.BlockEntity.loadStatic(main, podium.getBlockState(), podiumTag, level.registryAccess());
+        var same = net.minecraft.world.level.block.entity.BlockEntity.loadStatic(main, podium.getBlockState(), podiumTag);
         h.assertTrue(same instanceof PodiumBlockEntity p && p.members().equals(List.of(drum)), "loading in place keeps the members");
         // 乐器记着的指挥台不在了（例如蓝图转着放下，位置只平移不旋转）：召集附近照样收进来
         h.assertTrue("left".equals(podium.toggle(drum)), "the timpani leaves");
@@ -427,7 +427,7 @@ public final class BenchGameTests {
             byte[] encoded = roll.encode();
             UUID id = RollStore.save(encoded);
             ItemStack stack = new ItemStack(Instruments.MUSIC_ROLL_ITEM.get());
-            stack.set(Instruments.MUSIC_ROLL.get(), RollInfo.of(id, roll, MusicRoll.hash(encoded)));
+            RollInfo.set(stack, RollInfo.of(id, roll, MusicRoll.hash(encoded)));
             return stack;
         } catch (Exception e) {
             throw new AssertionError(e);
@@ -456,7 +456,7 @@ public final class BenchGameTests {
         // 坐上拿着小提琴的精灵：分到小提琴声部
         Mob elf = musician(h, new BlockPos(5, 1, 7));
         h.assertTrue(StarbloomBenchBlock.sit(level, seat, elf), "the elf sits down");
-        Benches.give(elf, new ItemStack(Instruments.VIOLIN.get()), h.makeMockPlayer(GameType.CREATIVE));
+        Benches.give(elf, new ItemStack(Instruments.VIOLIN.get()), h.makeMockPlayer());
         StarbloomBenchBlock.refresh(level, seat);
         h.assertTrue(podium.mask(seat) == 1, "the elf's bench plays the violin part, got " + podium.mask(seat));
         h.assertTrue(podium.mask(piano) == 1 << 1, "the piano plays the piano part, got " + podium.mask(piano));

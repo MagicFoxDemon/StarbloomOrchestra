@@ -1,15 +1,14 @@
 package dev.starbloom.orchestra.music;
 
-import com.mojang.serialization.MapCodec;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingBookCategory;
-import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CustomRecipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.SimpleCraftingRecipeSerializer;
 import net.minecraft.world.level.Level;
 
 /**
@@ -17,45 +16,31 @@ import net.minecraft.world.level.Level;
  * 复制出的纸带指向同一份内容；内容不可修改，所以互不影响。
  */
 public class RollCopyRecipe extends CustomRecipe {
-    public static final RollCopyRecipe INSTANCE = new RollCopyRecipe();
-    /** 配方文件里只有 {@code type}，别的字段（比如 {@code category}）都不读：始终是同一个实例，分类固定为「杂项」。 */
-    public static final RecipeSerializer<RollCopyRecipe> SERIALIZER = new RecipeSerializer<>() {
-        private final MapCodec<RollCopyRecipe> codec = MapCodec.unit(INSTANCE);
-        private final StreamCodec<RegistryFriendlyByteBuf, RollCopyRecipe> streamCodec = StreamCodec.unit(INSTANCE);
+    public static final RollCopyRecipe INSTANCE = new RollCopyRecipe(dev.starbloom.orchestra.StarbloomOrchestra.id("music_roll_copy"), CraftingBookCategory.MISC);
+    public static final RecipeSerializer<RollCopyRecipe> SERIALIZER = new SimpleCraftingRecipeSerializer<>(RollCopyRecipe::new);
 
-        @Override
-        public MapCodec<RollCopyRecipe> codec() {
-            return codec;
-        }
-
-        @Override
-        public StreamCodec<RegistryFriendlyByteBuf, RollCopyRecipe> streamCodec() {
-            return streamCodec;
-        }
-    };
-
-    public RollCopyRecipe() {
-        super(CraftingBookCategory.MISC);
+    public RollCopyRecipe(ResourceLocation id, CraftingBookCategory category) {
+        super(id, category);
     }
 
     @Override
-    public boolean matches(CraftingInput input, Level level) {
+    public boolean matches(CraftingContainer input, Level level) {
         return !assemble(input).isEmpty();
     }
 
     @Override
-    public ItemStack assemble(CraftingInput input, HolderLookup.Provider registries) {
+    public ItemStack assemble(CraftingContainer input, RegistryAccess registries) {
         return assemble(input);
     }
 
     /** 合成结果；不需要注册表（世界测试直接调用）。 */
-    public ItemStack assemble(CraftingInput input) {
+    public ItemStack assemble(CraftingContainer input) {
         ItemStack source = ItemStack.EMPTY;
         int blanks = 0;
-        for (int i = 0; i < input.size(); i++) {
+        for (int i = 0; i < input.getContainerSize(); i++) {
             ItemStack s = input.getItem(i);
             if (s.isEmpty()) continue;
-            if (s.is(Instruments.MUSIC_ROLL_ITEM.get()) && s.has(Instruments.MUSIC_ROLL.get())) {
+            if (s.is(Instruments.MUSIC_ROLL_ITEM.get()) && RollInfo.has(s)) {
                 if (!source.isEmpty()) return ItemStack.EMPTY;
                 source = s;
             } else if (s.is(Instruments.BLANK_ROLL.get())) {
@@ -75,11 +60,11 @@ public class RollCopyRecipe extends CustomRecipe {
     }
 
     @Override
-    public NonNullList<ItemStack> getRemainingItems(CraftingInput input) {
-        NonNullList<ItemStack> result = NonNullList.withSize(input.size(), ItemStack.EMPTY);
-        for (int i = 0; i < input.size(); i++) {
+    public NonNullList<ItemStack> getRemainingItems(CraftingContainer input) {
+        NonNullList<ItemStack> result = NonNullList.withSize(input.getContainerSize(), ItemStack.EMPTY);
+        for (int i = 0; i < input.getContainerSize(); i++) {
             ItemStack s = input.getItem(i);
-            if (s.is(Instruments.MUSIC_ROLL_ITEM.get()) && s.has(Instruments.MUSIC_ROLL.get())) {
+            if (s.is(Instruments.MUSIC_ROLL_ITEM.get()) && RollInfo.has(s)) {
                 result.set(i, s.copyWithCount(1));
                 break;
             }
@@ -88,7 +73,7 @@ public class RollCopyRecipe extends CustomRecipe {
     }
 
     @Override
-    public RecipeSerializer<RollCopyRecipe> getSerializer() {
+    public RecipeSerializer<?> getSerializer() {
         return SERIALIZER;
     }
 }

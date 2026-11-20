@@ -229,7 +229,7 @@ public class InstrumentScreen extends Screen implements MidiKeyboard.Target {
         addRenderableWidget(Button.builder(tr("eject"), b -> MusicClient.control(pos, MusicPayloads.Control.EJECT, 0)).bounds(x + 192, y, 60, 16).build());
         // 声部
         InstrumentBlockEntity be = entity();
-        RollInfo info = be == null ? null : be.roll().get(Instruments.MUSIC_ROLL.get());
+        RollInfo info = be == null ? null : RollInfo.get(be.roll());
         if (info != null && info.parts().size() > 1) {
             int mask = be.partMask();
             for (int i = 0; i < info.parts().size() && i < MusicRoll.MAX_PARTS; i++) {
@@ -268,7 +268,7 @@ public class InstrumentScreen extends Screen implements MidiKeyboard.Target {
             return;
         }
         String slot = "";
-        if (page == ROLL) slot = be.roll().getComponents().toString() + be.partMask() + be.stopWithSignal();
+        if (page == ROLL) slot = be.roll().getItem() + ":" + be.roll().getTag() + ":" + be.partMask() + ":" + be.stopWithSignal();
         if (page == STOPS) {
             var o = be.organ();
             slot = be.stops() + "/" + be.reverbMode() + "/" + (o == null ? "" : o.availableStops());
@@ -479,7 +479,7 @@ public class InstrumentScreen extends Screen implements MidiKeyboard.Target {
     private void openEditor() {
         InstrumentBlockEntity be = entity();
         if (be == null) return;
-        minecraft.setScreen(new RollEditorScreen(pos, this, be.roll().get(Instruments.MUSIC_ROLL.get())));
+        minecraft.setScreen(new RollEditorScreen(pos, this, RollInfo.get(be.roll())));
     }
 
     // —— 屏幕键盘 ——
@@ -553,8 +553,8 @@ public class InstrumentScreen extends Screen implements MidiKeyboard.Target {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        // Screen.render 先画原版背景（模糊、压暗）再画控件；羊皮纸和文字要夹在两者之间，所以拆开来调用
-        renderBackground(g, mouseX, mouseY, partialTick);
+        // Screen.render 先画原版背景（压暗）再画控件；羊皮纸和文字要夹在两者之间，所以拆开来调用
+        renderBackground(g);
         Parchment.draw(g, x0, y0, W, H);
         Component name = Component.translatable(nameKey());
         g.drawString(font, name, x0 + PAD, y0 + 24, Parchment.INK_TITLE, false);
@@ -618,7 +618,7 @@ public class InstrumentScreen extends Screen implements MidiKeyboard.Target {
         InstrumentBlockEntity be = entity();
         int x = x0 + PAD, y = y0 + 44;
         ItemStack slot = be == null ? ItemStack.EMPTY : be.roll();
-        RollInfo info = slot.get(Instruments.MUSIC_ROLL.get());
+        RollInfo info = RollInfo.get(slot);
         if (slot.isEmpty()) {
             g.drawString(font, tr("slot_empty"), x, y, Parchment.INK, false);
         } else if (info == null) {

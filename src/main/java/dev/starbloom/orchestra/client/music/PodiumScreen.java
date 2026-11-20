@@ -3,6 +3,7 @@ package dev.starbloom.orchestra.client.music;
 import dev.starbloom.orchestra.music.InstrumentKind;
 import dev.starbloom.orchestra.music.Instruments;
 import dev.starbloom.orchestra.music.MusicRoll;
+import dev.starbloom.orchestra.music.OrchestraNetwork;
 import dev.starbloom.orchestra.music.RollInfo;
 import dev.starbloom.orchestra.music.orchestra.BeatMap;
 import dev.starbloom.orchestra.music.orchestra.EnsemblePayloads;
@@ -17,7 +18,6 @@ import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -60,7 +60,7 @@ final class PodiumScreen extends Screen {
 
     /** 合奏用的总谱（钢琴曲另有拆出的旋律、和声、低音，{@link OrchestraScore}）。 */
     private static OrchestraScore.@Nullable Score prepared(PodiumBlockEntity be) {
-        RollInfo info = be.score().get(Instruments.MUSIC_ROLL.get());
+        RollInfo info = RollInfo.get(be.score());
         MusicRoll raw = info == null ? null : MusicClient.roll(info.id());
         return raw == null ? null : OrchestraScore.of(raw);
     }
@@ -80,7 +80,7 @@ final class PodiumScreen extends Screen {
                 default -> "bass";
             });
         }
-        RollInfo info = be.score().get(Instruments.MUSIC_ROLL.get());
+        RollInfo info = RollInfo.get(be.score());
         if (info != null && part < info.parts().size() && !info.parts().get(part).isBlank()) return Component.literal(info.parts().get(part));
         return Component.translatable("screen.starbloom_orchestra.podium.part", part + 1);
     }
@@ -90,7 +90,7 @@ final class PodiumScreen extends Screen {
     }
 
     private void send(int action, int a, int b) {
-        PacketDistributor.sendToServer(new EnsemblePayloads.PodiumControl(pos, action, a, b));
+        OrchestraNetwork.sendToServer(new EnsemblePayloads.PodiumControl(pos, action, a, b));
     }
 
     /** 按文字宽度放一个按钮，返回它右边（留 2 像素）的位置。 */
@@ -104,6 +104,10 @@ final class PodiumScreen extends Screen {
         return y0 + H - 34;
     }
 
+    private static int right(Button b) {
+        return b.getX() + b.getWidth();
+    }
+
     @Override
     protected void init() {
         x0 = (width - W) / 2;
@@ -111,12 +115,12 @@ final class PodiumScreen extends Screen {
         int y = bottomRow();
         int x = x0 + PAD, right = x0 + W - PAD;
         // 左：召集、重新分派；右：开始 / 停止、取出；中间：速度、从第几小节
-        x = button(tr("gather"), x, y, b -> send(EnsemblePayloads.PodiumControl.GATHER, 0, 0)).getRight() + 2;
-        x = button(tr("reassign"), x, y, b -> send(EnsemblePayloads.PodiumControl.REASSIGN, 0, 0)).getRight() + 8;
-        x = button(Component.literal("−"), x, y, b -> tempo(-5)).getRight() + 3;
+        x = right(button(tr("gather"), x, y, b -> send(EnsemblePayloads.PodiumControl.GATHER, 0, 0))) + 2;
+        x = right(button(tr("reassign"), x, y, b -> send(EnsemblePayloads.PodiumControl.REASSIGN, 0, 0))) + 8;
+        x = right(button(Component.literal("−"), x, y, b -> tempo(-5))) + 3;
         tempoX = x;
-        x = button(Component.literal("+"), x + font.width(tr("tempo", 150)) + 3, y, b -> tempo(5)).getRight() + 8;
-        x = button(Component.literal("◀"), x, y, b -> fromBar = Math.max(0, fromBar - 1)).getRight() + 3;
+        x = right(button(Component.literal("+"), x + font.width(tr("tempo", 150)) + 3, y, b -> tempo(5))) + 8;
+        x = right(button(Component.literal("◀"), x, y, b -> fromBar = Math.max(0, fromBar - 1))) + 3;
         fromX = x;
         button(Component.literal("▶"), x + font.width(tr("from_bar", 999)) + 3, y, b -> fromBar++);
         Component eject = tr("eject");
@@ -132,10 +136,10 @@ final class PodiumScreen extends Screen {
         partButtons.clear();
         x = x0 + PAD + 104;
         Button minus = button(Component.literal("−"), x, y2, b -> gain(-3));
-        gainX = minus.getRight() + 3;
+        gainX = right(minus) + 3;
         Button plus = button(Component.literal("+"), gainX + font.width("+6 dB") + 3, y2, b -> gain(3));
-        Button mute = button(tr("mute"), plus.getRight() + 6, y2, b -> partAction(EnsemblePayloads.PodiumControl.MUTE));
-        Button solo = button(tr("solo"), mute.getRight() + 2, y2, b -> partAction(EnsemblePayloads.PodiumControl.SOLO));
+        Button mute = button(tr("mute"), right(plus) + 6, y2, b -> partAction(EnsemblePayloads.PodiumControl.MUTE));
+        Button solo = button(tr("solo"), right(mute) + 2, y2, b -> partAction(EnsemblePayloads.PodiumControl.SOLO));
         partButtons.addAll(List.of(minus, plus, mute, solo));
         // 节拍器开关（右边，和开始 / 停止同一列）
         Component on = tr("metronome", tr("on"));
@@ -170,12 +174,12 @@ final class PodiumScreen extends Screen {
         return false;
     }
 
-    /** 不模糊、只稍微压暗：选中声部时要看得见画面里乐器的描边。 */
+    /** 稍微压暗：选中声部时要看得见画面里乐器的描边。 */
     @Override
-    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float a) {
+    public void renderBackground(GuiGraphics g) {
         g.fillGradient(0, 0, width, height, 0x50101010, 0x70101010);
-        // 原版在这里发的背景事件照发（别的模组可能在背景上画东西）；字幕在 1.21.1 是 HUD 的一层，不用在这里画
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(new net.neoforged.neoforge.client.event.ScreenEvent.BackgroundRendered(this, g));
+        // 原版在这里发的背景事件照发（别的模组可能在背景上画东西）
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(new net.minecraftforge.client.event.ScreenEvent.BackgroundRendered(this, g));
     }
 
     // —— 画 ——
@@ -201,7 +205,7 @@ final class PodiumScreen extends Screen {
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         // Screen.render 先画背景再画控件；羊皮纸和列表要夹在两者之间，所以拆开来调用
-        renderBackground(g, mouseX, mouseY, partialTick);
+        renderBackground(g);
         Parchment.draw(g, x0, y0, W, H);
         PodiumBlockEntity be = entity();
         if (be == null) {
@@ -209,7 +213,7 @@ final class PodiumScreen extends Screen {
             return;
         }
         MusicRoll roll = score(be);
-        RollInfo info = be.score().get(Instruments.MUSIC_ROLL.get());
+        RollInfo info = RollInfo.get(be.score());
         int x = x0 + PAD, top = y0 + TOP;
         Component title = info == null ? tr("no_score")
             : Component.literal(font.plainSubstrByWidth(info.title().isBlank() ? "—" : info.title(), 200));
@@ -354,11 +358,11 @@ final class PodiumScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double x, double y, double scrollX, double scrollY) {
+    public boolean mouseScrolled(double x, double y, double delta) {
         if (x >= splitX()) {
-            scroll = Math.max(0, scroll - (int) Math.signum(scrollY));
+            scroll = Math.max(0, scroll - (int) Math.signum(delta));
             return true;
         }
-        return super.mouseScrolled(x, y, scrollX, scrollY);
+        return super.mouseScrolled(x, y, delta);
     }
 }

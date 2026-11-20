@@ -15,7 +15,7 @@ import net.minecraft.gametest.framework.TestFunction;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.bus.api.IEventBus;
+import net.minecraftforge.eventbus.api.IEventBus;
 
 /** 创造模式物品栏：本模组的每件物品都在「星辰花乐团」页里（写好的打孔纸带除外，要在乐器上写）。 */
 public final class CreativeTabGameTests {

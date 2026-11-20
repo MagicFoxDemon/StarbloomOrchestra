@@ -9,7 +9,6 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Pose;
@@ -46,8 +45,8 @@ public final class BenchSeat extends Entity {
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder builder) {
-        builder.define(BENCH, BlockPos.ZERO);
+    protected void defineSynchedData() {
+        entityData.define(BENCH, BlockPos.ZERO);
     }
 
     @Override
@@ -73,19 +72,13 @@ public final class BenchSeat extends Entity {
     }
 
     @Override
-    public boolean canUsePortal(boolean ignorePassenger) {
+    public boolean canChangeDimensions() {
         return false;
     }
 
     @Override
     protected boolean canAddPassenger(Entity passenger) {
         return getPassengers().isEmpty();
-    }
-
-    /** 座位的位置就是坐的人双脚的位置：抵消乘客自己的骑乘挂点。 */
-    @Override
-    protected Vec3 getPassengerAttachmentPoint(Entity passenger, EntityDimensions dimensions, float scale) {
-        return passenger.getVehicleAttachmentPoint(this);
     }
 
     @Override
@@ -115,9 +108,11 @@ public final class BenchSeat extends Entity {
         if (!level().isClientSide() && !isRemoved()) StarbloomBenchBlock.refresh(level(), bench());
     }
 
+    /** 座位的位置就是坐的人双脚的位置：直接落在座位坐标上。 */
     @Override
     protected void positionRider(Entity passenger, MoveFunction move) {
-        super.positionRider(passenger, move);
+        if (!hasPassenger(passenger)) return;
+        move.accept(passenger, getX(), getY(), getZ());
         clampRotation(passenger);
     }
 

@@ -87,7 +87,7 @@ public class GrandPianoBlock extends InstrumentBlock {
     }
 
     @Override
-    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return SHAPE;
     }
 
@@ -112,8 +112,8 @@ public class GrandPianoBlock extends InstrumentBlock {
     }
 
     @Override
-    protected BlockState updateShape(BlockState state, Direction direction, BlockState neighborState, LevelAccessor level,
-                                     BlockPos pos, BlockPos neighborPos) {
+    public BlockState updateShape(BlockState state, Direction direction, BlockState neighborState, LevelAccessor level,
+                                  BlockPos pos, BlockPos neighborPos) {
         Direction facing = state.getValue(FACING);
         int part = state.getValue(PART);
         int sibling = -1;
@@ -129,7 +129,7 @@ public class GrandPianoBlock extends InstrumentBlock {
     }
 
     @Override
-    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         // 创造模式拆附属块时，先不掉落地拆掉主块，免得主块被连带拆掉时掉出钢琴
         if (!level.isClientSide() && player.isCreative() && !isMain(state)) {
             BlockPos main = mainPos(state, pos);
@@ -138,7 +138,7 @@ public class GrandPianoBlock extends InstrumentBlock {
                 level.setBlock(main, Blocks.AIR.defaultBlockState(), Block.UPDATE_SUPPRESS_DROPS | Block.UPDATE_ALL);
             }
         }
-        return super.playerWillDestroy(level, pos, state, player);
+        super.playerWillDestroy(level, pos, state, player);
     }
 
     @Override

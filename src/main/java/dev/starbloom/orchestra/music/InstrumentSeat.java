@@ -8,7 +8,6 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
@@ -47,8 +46,8 @@ public final class InstrumentSeat extends Entity {
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder builder) {
-        builder.define(INSTRUMENT, BlockPos.ZERO);
+    protected void defineSynchedData() {
+        entityData.define(INSTRUMENT, BlockPos.ZERO);
     }
 
     @Override
@@ -74,19 +73,13 @@ public final class InstrumentSeat extends Entity {
     }
 
     @Override
-    public boolean canUsePortal(boolean ignorePassenger) {
+    public boolean canChangeDimensions() {
         return false;
     }
 
     @Override
     protected boolean canAddPassenger(Entity passenger) {
         return getPassengers().isEmpty();
-    }
-
-    /** 座位的位置就是演奏者双脚的位置：抵消乘客自己的骑乘挂点（玩家是脚上方 0.6 格）。 */
-    @Override
-    protected Vec3 getPassengerAttachmentPoint(Entity passenger, EntityDimensions dimensions, float scale) {
-        return passenger.getVehicleAttachmentPoint(this);
     }
 
     @Override
@@ -104,9 +97,11 @@ public final class InstrumentSeat extends Entity {
         super.removePassenger(passenger);
     }
 
+    /** 座位的位置就是演奏者双脚的位置：直接落在座位坐标上。 */
     @Override
     protected void positionRider(Entity passenger, MoveFunction move) {
-        super.positionRider(passenger, move);
+        if (!hasPassenger(passenger)) return;
+        move.accept(passenger, getX(), getY(), getZ());
         clampRotation(passenger);
     }
 

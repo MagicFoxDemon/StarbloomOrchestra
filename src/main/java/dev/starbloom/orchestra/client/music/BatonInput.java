@@ -13,10 +13,10 @@ import dev.starbloom.orchestra.music.orchestra.EnsemblePayloads;
 import dev.starbloom.orchestra.music.orchestra.Judgement;
 import dev.starbloom.orchestra.music.orchestra.PodiumBlock;
 import dev.starbloom.orchestra.music.orchestra.PodiumBlockEntity;
+import dev.starbloom.orchestra.music.OrchestraNetwork;
 import java.util.HashMap;
 import java.util.Map;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.BlockPos;
@@ -34,16 +34,15 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.CalculatePlayerTurnEvent;
-import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
-import net.neoforged.neoforge.client.event.InputEvent;
-import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
-import net.neoforged.neoforge.client.event.RenderFrameEvent;
-import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
+import net.minecraftforge.client.event.InputEvent;
+import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
+import net.minecraftforge.client.gui.overlay.ForgeGui;
+import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -57,7 +56,7 @@ import org.jetbrains.annotations.Nullable;
  * </ul>
  * 不打拍子乐团就按设定的速度自己走；走下指挥台、放下指挥棒也是。只有自己看得到棒尖的轨迹、拍点的火花和左上角的提示。
  */
-@EventBusSubscriber(modid = StarbloomOrchestra.ID, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = StarbloomOrchestra.ID, value = Dist.CLIENT)
 public final class BatonInput {
     private static final ResourceLocation HUD = StarbloomOrchestra.id("conducting_hud");
     /** 右键选声部看多远（格）。 */
@@ -147,15 +146,14 @@ public final class BatonInput {
     @SubscribeEvent
     static void scroll(InputEvent.MouseScrollingEvent event) {
         BlockPos at = conductingPodium();
-        if (at == null || Minecraft.getInstance().screen != null || event.getScrollDeltaY() == 0) return;
+        if (at == null || Minecraft.getInstance().screen != null || event.getScrollDelta() == 0) return;
         event.setCanceled(true);
-        dynamics(at, event.getScrollDeltaY() > 0 ? 1 : -1);
+        dynamics(at, event.getScrollDelta() > 0 ? 1 : -1);
     }
 
-    /** 画拍子时视角不动（鼠标是棒尖）。 */
-    @SubscribeEvent
-    static void turn(CalculatePlayerTurnEvent event) {
-        if (drawing) event.setMouseSensitivity(-1 / 3.0);   // 原版的灵敏度换算 (s·0.6+0.2)³ 在这里为 0
+    /** 画拍子时视角不动（鼠标是棒尖，由 {@code BatonTurnMixin} 拦截鼠标转头）。 */
+    public static boolean isDrawing() {
+        return drawing;
     }
 
     /** 测试、按键：打一拍。 */
@@ -175,7 +173,7 @@ public final class BatonInput {
             if (countIn != 0 && gap >= 200_000_000L && gap <= 2_000_000_000L) {
                 countIn = 0;
                 follower = null;
-                PacketDistributor.sendToServer(new EnsemblePayloads.PodiumControl(at, EnsemblePayloads.PodiumControl.START, 0, (int) (gap / 1_000_000)));
+                OrchestraNetwork.sendToServer(new EnsemblePayloads.PodiumControl(at, EnsemblePayloads.PodiumControl.START, 0, (int) (gap / 1_000_000)));
                 flash(Component.translatable("hud.starbloom_orchestra.conducting.go"), 0xFFE8C15A);
                 started = now;
                 startGapMs = gap / 1_000_000.0;
@@ -228,14 +226,15 @@ public final class BatonInput {
     private static double startGapMs;
 
     private static void send(BlockPos at, int pos, double clockRate, boolean held) {
-        PacketDistributor.sendToServer(new EnsemblePayloads.ConductBeat(at, pos, (int) Math.round(clockRate * 1000),
+        OrchestraNetwork.sendToServer(new EnsemblePayloads.ConductBeat(at, pos, (int) Math.round(clockRate * 1000),
             Math.round(expression * 1000), held));
     }
 
     // —— 每一帧 ——
 
     @SubscribeEvent
-    static void frame(RenderFrameEvent.Pre event) {
+    static void frame(TickEvent.RenderTickEvent event) {
+        if (event.phase != TickEvent.Phase.START) return;
         var mc = Minecraft.getInstance();
         long now = System.nanoTime();
         BlockPos at = conductingPodium();
@@ -420,9 +419,9 @@ public final class BatonInput {
         int db = Math.max(PodiumBlockEntity.MIN_GAIN, Math.min(PodiumBlockEntity.MAX_GAIN, current + step));
         PENDING.put(part, new long[]{db, now});
         if (part >= 0) {
-            PacketDistributor.sendToServer(new EnsemblePayloads.PodiumControl(at, EnsemblePayloads.PodiumControl.GAIN, part, db));
+            OrchestraNetwork.sendToServer(new EnsemblePayloads.PodiumControl(at, EnsemblePayloads.PodiumControl.GAIN, part, db));
         } else {
-            PacketDistributor.sendToServer(new EnsemblePayloads.PodiumControl(at, EnsemblePayloads.PodiumControl.MASTER, db, 0));
+            OrchestraNetwork.sendToServer(new EnsemblePayloads.PodiumControl(at, EnsemblePayloads.PodiumControl.MASTER, db, 0));
         }
         Component who = part >= 0 ? PodiumScreen.partName(be, part) : Component.translatable("hud.starbloom_orchestra.conducting.everyone");
         Minecraft.getInstance().gui.setOverlayMessage(Component.translatable("hud.starbloom_orchestra.conducting.volume", who, signed(db)), false);
@@ -446,18 +445,18 @@ public final class BatonInput {
 
     // —— 左上角的提示 ——
 
-    /** 模组总线上的事件（FML 4 也会按事件类型自动分到模组总线，这里写明 {@code bus = MOD} 只是一目了然）。 */
-    @EventBusSubscriber(modid = StarbloomOrchestra.ID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
+    /** 模组总线上的事件。 */
+    @Mod.EventBusSubscriber(modid = StarbloomOrchestra.ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
     static final class ModEvents {
         private ModEvents() {}
 
         @SubscribeEvent
-        static void layers(RegisterGuiLayersEvent event) {
-            event.registerAbove(VanillaGuiLayers.CHAT, HUD, BatonInput::hud);
+        static void overlays(RegisterGuiOverlaysEvent event) {
+            event.registerAbove(VanillaGuiOverlay.CHAT_PANEL.id(), HUD.getPath(), BatonInput::hud);
         }
     }
 
-    private static void hud(GuiGraphics g, DeltaTracker delta) {
+    private static void hud(ForgeGui gui, GuiGraphics g, float partialTick, int screenWidth, int screenHeight) {
         var mc = Minecraft.getInstance();
         BlockPos at = conductingPodium();
         if (at == null || mc.options.hideGui || mc.screen != null) return;
@@ -486,7 +485,7 @@ public final class BatonInput {
         int db = part >= 0 ? be.gain(part) : be.master();
         if (pendingDb(part) != Integer.MIN_VALUE && PENDING.get(part) != null && System.currentTimeMillis() - PENDING.get(part)[1] < 1500) db = pendingDb(part);
         MutableComponent line3 = Component.translatable("hud.starbloom_orchestra.conducting.selected",
-            part >= 0 ? PodiumScreen.partName(be, part).copy().withColor(Conducting.PART_COLORS[part] | 0xFF000000)
+            part >= 0 ? PodiumScreen.partName(be, part).copy().withStyle(s -> s.withColor(Conducting.PART_COLORS[part] & 0xFFFFFF))
                 : Component.translatable("hud.starbloom_orchestra.conducting.everyone"), signed(db));
         int w = Math.max(font.width(line1), Math.max(font.width(line2), font.width(line3))) + 8;
         boolean fresh = feedback != null && now - feedbackAt < 700_000_000L;

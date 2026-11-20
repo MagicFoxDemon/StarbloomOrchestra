@@ -8,7 +8,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -23,6 +22,8 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.fml.DistExecutor;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -104,7 +105,7 @@ public class MusicStandBlock extends InstrumentBlock {
     }
 
     @Override
-    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return SHAPES.get(state.getValue(FACING));
     }
 
@@ -129,23 +130,23 @@ public class MusicStandBlock extends InstrumentBlock {
     }
 
     @Override
-    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
-                                              InteractionHand hand, BlockHitResult hit) {
+    protected @Nullable InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
+                                                      InteractionHand hand, BlockHitResult hit) {
         InstrumentKind kind = Instruments.heldKind(stack);
         BlockPos bench = seatedPlayer(level, pos, state);
         if (kind == null && bench != null && Instruments.isRoll(stack)) {
             // 谱台前坐着乐手：纸带交给琴凳（乐手照着它演奏）
-            if (level.isClientSide()) return ItemInteractionResult.SUCCESS;
-            if (!(level.getBlockEntity(bench) instanceof InstrumentBlockEntity be)) return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
+            if (level.isClientSide()) return InteractionResult.SUCCESS;
+            if (!(level.getBlockEntity(bench) instanceof InstrumentBlockEntity be)) return InteractionResult.PASS;
             ItemStack old = be.roll();
             be.setRoll(stack.copyWithCount(1));
             if (!player.getAbilities().instabuild) stack.shrink(1);
             if (!old.isEmpty() && !player.getInventory().add(old)) player.drop(old, false);
-            return ItemInteractionResult.CONSUME;
+            return InteractionResult.CONSUME;
         }
         if (kind == null) return super.useItemOn(stack, state, level, pos, player, hand, hit);
-        if (level.isClientSide()) return ItemInteractionResult.SUCCESS;
-        if (!(level.getBlockEntity(pos) instanceof InstrumentBlockEntity be)) return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
+        if (level.isClientSide()) return InteractionResult.SUCCESS;
+        if (!(level.getBlockEntity(pos) instanceof InstrumentBlockEntity be)) return InteractionResult.PASS;
         // 已经放着一件：换下来还给玩家
         ItemStack old = be.takeInstrument();
         be.setInstrument(stack.copyWithCount(1));
@@ -154,7 +155,7 @@ public class MusicStandBlock extends InstrumentBlock {
         dev.starbloom.orchestra.music.orchestra.PodiumBlockEntity.memberChanged(level, be.orchestra(), pos, false);
         if (!player.getAbilities().instabuild) stack.shrink(1);
         if (!old.isEmpty() && !player.getInventory().add(old)) player.drop(old, false);
-        return ItemInteractionResult.CONSUME;
+        return InteractionResult.CONSUME;
     }
 
     @Override
@@ -163,7 +164,9 @@ public class MusicStandBlock extends InstrumentBlock {
         BlockPos bench = seatedPlayer(level, pos, state);
         if (bench != null) {
             // 谱台前坐着乐手：打开那张琴凳的乐器界面（界面类只在客户端存在，经静态入口打开）
-            if (level.isClientSide()) dev.starbloom.orchestra.client.music.MusicClient.openInstrument(bench);
+            if (level.isClientSide()) {
+                DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> dev.starbloom.orchestra.client.music.MusicClient.openInstrument(bench));
+            }
             return InteractionResult.sidedSuccess(level.isClientSide());
         }
         if (holds == Holds.NONE) {

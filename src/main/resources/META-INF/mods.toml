@@ -1,0 +1,45 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="MIT"
+issueTrackerURL="https://github.com/MagicFoxDemon/StarbloomOrchestra/issues"
+
+[[mods]]
+modId="starbloom_orchestra"
+version="0.1.0"
+displayName="Starbloom Orchestra"
+authors="Kitsune Sakura"
+description='''
+Playable instruments for Minecraft: grand piano, harp, pipe organ, strings, winds, mallets and orchestral percussion, played by keyboard, MIDI keyboard, punched music rolls or imported MIDI files. Seat players, mobs and Touhou Little Maid maids at benches and posts, and conduct the whole orchestra with a baton.
+星辰花乐团：可以演奏的乐器（三角钢琴、竖琴、管风琴、弦乐、木管铜管、键盘打击乐、管弦乐打击乐），用键盘、MIDI 键盘、打孔纸带或导入的 MIDI 演奏；让玩家、生物和车万女仆坐上琴凳、站上工位，拿指挥棒指挥整个乐团。
+'''
+
+[[dependencies.starbloom_orchestra]]
+modId="forge"
+mandatory=true
+versionRange="[47.2,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.starbloom_orchestra]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1,1.20.2)"
+ordering="NONE"
+side="BOTH"
+
+# 「思索」（按住 W 看图文讲解）：官方发布的 Ponder 和它要求的 Flywheel 打包在本模组的 jar 里，不用另装；
+# 整合包里别的模组带着更新的版本时用那一份（docs/PONDER.md 第 4 节）
+[[dependencies.starbloom_orchestra]]
+modId="ponder"
+mandatory=true
+versionRange="[1.0.92,)"
+ordering="NONE"
+side="BOTH"
+
+# 1.20.1 的车万女仆版本号是 1.5.x（1.5.3-forge+mc1.20.1）。下限是兼容代码要对着编译的版本
+[[dependencies.starbloom_orchestra]]
+modId="touhou_little_maid"
+mandatory=false
+versionRange="[1.5.3,)"
+ordering="AFTER"
+side="BOTH"

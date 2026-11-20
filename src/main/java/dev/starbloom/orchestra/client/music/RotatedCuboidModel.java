@@ -24,16 +24,16 @@ import net.minecraft.client.resources.model.ModelState;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.GsonHelper;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.ClientHooks;
-import net.neoforged.neoforge.client.event.ModelEvent;
-import net.neoforged.neoforge.client.model.IModelBuilder;
-import net.neoforged.neoforge.client.model.geometry.IGeometryBakingContext;
-import net.neoforged.neoforge.client.model.geometry.IGeometryLoader;
-import net.neoforged.neoforge.client.model.geometry.SimpleUnbakedGeometry;
-import net.neoforged.neoforge.client.model.geometry.UnbakedGeometryHelper;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.ForgeHooksClient;
+import net.minecraftforge.client.event.ModelEvent;
+import net.minecraftforge.client.model.IModelBuilder;
+import net.minecraftforge.client.model.geometry.IGeometryBakingContext;
+import net.minecraftforge.client.model.geometry.IGeometryLoader;
+import net.minecraftforge.client.model.geometry.SimpleUnbakedGeometry;
+import net.minecraftforge.client.model.geometry.UnbakedGeometryHelper;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
@@ -42,16 +42,16 @@ import org.joml.Vector3f;
  * 元素可以任意转动的方块 / 物品模型（几何加载器 `starbloom_orchestra:rotated_cuboids`）。
  *
  * <p>乐器模型按 26.1 的模型格式画：元素的 `rotation` 可以是 `x`/`y`/`z` 三个欧拉角（先绕 X、再绕 Y、最后绕 Z，
- * 和 26.1 的 `rotationZYX` 一样），也可以是任意角度的 `axis` + `angle`。1.21.1 原版的解析器只认一根轴、
+ * 和 26.1 的 `rotationZYX` 一样），也可以是任意角度的 `axis` + `angle`。1.20.1 原版的解析器只认一根轴、
  * ±22.5°/±45°，别的直接报错，所以这类模型由生成脚本（tools/instrument_kit.py）写成
  * `"loader": "starbloom_orchestra:rotated_cuboids"`，元素放在 `"cuboids"` 里（放在 `"elements"` 里原版会先解析、报错）。
  * 不需要转动的模型仍是原版格式。
  *
  * <p>烘焙和原版一样：元素先绕自己的 `origin` 转，再按方块状态的旋转绕方块中心转，朝向（明暗、剔除用）和法线按转完的顶点算；
  * 转动的元素不重排顶点顺序（原版对有 rotation 的元素也不重排）。`rescale` 按 26.1 的算法：每根轴按转完后最长的分量放大回去。
- * 面的 uv、cullface、tintindex、neoforge_data 都交给原版的元素解析器。
+ * 面的 uv、cullface、tintindex、forge_data 都交给原版的元素解析器。
  */
-@EventBusSubscriber(modid = StarbloomOrchestra.ID, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = StarbloomOrchestra.ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class RotatedCuboidModel extends SimpleUnbakedGeometry<RotatedCuboidModel> {
     /** 模型 JSON 里 `loader` 写的名字。 */
     public static final ResourceLocation LOADER = StarbloomOrchestra.id("rotated_cuboids");
@@ -74,40 +74,41 @@ public final class RotatedCuboidModel extends SimpleUnbakedGeometry<RotatedCuboi
 
     @SubscribeEvent
     static void registerLoader(ModelEvent.RegisterGeometryLoaders event) {
-        event.register(LOADER, Loader.INSTANCE);
+        event.register(LOADER.getPath(), Loader.INSTANCE);
     }
 
     @Override
     protected void addQuads(IGeometryBakingContext context, IModelBuilder<?> builder, ModelBaker baker,
-                            Function<Material, TextureAtlasSprite> spriteGetter, ModelState modelState) {
-        // 同 NeoForge 的 ElementsModel：模型自己的根变换并进方块状态的变换
+                            Function<Material, TextureAtlasSprite> spriteGetter, ModelState modelState, ResourceLocation modelLocation) {
+        // 同 Forge 的 ElementsModel：模型自己的根变换并进方块状态的变换
         Transformation root = context.getRootTransform();
         if (!root.isIdentity()) modelState = UnbakedGeometryHelper.composeRootTransformIntoModelState(modelState, root);
         for (Cuboid cuboid : cuboids) {
             BlockElement element = cuboid.element();
             for (Direction direction : element.faces.keySet()) {
                 BlockElementFace face = element.faces.get(direction);
-                TextureAtlasSprite sprite = spriteGetter.apply(context.getMaterial(face.texture()));
+                TextureAtlasSprite sprite = spriteGetter.apply(context.getMaterial(face.texture));
                 BakedQuad quad = cuboid.turn() == null
-                    ? BlockModel.bakeFace(element, face, sprite, direction, modelState)
-                    : bakeTurned(cuboid, face, sprite, direction, modelState);
-                if (face.cullForDirection() == null) builder.addUnculledFace(quad);
-                else builder.addCulledFace(modelState.getRotation().rotateTransform(face.cullForDirection()), quad);
+                    ? BlockModel.bakeFace(element, face, sprite, direction, modelState, modelLocation)
+                    : bakeTurned(cuboid, face, sprite, direction, modelState, modelLocation);
+                if (face.cullForDirection == null) builder.addUnculledFace(quad);
+                else builder.addCulledFace(modelState.getRotation().rotateTransform(face.cullForDirection), quad);
             }
         }
     }
 
     /** 转动的元素的一个面：按不转烘焙，顶点绕 origin 转、再按方块状态绕方块中心转，最后重算朝向和法线。 */
-    private static BakedQuad bakeTurned(Cuboid cuboid, BlockElementFace face, TextureAtlasSprite sprite, Direction direction, ModelState state) {
+    private static BakedQuad bakeTurned(Cuboid cuboid, BlockElementFace face, TextureAtlasSprite sprite, Direction direction,
+                                        ModelState state, ResourceLocation modelLocation) {
         BlockElement element = cuboid.element();
         Transformation rotation = state.getRotation();
         BlockElementFace baked = face;
         // uvlock 只看方块状态的旋转（原版 FaceBakery 也是先按它换 uv、再烘焙）
         if (state.isUvLocked()) {
-            baked = new BlockElementFace(face.cullForDirection(), face.tintIndex(), face.texture(),
-                FaceBakery.recomputeUVs(face.uv(), direction, rotation), face.faceData(), face.parent());
+            baked = new BlockElementFace(face.cullForDirection, face.tintIndex, face.texture,
+                FaceBakery.recomputeUVs(face.uv, direction, rotation, modelLocation), face.getFaceData());
         }
-        BakedQuad flat = BAKERY.bakeQuad(element.from, element.to, baked, sprite, direction, BlockModelRotation.X0_Y0, NO_TURN, element.shade);
+        BakedQuad flat = BAKERY.bakeQuad(element.from, element.to, baked, sprite, direction, BlockModelRotation.X0_Y0, NO_TURN, element.shade, modelLocation);
         int[] vertices = flat.getVertices().clone();
         Matrix4f model = rotation == Transformation.identity() ? null : rotation.getMatrix();
         Vector3f pos = new Vector3f();
@@ -121,7 +122,7 @@ public final class RotatedCuboidModel extends SimpleUnbakedGeometry<RotatedCuboi
             vertices[at + 2] = Float.floatToRawIntBits(pos.z());
         }
         Direction facing = FaceBakery.calculateFacing(vertices);
-        ClientHooks.fillNormal(vertices, facing);
+        ForgeHooksClient.fillNormal(vertices, facing);
         return new BakedQuad(vertices, flat.getTintIndex(), facing, sprite, flat.isShade(), flat.hasAmbientOcclusion());
     }
 
@@ -180,12 +181,12 @@ public final class RotatedCuboidModel extends SimpleUnbakedGeometry<RotatedCuboi
             for (JsonElement entry : GsonHelper.getAsJsonArray(json, CUBOIDS)) {
                 JsonObject element = entry.getAsJsonObject().deepCopy();
                 JsonElement rotation = element.remove("rotation");
-                // 26.1 元素自己的发光等级换成 NeoForge 的面数据（方块光照）
+                // 26.1 元素自己的发光等级换成 Forge 的面数据（方块光照）
                 JsonElement light = element.remove("light_emission");
-                if (light != null && !element.has("neoforge_data")) {
+                if (light != null && !element.has("forge_data")) {
                     JsonObject data = new JsonObject();
                     data.add("block_light", light);
-                    element.add("neoforge_data", data);
+                    element.add("forge_data", data);
                 }
                 BlockElement parsed = context.deserialize(element, BlockElement.class);
                 Matrix4f turn = null;

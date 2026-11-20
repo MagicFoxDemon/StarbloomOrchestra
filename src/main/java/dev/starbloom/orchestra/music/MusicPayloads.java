@@ -1,14 +1,10 @@
 package dev.starbloom.orchestra.music;
 
-import dev.starbloom.orchestra.StarbloomOrchestra;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -53,122 +49,141 @@ public final class MusicPayloads {
     }
 
     /** 演奏者 → 服务端：这一 tick 弹下和松开的音。 */
-    public record LiveNotes(BlockPos pos, List<LiveNote> notes) implements CustomPacketPayload {
-        public static final Type<LiveNotes> TYPE = new Type<>(StarbloomOrchestra.id("instrument_live_notes"));
-        public static final StreamCodec<RegistryFriendlyByteBuf, LiveNotes> CODEC = StreamCodec.of(
-            (b, p) -> { b.writeBlockPos(p.pos); writeNotes(b, p.notes); },
-            b -> new LiveNotes(b.readBlockPos(), readNotes(b)));
+    public record LiveNotes(BlockPos pos, List<LiveNote> notes) {
+        public void encode(FriendlyByteBuf b) {
+            b.writeBlockPos(pos);
+            writeNotes(b, notes);
+        }
 
-        @Override public Type<LiveNotes> type() { return TYPE; }
+        public static LiveNotes decode(FriendlyByteBuf b) {
+            return new LiveNotes(b.readBlockPos(), readNotes(b));
+        }
     }
 
     /** 服务端 → 附近的听众：转发演奏者的一批音；allOff 表示演奏者离开，全部松开。 */
-    public record LiveNotesOut(BlockPos pos, int performer, boolean allOff, List<LiveNote> notes) implements CustomPacketPayload {
-        public static final Type<LiveNotesOut> TYPE = new Type<>(StarbloomOrchestra.id("instrument_live_notes_out"));
-        public static final StreamCodec<RegistryFriendlyByteBuf, LiveNotesOut> CODEC = StreamCodec.of(
-            (b, p) -> { b.writeBlockPos(p.pos); b.writeVarInt(p.performer); b.writeBoolean(p.allOff); writeNotes(b, p.notes); },
-            b -> new LiveNotesOut(b.readBlockPos(), b.readVarInt(), b.readBoolean(), readNotes(b)));
+    public record LiveNotesOut(BlockPos pos, int performer, boolean allOff, List<LiveNote> notes) {
+        public void encode(FriendlyByteBuf b) {
+            b.writeBlockPos(pos);
+            b.writeVarInt(performer);
+            b.writeBoolean(allOff);
+            writeNotes(b, notes);
+        }
 
-        @Override public Type<LiveNotesOut> type() { return TYPE; }
+        public static LiveNotesOut decode(FriendlyByteBuf b) {
+            return new LiveNotesOut(b.readBlockPos(), b.readVarInt(), b.readBoolean(), readNotes(b));
+        }
     }
 
     /**
      * 拿在手上的乐器 → 服务端：这一 tick 弹的音；allOff 表示收起乐器（关掉演奏条）。
      * kind 是 {@link InstrumentKind} 的序号，服务端核对玩家手上确实拿着这种乐器。
      */
-    public record HeldNotes(int kind, boolean allOff, List<LiveNote> notes) implements CustomPacketPayload {
-        public static final Type<HeldNotes> TYPE = new Type<>(StarbloomOrchestra.id("held_notes"));
-        public static final StreamCodec<RegistryFriendlyByteBuf, HeldNotes> CODEC = StreamCodec.of(
-            (b, p) -> { b.writeVarInt(p.kind); b.writeBoolean(p.allOff); writeNotes(b, p.notes); },
-            b -> new HeldNotes(b.readVarInt(), b.readBoolean(), readNotes(b)));
+    public record HeldNotes(int kind, boolean allOff, List<LiveNote> notes) {
+        public void encode(FriendlyByteBuf b) {
+            b.writeVarInt(kind);
+            b.writeBoolean(allOff);
+            writeNotes(b, notes);
+        }
 
-        @Override public Type<HeldNotes> type() { return TYPE; }
+        public static HeldNotes decode(FriendlyByteBuf b) {
+            return new HeldNotes(b.readVarInt(), b.readBoolean(), readNotes(b));
+        }
     }
 
     /** 服务端 → 附近的听众：某个玩家手上乐器弹的一批音（声音跟着这个实体走）。 */
-    public record HeldNotesOut(int entity, int kind, boolean allOff, List<LiveNote> notes) implements CustomPacketPayload {
-        public static final Type<HeldNotesOut> TYPE = new Type<>(StarbloomOrchestra.id("held_notes_out"));
-        public static final StreamCodec<RegistryFriendlyByteBuf, HeldNotesOut> CODEC = StreamCodec.of(
-            (b, p) -> { b.writeVarInt(p.entity); b.writeVarInt(p.kind); b.writeBoolean(p.allOff); writeNotes(b, p.notes); },
-            b -> new HeldNotesOut(b.readVarInt(), b.readVarInt(), b.readBoolean(), readNotes(b)));
+    public record HeldNotesOut(int entity, int kind, boolean allOff, List<LiveNote> notes) {
+        public void encode(FriendlyByteBuf b) {
+            b.writeVarInt(entity);
+            b.writeVarInt(kind);
+            b.writeBoolean(allOff);
+            writeNotes(b, notes);
+        }
 
-        @Override public Type<HeldNotesOut> type() { return TYPE; }
+        public static HeldNotesOut decode(FriendlyByteBuf b) {
+            return new HeldNotesOut(b.readVarInt(), b.readVarInt(), b.readBoolean(), readNotes(b));
+        }
     }
 
     /** 演奏界面上的操作。 */
-    public record Control(BlockPos pos, int action, int arg) implements CustomPacketPayload {
+    public record Control(BlockPos pos, int action, int arg) {
         public static final int CLAIM = 0, RELEASE = 1, PLAY = 2, PAUSE = 3, STOP = 4, EJECT = 5, PART_MASK = 6, SIGNAL_MODE = 7;
         /** 管风琴：arg 是音栓掩码、混响档位。 */
         public static final int STOPS = 8, REVERB = 9;
-        public static final Type<Control> TYPE = new Type<>(StarbloomOrchestra.id("instrument_control"));
-        public static final StreamCodec<RegistryFriendlyByteBuf, Control> CODEC = StreamCodec.of(
-            (b, p) -> { b.writeBlockPos(p.pos); b.writeVarInt(p.action); b.writeVarInt(p.arg); },
-            b -> new Control(b.readBlockPos(), b.readVarInt(), b.readVarInt()));
 
-        @Override public Type<Control> type() { return TYPE; }
+        public void encode(FriendlyByteBuf b) {
+            b.writeBlockPos(pos);
+            b.writeVarInt(action);
+            b.writeVarInt(arg);
+        }
+
+        public static Control decode(FriendlyByteBuf b) {
+            return new Control(b.readBlockPos(), b.readVarInt(), b.readVarInt());
+        }
     }
 
     /**
      * 服务端 → 追踪这个区块的玩家：纸带播放状态。roll 为空表示停止；positionMs 是此刻的播放位置。
      * 开始、暂停、停止时各发一次，播放中每 5 秒发一次心跳。
      */
-    public record Playback(BlockPos pos, @Nullable UUID roll, long hash, int positionMs, boolean playing, int partMask)
-            implements CustomPacketPayload {
-        public static final Type<Playback> TYPE = new Type<>(StarbloomOrchestra.id("instrument_playback"));
-        public static final StreamCodec<RegistryFriendlyByteBuf, Playback> CODEC = StreamCodec.of(
-            (b, p) -> {
-                b.writeBlockPos(p.pos);
-                b.writeBoolean(p.roll != null);
-                if (p.roll != null) b.writeUUID(p.roll);
-                b.writeLong(p.hash);
-                b.writeVarInt(p.positionMs);
-                b.writeBoolean(p.playing);
-                b.writeVarInt(p.partMask);
-            },
-            b -> new Playback(b.readBlockPos(), b.readBoolean() ? b.readUUID() : null, b.readLong(), b.readVarInt(),
-                b.readBoolean(), b.readVarInt()));
+    public record Playback(BlockPos pos, @Nullable UUID roll, long hash, int positionMs, boolean playing, int partMask) {
+        public void encode(FriendlyByteBuf b) {
+            b.writeBlockPos(pos);
+            b.writeBoolean(roll != null);
+            if (roll != null) b.writeUUID(roll);
+            b.writeLong(hash);
+            b.writeVarInt(positionMs);
+            b.writeBoolean(playing);
+            b.writeVarInt(partMask);
+        }
 
-        @Override public Type<Playback> type() { return TYPE; }
+        public static Playback decode(FriendlyByteBuf b) {
+            return new Playback(b.readBlockPos(), b.readBoolean() ? b.readUUID() : null, b.readLong(), b.readVarInt(),
+                b.readBoolean(), b.readVarInt());
+        }
     }
 
     /** 客户端 → 服务端：要一卷纸带的内容。 */
-    public record RollRequest(UUID id) implements CustomPacketPayload {
-        public static final Type<RollRequest> TYPE = new Type<>(StarbloomOrchestra.id("roll_request"));
-        public static final StreamCodec<RegistryFriendlyByteBuf, RollRequest> CODEC = StreamCodec.of(
-            (b, p) -> b.writeUUID(p.id), b -> new RollRequest(b.readUUID()));
+    public record RollRequest(UUID id) {
+        public void encode(FriendlyByteBuf b) {
+            b.writeUUID(id);
+        }
 
-        @Override public Type<RollRequest> type() { return TYPE; }
+        public static RollRequest decode(FriendlyByteBuf b) {
+            return new RollRequest(b.readUUID());
+        }
     }
 
     /** 服务端 → 客户端：纸带内容（找不到时为空数组）。 */
-    public record RollData(UUID id, byte[] data) implements CustomPacketPayload {
-        public static final Type<RollData> TYPE = new Type<>(StarbloomOrchestra.id("roll_data"));
-        public static final StreamCodec<RegistryFriendlyByteBuf, RollData> CODEC = StreamCodec.of(
-            (b, p) -> { b.writeUUID(p.id); b.writeByteArray(p.data); },
-            b -> new RollData(b.readUUID(), b.readByteArray(MusicRoll.MAX_BYTES)));
+    public record RollData(UUID id, byte[] data) {
+        public void encode(FriendlyByteBuf b) {
+            b.writeUUID(id);
+            b.writeByteArray(data);
+        }
 
-        @Override public Type<RollData> type() { return TYPE; }
+        public static RollData decode(FriendlyByteBuf b) {
+            return new RollData(b.readUUID(), b.readByteArray(MusicRoll.MAX_BYTES));
+        }
     }
 
     /**
      * 客户端 → 服务端：上传一卷纸带（录制、打孔编辑器、MIDI 导入）的一块。全部到齐后服务端重新校验。
      * purpose：{@link #WRITE} 刻进乐器里的纸带，{@link #TEMPORARY} 只作临时纸带直接播放。
      */
-    public record Upload(int uploadId, int index, int total, int purpose, BlockPos pos, byte[] chunk) implements CustomPacketPayload {
+    public record Upload(int uploadId, int index, int total, int purpose, BlockPos pos, byte[] chunk) {
         public static final int WRITE = 0, TEMPORARY = 1;
-        public static final Type<Upload> TYPE = new Type<>(StarbloomOrchestra.id("roll_upload"));
-        public static final StreamCodec<RegistryFriendlyByteBuf, Upload> CODEC = StreamCodec.of(
-            (b, p) -> {
-                b.writeVarInt(p.uploadId);
-                b.writeVarInt(p.index);
-                b.writeVarInt(p.total);
-                b.writeVarInt(p.purpose);
-                b.writeBlockPos(p.pos);
-                b.writeByteArray(p.chunk);
-            },
-            b -> new Upload(b.readVarInt(), b.readVarInt(), b.readVarInt(), b.readVarInt(), b.readBlockPos(),
-                b.readByteArray(UPLOAD_CHUNK)));
 
-        @Override public Type<Upload> type() { return TYPE; }
+        public void encode(FriendlyByteBuf b) {
+            b.writeVarInt(uploadId);
+            b.writeVarInt(index);
+            b.writeVarInt(total);
+            b.writeVarInt(purpose);
+            b.writeBlockPos(pos);
+            b.writeByteArray(chunk);
+        }
+
+        public static Upload decode(FriendlyByteBuf b) {
+            return new Upload(b.readVarInt(), b.readVarInt(), b.readVarInt(), b.readVarInt(), b.readBlockPos(),
+                b.readByteArray(UPLOAD_CHUNK));
+        }
     }
 }

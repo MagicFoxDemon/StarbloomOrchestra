@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " GS",
+    "GNS",
+    "PPP"
+  ],
+  "key": {
+    "G": {
+      "item": "minecraft:gold_ingot"
+    },
+    "S": {
+      "item": "minecraft:string"
+    },
+    "N": {
+      "item": "minecraft:note_block"
+    },
+    "P": {
+      "item": "minecraft:birch_planks"
+    }
+  },
+  "result": {
+    "item": "starbloom_orchestra:hexen_concert_harp",
+    "count": 1
+  }
+}

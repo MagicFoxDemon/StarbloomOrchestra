@@ -7,13 +7,13 @@ import net.minecraft.client.renderer.item.ClampedItemPropertyFunction;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 
 /**
- * 物品模型用的属性（1.21.1 的 {@link ItemProperties}）。
+ * 物品模型用的属性（1.20.1 的 {@link ItemProperties}）。
  *
  * <p>手持乐器演奏时换成 `_playing` 模型（第一人称把乐器摆到下巴、嘴边）：`models/item/<乐器>.json` 的 `overrides`
  * 在 `starbloom_orchestra:playing` 为 1 时换成 `item/<乐器>_playing`。属性的判断和原版弓的 `pulling` 一样——
@@ -22,7 +22,7 @@ import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
  * <p>属性挂在每个 {@link HandheldInstrumentItem} 上（以后加的手持乐器自动带上），生成脚本给有 `_playing` 模型的物品写 overrides
  * （tools/instrument_kit.py 的 `Out.flush`）。
  */
-@EventBusSubscriber(modid = StarbloomOrchestra.ID, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = StarbloomOrchestra.ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class ItemModelProperties {
     private ItemModelProperties() {}
 

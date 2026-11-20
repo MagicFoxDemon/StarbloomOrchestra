@@ -3,7 +3,28 @@
 本仓库从 Logos 附属「炼金釜」拆出来之前的验证记录在附属仓库的
 [VERIFICATION.md](https://github.com/wushuowei1145/Logos-Spellwrought-Expanse/blob/main/VERIFICATION.md)（乐器、乐团各节）。
 
-本分支 `mc/1.21.1` 是 1.21.1 那条线；下面「移植到 1.21.1」以外的各节是 26.1（main）上的记录，不代表 1.21.1 验证过。
+本分支 `mc/1.20.1` 是 Minecraft 1.20.1 / Forge 47.4.0 那条线；下面「移植到 Minecraft 1.20.1 / Forge 47.4.0」以外的各节分别来自 `mc/1.21.1` 与 `main`（26.1）的历史记录，不代表已在 1.20.1 验证过。
+
+## 移植到 Minecraft 1.20.1 / Forge 47.4.0
+
+基于 `mc/1.21.1` 移植到 Minecraft 1.20.1 / Forge 47.4.0（Java 17、Parchment `2023.09.03`、`net.neoforged.moddev.legacyforge` `2.0.148`）。Ponder 使用官方 `Ponder-Forge-1.20.1:1.0.92`（内含 catnip）并通过 `jarJar` 与 `flywheel-forge-1.20.1:1.0.6` 一同打包；按要求排除 Logos 附属 `LegacyIds` 及 LDLib2 UI 测试套件（`*Views.java`、`gradle/ldlib2-uitest.gradle`、`TestTravel.java`）；使用 `SimpleChannel` 实现 `OrchestraNetwork`，补充 `BatonTurnMixin` 并适配所有 10 个 Mixin、资源格式（`pack_format: 15`、`DataVersion: 3465`）与 Forge 1.20.1 事件/渲染接口。
+
+| 层级 | 结果 |
+|---|---|
+| 编译与打包 | 带 1.20.1 Forge 版车万女仆（`touhoulittlemaid-1.5.3-forge+mc1.20.1.jar`，通过 `-Ptlm_jar=<路径>` 指定）与不带女仆 jar 时均编译通过；带 `-Ptlm_jar` 时构建产物包含 `MaidMusicians`，不带时自动排除 `MaidMusicians`；产出 jar 含 `starbloom_orchestra.refmap.json`（10 个 mixin 均生成 Searge 映射）、`jarJar` 内嵌 Ponder `1.0.92` 与 Flywheel `1.0.6`；`concertHallPack` 成功生成 `starbloom_orchestra-concert_hall-0.1.0.zip`（`pack_format: 15`） |
+| 单元测试 | `./gradlew test`：84 个测试用例（83 通过，1 跳过 `OrganDemoTest`，0 失败，0 错误） |
+| 世界测试（服务端） | `./gradlew runGameTestServer`：35/35 通过（已按需求排除 Logos `LegacyIdGameTests`，报告见 `build/gametest-results.xml`）；`-PorchestraTests=starbloom_orchestra:nonexistent_*` 以非零退出码（1）退出 |
+| 思索蓝图导出 | `./gradlew runGameTestServer -PorchestraTests=starbloom_orchestra:ponder_layouts -PponderExport` 连续运行两次，导出的 7 个 `.nbt` 蓝图均为 `DataVersion: 3465` 且两次 SHA-256 完全一致 |
+| 车万女仆（服务端） | `./gradlew runGameTestServer -Ptlm -Ptlm_jar=...`：Forge 专用游戏测试服务端成功加载 `touhou_little_maid`（1.5.3-forge+mc1.20.1）并通过 35/35 世界测试；日志中无 `starbloom_orchestra` 或 `MaidMusicians` 引发的类加载或运行时报错 |
+| 未验证 | 实际客户端运行、实机渲染与交互（键盘/MIDI 演奏、管风琴现场合成、声部描边着色器、指挥棒鼠标滚轮与转向、按住 W 打开 Ponder 界面）、车万女仆实机客户端模型渲染与图层、LDLib2 1.20.1 客户端 UI 自动化场景（已排除）、多人联机、光影包与 Embeddium/Sodium/Create 共存 |
+
+```text
+.\gradlew.bat build
+.\gradlew.bat build concertHallPack -Ptlm_jar=<path-to-touhoulittlemaid-1.5.3-forge+mc1.20.1.jar>
+.\gradlew.bat runGameTestServer
+.\gradlew.bat runGameTestServer -PorchestraTests=starbloom_orchestra:ponder_layouts -PponderExport
+.\gradlew.bat runGameTestServer -Ptlm -Ptlm_jar=<path-to-touhoulittlemaid-1.5.3-forge+mc1.20.1.jar>
+```
 
 ## 移植到 Minecraft 1.21.1 / NeoForge 21.1
 

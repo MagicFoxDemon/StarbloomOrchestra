@@ -2,7 +2,6 @@ package dev.starbloom.orchestra.music;
 
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.protocol.Packet;
@@ -18,7 +17,6 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -159,7 +157,7 @@ public class InstrumentBlockEntity extends BlockEntity {
     // —— 纸带槽 ——
 
     public void setRoll(ItemStack stack) {
-        if (!ItemStack.isSameItemSameComponents(stack, roll)) stopPlayback();
+        if (!ItemStack.isSameItemSameTags(stack, roll)) stopPlayback();
         roll = stack.copyWithCount(Math.min(1, stack.getCount()));
         changed();
     }
@@ -234,7 +232,7 @@ public class InstrumentBlockEntity extends BlockEntity {
             broadcast();
             return true;
         }
-        RollInfo info = roll.get(Instruments.MUSIC_ROLL.get());
+        RollInfo info = RollInfo.get(roll);
         if (info == null || RollStore.load(info.id()) == null) return false;
         start(info.id(), info.hash(), info.durationMs(), false);
         return true;
@@ -282,9 +280,9 @@ public class InstrumentBlockEntity extends BlockEntity {
         MusicPayloads.Playback p = new MusicPayloads.Playback(worldPosition, playing, playingHash, positionMs(),
             playing != null && pausedAt < 0, partMask);
         if (to != null) {
-            PacketDistributor.sendToPlayer(to, p);
+            OrchestraNetwork.sendToPlayer(to, p);
         } else {
-            PacketDistributor.sendToPlayersTrackingChunk(server, new ChunkPos(worldPosition), p);
+            OrchestraNetwork.sendToPlayersTrackingChunk(server, new ChunkPos(worldPosition), p);
         }
     }
 
@@ -341,10 +339,10 @@ public class InstrumentBlockEntity extends BlockEntity {
     // —— 存盘与同步 ——
 
     @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
-        roll = ItemStack.parseOptional(registries, tag.getCompound("roll"));
-        instrument = ItemStack.parseOptional(registries, tag.getCompound("instrument"));
+    public void load(CompoundTag tag) {
+        super.load(tag);
+        roll = ItemStack.of(tag.getCompound("roll"));
+        instrument = ItemStack.of(tag.getCompound("instrument"));
         partMask = tag.contains("part_mask", Tag.TAG_ANY_NUMERIC) ? tag.getInt("part_mask") : 0xFFFF;
         stopWithSignal = tag.getBoolean("stop_with_signal");
         powered = tag.getBoolean("powered");
@@ -359,10 +357,10 @@ public class InstrumentBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
-        if (!roll.isEmpty()) tag.put("roll", roll.save(registries));
-        if (!instrument.isEmpty()) tag.put("instrument", instrument.save(registries));
+    protected void saveAdditional(CompoundTag tag) {
+        super.saveAdditional(tag);
+        if (!roll.isEmpty()) tag.put("roll", roll.save(new CompoundTag()));
+        if (!instrument.isEmpty()) tag.put("instrument", instrument.save(new CompoundTag()));
         tag.putInt("part_mask", partMask);
         tag.putBoolean("stop_with_signal", stopWithSignal);
         tag.putBoolean("powered", powered);
@@ -382,8 +380,8 @@ public class InstrumentBlockEntity extends BlockEntity {
     }
 
     @Override
-    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
-        CompoundTag tag = saveCustomOnly(registries);
+    public CompoundTag getUpdateTag() {
+        CompoundTag tag = saveWithoutMetadata();
         // 演奏者只同步、不存盘
         if (performer != null) tag.putUUID("performer", performer);
         return tag;

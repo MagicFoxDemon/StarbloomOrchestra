@@ -12,14 +12,10 @@ import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import java.util.function.Consumer;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.fml.common.asm.enumextension.EnumProxy;
-import net.neoforged.neoforge.client.IArmPoseTransformer;
-import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
-import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
+import net.minecraftforge.client.IArmPoseTransformer;
+import net.minecraftforge.client.extensions.common.IClientItemExtensions;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -27,10 +23,9 @@ import org.jetbrains.annotations.Nullable;
  * （{@link Conducting#poseOf}），幅度随响度；有声部要进来时左手提前一拍指向它，响的段落左手跟着右手做镜像，平时自然下垂。
  * 预备拍从站姿抬起来，收束之后慢慢放下。别人看到的和自己看到的按同一个时钟算。第一人称里拿棒的手也跟着拍子动。
  */
-@EventBusSubscriber(modid = StarbloomOrchestra.ID, value = Dist.CLIENT)
 public final class ConductingPoses {
-    public static final EnumProxy<HumanoidModel.ArmPose> CONDUCT = new EnumProxy<>(HumanoidModel.ArmPose.class,
-        true, (IArmPoseTransformer) (m, e, a) -> pose(m, e));
+    public static final HumanoidModel.ArmPose CONDUCT = HumanoidModel.ArmPose.create(
+        "STARBLOOM_ORCHESTRA_CONDUCT", true, (IArmPoseTransformer) (m, e, a) -> pose(m, e));
 
     /**
      * 拍子平面在身前的位置与大小（模型像素：−Y 向上、−Z 向前、+X 是身体左侧；肩的支点在 y=2）。拍点（图形的最低处）手臂在水平下约 28°，
@@ -42,13 +37,12 @@ public final class ConductingPoses {
 
     private ConductingPoses() {}
 
-    @SubscribeEvent
-    static void extensions(RegisterClientExtensionsEvent event) {
-        event.registerItem(new IClientItemExtensions() {
+    public static void initClient(Consumer<IClientItemExtensions> consumer) {
+        consumer.accept(new IClientItemExtensions() {
             @Override
             public HumanoidModel.@Nullable ArmPose getArmPose(LivingEntity entity, InteractionHand hand, ItemStack stack) {
                 if (hand != InteractionHand.MAIN_HAND) return null;
-                return Conducting.poseOf(entity) != null ? CONDUCT.getValue() : null;
+                return Conducting.poseOf(entity) != null ? CONDUCT : null;
             }
 
             @Override
@@ -64,7 +58,7 @@ public final class ConductingPoses {
                 pose.mulPose(com.mojang.math.Axis.XP.rotationDegrees(y * 18 - 8 * b));
                 return true;
             }
-        }, Orchestra.BATON.get());
+        });
     }
 
     /**

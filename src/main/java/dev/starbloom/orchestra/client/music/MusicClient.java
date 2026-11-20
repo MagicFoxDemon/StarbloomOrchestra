@@ -6,6 +6,7 @@ import dev.starbloom.orchestra.music.InstrumentBlock;
 import dev.starbloom.orchestra.music.InstrumentKind;
 import dev.starbloom.orchestra.music.MusicPayloads;
 import dev.starbloom.orchestra.music.MusicRoll;
+import dev.starbloom.orchestra.music.OrchestraNetwork;
 import dev.starbloom.orchestra.music.orchestra.EnsemblePayloads;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -20,15 +21,12 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
-import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.client.event.RenderFrameEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -41,7 +39,7 @@ import org.jetbrains.annotations.Nullable;
  * </ul>
  * 每帧（不是每 tick）检查一次到点的音，时间精度跟帧率走。
  */
-@EventBusSubscriber(modid = StarbloomOrchestra.ID, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = StarbloomOrchestra.ID, value = Dist.CLIENT)
 public final class MusicClient {
     /** 听众端的抖动缓冲。 */
     private static final long LISTEN_DELAY_NS = 100_000_000L;
@@ -103,43 +101,23 @@ public final class MusicClient {
 
     // —— 网络 ——
 
-    // 1.21.1 没有单独的客户端收包注册：发往客户端的包在公共端 {@code RegisterPayloadHandlersEvent} 里登记时只放一个转发
-    // （{@code Instruments#payloads} 里的 {@link ClientPayloadHandlers#dispatch}），真正的处理器是下面这几个方法，
+    // 1.20.1 没有单独的客户端收包注册：发往客户端的包在公共端 {@code OrchestraNetwork#register} 里登记时只放一个转发
+    // （{@link ClientPayloadHandlers#dispatch}），真正的处理器是下面这几个方法，
     // 客户端初始化时由 {@link ModBus#setup} 填进 {@link ClientPayloadHandlers}；专用服务端上什么都不登记，也就不会加载客户端的类。
 
     /** 模组总线上的事件：客户端初始化时登记发往客户端的包的处理器（进服之前，收包时才查）。 */
-    @EventBusSubscriber(modid = StarbloomOrchestra.ID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
+    @Mod.EventBusSubscriber(modid = StarbloomOrchestra.ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
     static final class ModBus {
         private ModBus() {}
 
         @SubscribeEvent
         static void setup(FMLClientSetupEvent event) {
-            ClientPayloadHandlers.register(MusicPayloads.LiveNotesOut.TYPE, MusicClient::onLiveNotesOut);
-            ClientPayloadHandlers.register(MusicPayloads.Playback.TYPE, MusicClient::onPlayback);
-            ClientPayloadHandlers.register(MusicPayloads.RollData.TYPE, MusicClient::onRollData);
-            ClientPayloadHandlers.register(MusicPayloads.HeldNotesOut.TYPE, MusicClient::onHeldNotesOut);
-            ClientPayloadHandlers.register(EnsemblePayloads.EnsembleState.TYPE, Conducting::onEnsembleState);
+            ClientPayloadHandlers.register(MusicPayloads.LiveNotesOut.class, MusicClient::heard);
+            ClientPayloadHandlers.register(MusicPayloads.Playback.class, MusicClient::playback);
+            ClientPayloadHandlers.register(MusicPayloads.RollData.class, MusicClient::rollData);
+            ClientPayloadHandlers.register(MusicPayloads.HeldNotesOut.class, MusicClient::heardHeld);
+            ClientPayloadHandlers.register(EnsemblePayloads.EnsembleState.class, Conducting::onEnsembleState);
         }
-    }
-
-    /** 收到别人实时弹的一批音。 */
-    public static void onLiveNotesOut(MusicPayloads.LiveNotesOut p, IPayloadContext c) {
-        c.enqueueWork(() -> heard(p));
-    }
-
-    /** 收到纸带播放状态（开始、心跳、暂停、停止）。 */
-    public static void onPlayback(MusicPayloads.Playback p, IPayloadContext c) {
-        c.enqueueWork(() -> playback(p));
-    }
-
-    /** 收到纸带内容。 */
-    public static void onRollData(MusicPayloads.RollData p, IPayloadContext c) {
-        c.enqueueWork(() -> rollData(p));
-    }
-
-    /** 收到别人手上乐器的一批音。 */
-    public static void onHeldNotesOut(MusicPayloads.HeldNotesOut p, IPayloadContext c) {
-        c.enqueueWork(() -> heardHeld(p));
     }
 
     @SubscribeEvent
@@ -172,7 +150,8 @@ public final class MusicClient {
     }
 
     @SubscribeEvent
-    static void frame(RenderFrameEvent.Pre event) {
+    static void frame(TickEvent.RenderTickEvent event) {
+        if (event.phase != TickEvent.Phase.START) return;
         MidiKeyboard.drain();
         long now = System.nanoTime();
         while (!SCHEDULE.isEmpty() && SCHEDULE.peek().at <= now) SCHEDULE.poll().run.run();
@@ -188,7 +167,8 @@ public final class MusicClient {
     }
 
     @SubscribeEvent
-    static void tick(ClientTickEvent.Post event) {
+    static void tick(TickEvent.ClientTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
         flushLive();
         flushHeld();
         VoiceBank.tickOrgans();
@@ -230,14 +210,14 @@ public final class MusicClient {
         var me = Minecraft.getInstance().player;
         if (me != null) VoiceBank.allOff(heldKey(me.getId()));
         if (Minecraft.getInstance().getConnection() != null) {
-            PacketDistributor.sendToServer(new MusicPayloads.HeldNotes(kind.ordinal(), true, List.of()));
+            OrchestraNetwork.sendToServer(new MusicPayloads.HeldNotes(kind.ordinal(), true, List.of()));
         }
     }
 
     private static void flushHeld() {
         if (HELD_BATCH.isEmpty() || heldKind == null) return;
         if (Minecraft.getInstance().getConnection() != null) {
-            PacketDistributor.sendToServer(new MusicPayloads.HeldNotes(heldKind.ordinal(), false, List.copyOf(HELD_BATCH)));
+            OrchestraNetwork.sendToServer(new MusicPayloads.HeldNotes(heldKind.ordinal(), false, List.copyOf(HELD_BATCH)));
         }
         HELD_BATCH.clear();
     }
@@ -306,7 +286,7 @@ public final class MusicClient {
     private static void flushLive() {
         if (BATCH.isEmpty() || batchPos == null) return;
         if (Minecraft.getInstance().getConnection() != null) {
-            PacketDistributor.sendToServer(new MusicPayloads.LiveNotes(batchPos, List.copyOf(BATCH)));
+            OrchestraNetwork.sendToServer(new MusicPayloads.LiveNotes(batchPos, List.copyOf(BATCH)));
         }
         BATCH.clear();
     }
@@ -373,7 +353,7 @@ public final class MusicClient {
     static @Nullable MusicRoll roll(UUID id) {
         MusicRoll r = ROLLS.get(id);
         if (r == null && !MISSING.contains(id) && REQUESTED.add(id)) {
-            PacketDistributor.sendToServer(new MusicPayloads.RollRequest(id));
+            OrchestraNetwork.sendToServer(new MusicPayloads.RollRequest(id));
         }
         return r;
     }
@@ -692,11 +672,11 @@ public final class MusicClient {
             int from = i * chunk;
             int to = Math.min(encoded.length, from + chunk);
             byte[] part = java.util.Arrays.copyOfRange(encoded, from, to);
-            PacketDistributor.sendToServer(new MusicPayloads.Upload(id, i, total, purpose, pos, part));
+            OrchestraNetwork.sendToServer(new MusicPayloads.Upload(id, i, total, purpose, pos, part));
         }
     }
 
     static void control(BlockPos pos, int action, int arg) {
-        PacketDistributor.sendToServer(new MusicPayloads.Control(pos, action, arg));
+        OrchestraNetwork.sendToServer(new MusicPayloads.Control(pos, action, arg));
     }
 }

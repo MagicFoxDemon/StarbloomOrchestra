@@ -56,7 +56,7 @@ public class StarbloomDuetBenchBlock extends StarbloomBenchBlock {
     }
 
     @Override
-    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return (state.getValue(SIDE) ? SIDE_SHAPES : MAIN_SHAPES).get(state.getValue(FACING));
     }
 
@@ -75,8 +75,8 @@ public class StarbloomDuetBenchBlock extends StarbloomBenchBlock {
     }
 
     @Override
-    protected BlockState updateShape(BlockState state, Direction direction, BlockState neighborState, LevelAccessor level,
-                                     BlockPos pos, BlockPos neighborPos) {
+    public BlockState updateShape(BlockState state, Direction direction, BlockState neighborState, LevelAccessor level,
+                                  BlockPos pos, BlockPos neighborPos) {
         boolean side = state.getValue(SIDE);
         Direction toOther = side ? state.getValue(FACING).getCounterClockWise() : state.getValue(FACING).getClockWise();
         if (direction == toOther && !(neighborState.is(this) && neighborState.getValue(SIDE) != side
@@ -87,14 +87,14 @@ public class StarbloomDuetBenchBlock extends StarbloomBenchBlock {
     }
 
     @Override
-    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         if (!level.isClientSide() && player.isCreative() && state.getValue(SIDE)) {
             BlockPos main = mainPos(state, pos);
             if (level.getBlockState(main).is(this)) {
                 level.setBlock(main, Blocks.AIR.defaultBlockState(), Block.UPDATE_SUPPRESS_DROPS | Block.UPDATE_ALL);
             }
         }
-        return super.playerWillDestroy(level, pos, state, player);
+        super.playerWillDestroy(level, pos, state, player);
     }
 
     @Override

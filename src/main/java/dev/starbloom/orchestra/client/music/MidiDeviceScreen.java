@@ -67,7 +67,7 @@ public class MidiDeviceScreen extends Screen {
         set(ClientConfig.MIDI_TRANSPOSE, Math.max(-36, Math.min(36, ClientConfig.MIDI_TRANSPOSE.get() + d * step)));
     }
 
-    private void set(net.neoforged.neoforge.common.ModConfigSpec.IntValue value, int v) {
+    private void set(net.minecraftforge.common.ForgeConfigSpec.IntValue value, int v) {
         value.set(v);
         value.save();
         rebuildWidgets();
@@ -100,8 +100,8 @@ public class MidiDeviceScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        // Screen.render 先画原版背景（模糊、压暗）再画控件；羊皮纸和列表要夹在两者之间，所以拆开来调用
-        renderBackground(g, mouseX, mouseY, partialTick);
+        // Screen.render 先画原版背景（压暗）再画控件；羊皮纸和列表要夹在两者之间，所以拆开来调用
+        renderBackground(g);
         Parchment.draw(g, x0, y0, W, H);
         int x = x0 + PAD;
         g.drawString(font, title, x, y0 + 24, Parchment.INK_TITLE, false);

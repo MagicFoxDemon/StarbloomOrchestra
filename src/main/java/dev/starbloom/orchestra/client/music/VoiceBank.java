@@ -203,7 +203,7 @@ public final class VoiceBank {
 
         @Override
         public @Nullable WeighedSoundEvents resolve(SoundManager manager) {
-            this.sound = new Sound(buffer, ConstantFloat.of(1f), ConstantFloat.of(1f), 1, Sound.Type.FILE, false, false, range);
+            this.sound = new Sound(buffer.toString(), ConstantFloat.of(1f), ConstantFloat.of(1f), 1, Sound.Type.FILE, false, false, range);
             return new WeighedSoundEvents(buffer, subtitle);
         }
     }
